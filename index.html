@@ -275,233 +275,6 @@ Text: ${fullText}`;
                 var vocabPayload = { contents: [{ parts: [{ text: vocabPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
                 var data = await fetchGeminiApi(apiKey, vocabPayload);
                 var text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                text = text.trim().replace(/^```json/g, '').replace(/^<!DOCTYPE html>
-<html lang="id" class="h-full">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SuaraTeks ID - 高精度長尺 Pro</title>
-    <!-- Tailwind CSS & FontAwesome -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <style>
-        :root { var-transcript-font-size: 20px; }
-        .dynamic-text-indo { font-size: var(--transcript-font-size, 20px); line-height: 1.4; }
-        .dynamic-text-ja { font-size: calc(var(--transcript-font-size, 20px) * 0.75); line-height: 1.4; }
-        .rotate-y-180 { transform: rotateY(180deg); }
-        .perspective-1000 { perspective: 1000px; }
-        .transform-style-3d { transform-style: preserve-3d; }
-        .backface-hidden { backface-visibility: hidden; }
-        .word-clickable { cursor: pointer; border-bottom: 1.5px dotted #94a3b8; transition: all 0.15s; display: inline-block; }
-        .word-clickable:hover { color: #e70011; border-bottom-color: #e70011; background-color: rgba(231, 0, 17, 0.08); border-radius: 2px; }
-        .search-highlight { background-color: #fef08a; color: #854d0e; font-weight: bold; padding: 0 2px; border-radius: 2px; }
-    </style>
-
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
-                    colors: { indoRed: { 500: '#E70011', 600: '#C8000F', 700: '#A0000C' } }
-                }
-            }
-        };
-
-        window.currentLoadedFile = null;
-        window.currentAudioBase64 = null;
-        window.transcriptBlocks = [];
-        window.vocabList = [];
-        window.activeMobileTab = 'setup';
-        window.activeStudioSubView = 'transcript';
-        window.activeVocabMode = 'card';
-        window.activeVocabPosFilter = 'all';
-        window.activeVocabSearchQuery = '';
-        window.currentCardIndex = 0;
-        window.isCardFlipped = false;
-        window.isShuffled = false;
-        window.shuffledVocabList = [];
-        window.searchDebounceTimer = null;
-
-        window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
-
-        // 音声ファイル読み込み
-        window.handleFileChange = function(event) {
-            var input = (event && event.target) ? event.target : document.getElementById('audioFileInput');
-            var files = input ? input.files : null;
-            if (!files || files.length === 0) return;
-
-            var file = files[0];
-            window.currentLoadedFile = file;
-
-            var loadedName = document.getElementById('loadedFileName');
-            if (loadedName) loadedName.textContent = file.name;
-
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                var dataUrl = e.target.result;
-                window.currentAudioBase64 = dataUrl.split(',')[1];
-
-                var audioPlayer = document.getElementById('audioPlayer');
-                if (audioPlayer) {
-                    audioPlayer.src = dataUrl;
-                    audioPlayer.load();
-                }
-                showToast('「' + file.name + '」を読み込みました！', 'info');
-            };
-            reader.readAsDataURL(file);
-        };
-
-        // Gemini API 呼び出し
-        async function fetchGeminiApi(apiKey, payload) {
-            var modelName = 'gemini-3.6-flash';
-            if (!payload.generationConfig) payload.generationConfig = {};
-            payload.generationConfig.temperature = 0.1;
-
-            var response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent?key=' + apiKey, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            var data = await response.json();
-            if (!response.ok || data.error) throw new Error(data.error?.message || ('HTTP Error ' + response.status));
-            return data;
-        }
-
-        // 2Pass 音声解析実行
-        window.processAudioWithGemini = async function() {
-            if (!window.currentLoadedFile || !window.currentAudioBase64) {
-                showToast('先に「音源選択」から音声ファイルを選択してください。', 'error');
-                return;
-            }
-
-            var apiKey = getApiKey();
-            if (!apiKey) {
-                showToast('Gemini API Key が設定されていません。', 'error');
-                openModal('apiKeyModal');
-                return;
-            }
-
-            var btn = document.getElementById('startTranscribeBtn');
-            var btnText = document.getElementById('transcribeBtnText');
-            var progressContainer = document.getElementById('chunkProgressContainer');
-            var progressLabel = document.getElementById('chunkProgressLabel');
-            var progressPercent = document.getElementById('chunkProgressPercent');
-            var progressBar = document.getElementById('chunkProgressBar');
-
-            if (btn) btn.disabled = true;
-            if (progressContainer) progressContainer.classList.remove('hidden');
-
-            try {
-                if (btnText) btnText.textContent = "Pass 1: 文字起こし＆文法解剖中...";
-                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> <span>【Pass 1/2】音声認識・対訳・文法解剖...</span>';
-                if (progressBar) progressBar.style.width = '35%';
-                if (progressPercent) progressPercent.textContent = '35%';
-
-                var base64Data = window.currentAudioBase64;
-                var mimeType = window.currentLoadedFile.type || 'audio/mp3';
-
-                var transcribePrompt = `You are a world-class Indonesian verbatim transcription specialist and linguist.
-Listen carefully to the entire audio file from absolute start to finish. Transcribe spoken Indonesian exactly as spoken with zero omissions.
-
-For each phrase block, provide:
-1. "speaker": Speaker identification (Pembicara 1, Pembicara 2, etc.)
-2. "indonesian": Complete, verbatim spoken Indonesian text
-3. "japanese": Precise Japanese translation
-4. "grammarExplanation": Professional linguistic breakdown in Japanese:
-   - 【構文】 Main/subordinate clauses, prepositions, conjunctions.
-   - 【語根と派生】 Kata dasar and affix mechanics (me-, di-, ter-, -kan, -an).
-   - 【ニュアンス】 Spoken context and nuance.
-
-Return ONLY a valid JSON array matching this schema:
-[
-  {
-    "speaker": "Pembicara 1",
-    "indonesian": "exact spoken Indonesian",
-    "japanese": "Japanese translation",
-    "grammarExplanation": "【構文】...\n【語根と派生】...\n【ニュアンス】..."
-  }
-]`;
-
-                var transcribePayload = {
-                    contents: [{ role: 'user', parts: [{ text: transcribePrompt }, { inlineData: { mimeType: mimeType, data: base64Data } }] }],
-                    generationConfig: { responseMimeType: "application/json" }
-                };
-
-                var transcribeData = await fetchGeminiApi(apiKey, transcribePayload);
-                var transcriptRaw = transcribeData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                transcriptRaw = transcriptRaw.trim().replace(/^```json/g, '').replace(/^```/g, '').replace(/```$/g, '').trim();
-                var parsedTranscript = JSON.parse(transcriptRaw);
-                var rawBlocks = Array.isArray(parsedTranscript) ? parsedTranscript : (parsedTranscript.transcript || []);
-
-                if (!rawBlocks || rawBlocks.length === 0) throw new Error('音声からテキストが読み取れませんでした');
-
-                window.transcriptBlocks = rawBlocks.map(function(item, index) {
-                    return {
-                        id: 'block-' + Date.now() + '-' + index,
-                        blockIndex: index,
-                        speaker: item.speaker || 'Pembicara 1',
-                        indonesian: item.indonesian || '',
-                        japanese: item.japanese || '',
-                        grammarExplanation: item.grammarExplanation || '構造解説なし'
-                    };
-                });
-
-                if (btnText) btnText.textContent = "Pass 2: 全単語網羅抽出中...";
-                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-book-open text-emerald-500"></i> <span>【Pass 2/2】品詞分解・単語帳生成...</span>';
-                if (progressBar) progressBar.style.width = '75%';
-                if (progressPercent) progressPercent.textContent = '75%';
-
-                await extractAllVocabWithPosPass2(apiKey);
-
-                if (progressBar) progressBar.style.width = '100%';
-                if (progressPercent) progressPercent.textContent = '100%';
-
-                renderTranscriptContainer();
-                renderGrammarContainer();
-                renderVocabContainer();
-                
-                saveCurrentToHistory(window.currentLoadedFile.name, true);
-                showToast('2Pass全自動精密解析が完了しました！', 'info');
-                if (window.innerWidth < 768) switchMobileTab('transcript');
-
-            } catch (err) {
-                console.error('Gemini API Process Error:', err);
-                showToast('エラー: ' + (err.message || '解析処理に失敗しました'), 'error');
-            } finally {
-                if (btn) btn.disabled = false;
-                if (btnText) btnText.textContent = "高精度解析を開始";
-                setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
-            }
-        };
-
-        async function extractAllVocabWithPosPass2(apiKey) {
-            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
-            var fullText = window.transcriptBlocks.map(function(b) { return b.indonesian; }).join(' ');
-            var vocabPrompt = `Perform a comprehensive lexicographical analysis on the following Indonesian text.
-Extract EVERY unique word without skipping, and categorize each into its exact Part of Speech (POS).
-
-Categories (pos): "noun", "verb", "adjective", "adverb", "other"
-
-Return ONLY a valid JSON array:
-[
-  {
-    "indonesian": "word",
-    "baseForm": "root word",
-    "japanese": "Japanese meaning",
-    "pos": "noun" | "verb" | "adjective" | "adverb" | "other",
-    "context": "Short context phrase"
-  }
-]
-Text: ${fullText}`;
-
-            try {
-                var vocabPayload = { contents: [{ parts: [{ text: vocabPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
-                var data = await fetchGeminiApi(apiKey, vocabPayload);
-                var text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
                 text = text.trim().replace(/^```json/g, '').replace(/^```/g, '').replace(/```$/g, '').trim();
                 var parsed = JSON.parse(text);
 
@@ -521,7 +294,7 @@ Text: ${fullText}`;
             } catch (e) { console.warn('Vocab Parsing Failed:', e); }
         }
 
-        // --- フォントサイズ調整 ---
+        // フォントサイズ調整
         function adjustFontSize(delta) {
             var slider = document.getElementById('fontSizeSlider');
             if (slider) {
@@ -537,22 +310,16 @@ Text: ${fullText}`;
             if (ptDisplay) ptDisplay.textContent = val + ' pt';
         }
 
-        // --- 音声再生エンジン (Web Speech API 全端末完全互換対応) ---
+        // 音声再生エンジン
         function speakIndonesian(text) {
-            if (!('speechSynthesis' in window)) {
-                showToast('音声読み上げ非対応ブラウザです', 'error');
-                return;
-            }
+            if (!('speechSynthesis' in window)) return;
             window.speechSynthesis.cancel();
-
             var utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'id-ID';
             utterance.rate = 0.85;
-
             var voices = window.speechSynthesis.getVoices();
             var indoVoice = voices.find(function(v) { return v.lang.startsWith('id') || v.lang.includes('ID'); });
             if (indoVoice) utterance.voice = indoVoice;
-
             window.speechSynthesis.speak(utterance);
         }
 
@@ -567,10 +334,8 @@ Text: ${fullText}`;
             var cleanId = blockId.replace(/^[tg]-/, '');
             var block = window.transcriptBlocks.find(function(b) { return b.id === cleanId; });
             if (!block || !block.indonesian) return;
-
             var words = block.indonesian.split(/\s+/);
-            var remainingText = words.slice(wordIndex).join(' ');
-            startSpeechBlock(blockId, remainingText);
+            startSpeechBlock(blockId, words.slice(wordIndex).join(' '));
         }
 
         function toggleSpeechBlock(blockId) {
@@ -597,7 +362,6 @@ Text: ${fullText}`;
         function startSpeechBlock(blockId, customText) {
             if (!('speechSynthesis' in window)) return;
             stopAllSpeech();
-
             var cleanId = blockId.replace(/^[tg]-/, '');
             var block = window.transcriptBlocks.find(function(b) { return b.id === cleanId; });
             if (!block) return;
@@ -635,25 +399,19 @@ Text: ${fullText}`;
         function updateBlockToggleUI(blockId, state) {
             var btn = document.getElementById('btn-toggle-' + blockId);
             if (!btn) return;
-            if (state === 'playing') {
-                btn.innerHTML = '<i class="fa-solid fa-pause text-red-500"></i><span>一時停止</span>';
-            } else if (state === 'paused') {
-                btn.innerHTML = '<i class="fa-solid fa-play text-amber-500"></i><span>再開</span>';
-            } else {
-                btn.innerHTML = '<i class="fa-solid fa-play"></i><span>再生</span>';
-            }
+            if (state === 'playing') btn.innerHTML = '<i class="fa-solid fa-pause text-red-500"></i><span>一時停止</span>';
+            else if (state === 'paused') btn.innerHTML = '<i class="fa-solid fa-play text-amber-500"></i><span>再開</span>';
+            else btn.innerHTML = '<i class="fa-solid fa-play"></i><span>再生</span>';
         }
 
         function renderClickableIndonesianWords(text, blockId) {
             if (!text) return '';
             var words = text.split(/\s+/);
             return words.map(function(w, idx) {
-                var cleanWord = escapeHtml(w);
-                return '<span class="word-clickable" onclick="speakFromWord(\'' + blockId + '\', ' + idx + ')" title="ここから再生">' + cleanWord + '</span>';
+                return '<span class="word-clickable" onclick="speakFromWord(\'' + blockId + '\', ' + idx + ')" title="ここから再生">' + escapeHtml(w) + '</span>';
             }).join(' ');
         }
 
-        // --- 本文・文法表示 ---
         function renderTranscriptContainer() {
             var emptyState = document.getElementById('emptyState');
             var container = document.getElementById('transcriptContainer');
@@ -711,7 +469,17 @@ Text: ${fullText}`;
             if (container) container.innerHTML = html;
         }
 
-        // --- 単語帳エンジン (品詞フィルター・検索・シャッフル・カード表示復元) ---
+        function highlightMatch(str, query) {
+            var safeStr = escapeHtml(str || '');
+            var q = (query || '').trim();
+            if (!q) return safeStr;
+            try {
+                var escQuery = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                var regex = new RegExp('(' + escQuery + ')', 'gi');
+                return safeStr.replace(regex, '<mark class="search-highlight">$1</mark>');
+            } catch (e) { return safeStr; }
+        }
+
         function getFilteredVocabList() {
             var filtered = window.isShuffled ? [...window.shuffledVocabList] : (window.vocabList || []);
             if (window.activeVocabPosFilter !== 'all') {
@@ -735,6 +503,9 @@ Text: ${fullText}`;
             var filtered = getFilteredVocabList();
             if (vocabBadge) vocabBadge.textContent = (window.vocabList || []).length;
 
+            updatePosFilterUI();
+            updateModeBtnUI();
+
             if (!filtered || filtered.length === 0) {
                 emptyState?.classList.remove('hidden');
                 if (listContainer) listContainer.innerHTML = '';
@@ -749,17 +520,21 @@ Text: ${fullText}`;
                 listContainer?.classList.remove('hidden');
 
                 var html = '';
+                var q = window.activeVocabSearchQuery;
                 filtered.forEach(function(v) {
+                    var hIndo = highlightMatch(v.indonesian, q);
+                    var hJap = highlightMatch(v.japanese, q);
+
                     html += '<div class="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between gap-2">' +
                         '<div class="space-y-0.5 flex-1 min-w-0">' +
                             '<div class="flex items-center gap-2">' +
                                 '<span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">' + getPosLabel(v.pos) + '</span>' +
-                                '<h4 class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100 truncate">' + escapeHtml(v.indonesian) + '</h4>' +
+                                '<h4 class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100 truncate">' + hIndo + '</h4>' +
                                 '<button onclick="speakIndonesian(\'' + escapeHtml(v.indonesian) + '\')" class="text-slate-400 hover:text-emerald-500 p-1">' +
                                     '<i class="fa-solid fa-volume-high text-xs"></i>' +
                                 '</button>' +
                             '</div>' +
-                            '<p class="dynamic-text-ja text-emerald-700 dark:text-emerald-400 font-bold">' + escapeHtml(v.japanese) + '</p>' +
+                            '<p class="dynamic-text-ja text-emerald-700 dark:text-emerald-400 font-bold">' + hJap + '</p>' +
                         '</div>' +
                         '<button onclick="toggleVocabMastered(\'' + v.id + '\')" class="px-2 py-1 rounded ' + (v.mastered ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400') + ' text-[10px] font-bold shrink-0">' +
                             (v.mastered ? '習得' : '未修') +
@@ -780,6 +555,31 @@ Text: ${fullText}`;
                 case 'noun': return '名詞'; case 'verb': return '動詞'; case 'adjective': return '形容詞'; case 'adverb': return '副詞'; default: return 'その他';
             }
         }
+
+        function updateModeBtnUI() {
+            var btnCard = document.getElementById('btnModeCard');
+            var btnList = document.getElementById('btnModeList');
+            if (btnCard && btnList) {
+                if (window.activeVocabMode === 'card') {
+                    btnCard.className = "px-3 py-1.5 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition";
+                    btnList.className = "px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
+                } else {
+                    btnList.className = "px-3 py-1.5 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition";
+                    btnCard.className = "px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
+                }
+            }
+        }
+
+        function updatePosFilterUI() {
+            document.querySelectorAll('.btn-pos-filter').forEach(function(btn) {
+                if (btn.dataset.pos === window.activeVocabPosFilter) {
+                    btn.className = "btn-pos-filter px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-red-600 text-white shadow-xs transition";
+                } else {
+                    btn.className = "btn-pos-filter px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
+                }
+            });
+        }
+
         function setVocabMode(mode) { window.activeVocabMode = mode; renderVocabContainer(); }
         function setVocabPosFilter(pos) { window.activeVocabPosFilter = pos; window.currentCardIndex = 0; renderVocabContainer(); }
         function toggleShuffleCards() {
@@ -792,6 +592,7 @@ Text: ${fullText}`;
             var item = window.vocabList.find(function(v) { return v.id === id; });
             if (item) { item.mastered = !item.mastered; renderVocabContainer(); }
         }
+
         function updateFlashcardUI() {
             var filtered = getFilteredVocabList();
             if (!filtered || filtered.length === 0) return;
@@ -800,27 +601,32 @@ Text: ${fullText}`;
             var item = filtered[window.currentCardIndex];
             if (!item) return;
 
+            var q = window.activeVocabSearchQuery;
             var cardIndo = document.getElementById('cardIndoText');
             var cardJap = document.getElementById('cardJapText');
             var cardContext = document.getElementById('cardContextFull');
             var cardPosFront = document.getElementById('cardBadgeFront');
+            var cardPosBack = document.getElementById('cardPosBack');
             var progressLabel = document.getElementById('flashcardProgressLabel');
 
-            if (cardIndo) cardIndo.textContent = item.indonesian || '';
-            if (cardJap) cardJap.textContent = item.japanese || '';
-            if (cardContext) cardContext.textContent = item.context ? ('文脈: ' + item.context) : '';
+            if (cardIndo) cardIndo.innerHTML = highlightMatch(item.indonesian, q);
+            if (cardJap) cardJap.innerHTML = highlightMatch(item.japanese, q);
+            if (cardContext) cardContext.innerHTML = item.context ? ('文脈: "' + highlightMatch(item.context, q) + '"') : '文脈なし';
             if (cardPosFront) cardPosFront.textContent = getPosLabel(item.pos);
+            if (cardPosBack) cardPosBack.textContent = '品詞: ' + getPosLabel(item.pos) + (item.baseForm ? (' (原形: ' + item.baseForm + ')') : '');
             if (progressLabel) progressLabel.textContent = (window.currentCardIndex + 1) + ' / ' + filtered.length;
 
             window.isCardFlipped = false;
             document.getElementById('flashcardInner')?.classList.remove('rotate-y-180');
         }
+
         function flipFlashcard() {
             window.isCardFlipped = !window.isCardFlipped;
             var inner = document.getElementById('flashcardInner');
             if (window.isCardFlipped) inner?.classList.add('rotate-y-180');
             else inner?.classList.remove('rotate-y-180');
         }
+
         function nextFlashcard(mastered) {
             var filtered = getFilteredVocabList();
             if (filtered.length === 0) return;
@@ -829,7 +635,7 @@ Text: ${fullText}`;
             updateFlashcardUI();
         }
 
-        // --- 履歴機能 (重複排除・手動保存・一括消去・JSON復元) ---
+        // 履歴機能
         function loadHistoryFromStorage() {
             try {
                 var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
@@ -870,7 +676,6 @@ Text: ${fullText}`;
                 var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
                 var targetName = fileName || (window.currentLoadedFile ? window.currentLoadedFile.name : '音源解析データ');
 
-                // 重複保存の排除（同じ名前の履歴があれば削除して最新化）
                 history = history.filter(function(h) { return h.fileName !== targetName; });
 
                 var item = {
@@ -883,7 +688,6 @@ Text: ${fullText}`;
 
                 history.unshift(item);
 
-                // 5件超え時の自動JSON出力＆リセット
                 if (history.length >= 5) {
                     exportHistoryDataToFile(history, 'suarateks_5items_backup_' + new Date().toISOString().slice(0,10).replace(/-/g, '') + '.json');
                     history = [];
@@ -920,8 +724,17 @@ Text: ${fullText}`;
                 renderTranscriptContainer();
                 renderGrammarContainer();
                 renderVocabContainer();
-                var loadedName = document.getElementById('loadedFileName');
-                if (loadedName) loadedName.textContent = found.fileName;
+                
+                var dropzoneDefault = document.getElementById('dropzoneDefault');
+                var dropzoneSelected = document.getElementById('dropzoneSelected');
+                var selectedFileName = document.getElementById('selectedFileName');
+                var selectedFileSize = document.getElementById('selectedFileSize');
+
+                if (dropzoneDefault) dropzoneDefault.classList.add('hidden');
+                if (dropzoneSelected) dropzoneSelected.classList.remove('hidden');
+                if (selectedFileName) selectedFileName.textContent = found.fileName;
+                if (selectedFileSize) selectedFileSize.textContent = '保存済みデータ';
+
                 showToast('「' + found.fileName + '」を復元読み込みしました', 'info');
                 if (window.innerWidth < 768) switchMobileTab('transcript');
             }
@@ -1002,19 +815,30 @@ Text: ${fullText}`;
             var viewGrammar = document.getElementById('grammarView');
             var viewVocab = document.getElementById('vocabView');
 
+            var btnTranscript = document.getElementById('navTabTranscript');
+            var btnGrammar = document.getElementById('navTabGrammar');
+            var btnVocab = document.getElementById('navTabVocab');
+
             viewTranscript?.classList.add('hidden');
             viewGrammar?.classList.add('hidden');
             viewVocab?.classList.add('hidden');
             viewVocab?.classList.remove('flex');
 
+            [btnTranscript, btnGrammar, btnVocab].forEach(function(btn) {
+                if (btn) btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1.5";
+            });
+
             if (subView === 'transcript') {
                 viewTranscript?.classList.remove('hidden');
+                if (btnTranscript) btnTranscript.className = "px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1.5";
             } else if (subView === 'grammar') {
                 viewGrammar?.classList.remove('hidden');
+                if (btnGrammar) btnGrammar.className = "px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1.5";
                 renderGrammarContainer();
             } else if (subView === 'vocab') {
                 viewVocab?.classList.remove('hidden');
                 viewVocab?.classList.add('flex');
+                if (btnVocab) btnVocab.className = "px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1.5";
                 renderVocabContainer();
             }
         }
@@ -1054,6 +878,7 @@ Text: ${fullText}`;
 
         document.addEventListener('DOMContentLoaded', function() {
             loadHistoryFromStorage();
+            initDropzoneEvents();
             if ('speechSynthesis' in window) window.speechSynthesis.getVoices();
         });
     </script>
@@ -1080,11 +905,41 @@ Text: ${fullText}`;
 
         <!-- 左パネル：音源・履歴コントロール -->
         <div id="panelSetup" class="w-full md:w-72 flex flex-col gap-3 shrink-0 overflow-y-auto">
-            <div id="playerCard" class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2.5">
-                <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200"><i class="fa-solid fa-file-audio text-red-600"></i> 音源選択</h3>
-                <input type="file" id="audioFileInput" accept="audio/*" onchange="window.handleFileChange(event)" class="text-xs w-full">
-                <p id="loadedFileName" class="text-xs font-bold text-slate-500 truncate">音源未選択</p>
+            <div id="playerCard" class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
+                <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                    <i class="fa-solid fa-file-audio text-red-600"></i> 音源選択
+                </h3>
+                
+                <!-- おしゃれなドラッグ＆ドロップファイル選択UI -->
+                <label id="fileDropLabel" for="audioFileInput" class="relative group cursor-pointer block">
+                    <input type="file" id="audioFileInput" accept="audio/*" onchange="window.handleFileChange(event)" class="hidden">
+                    
+                    <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-red-500 dark:hover:border-red-500 rounded-xl p-3.5 text-center bg-slate-50 dark:bg-slate-900 transition-all duration-200 group-hover:bg-red-50/30">
+                        
+                        <!-- 初期状態 UI -->
+                        <div id="dropzoneDefault" class="space-y-1.5">
+                            <div class="w-9 h-9 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 flex items-center justify-center text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-cloud-arrow-up text-base"></i>
+                            </div>
+                            <p class="text-xs font-extrabold text-slate-700 dark:text-slate-200">音源を選択する</p>
+                            <p class="text-[10px] text-slate-400 leading-tight">ドラッグ＆ドロップ、または<br>タップしてファイル指定</p>
+                        </div>
+
+                        <!-- 選択完了時 UI -->
+                        <div id="dropzoneSelected" class="hidden space-y-1 text-left">
+                            <div class="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                                <i class="fa-solid fa-circle-check text-xs"></i>
+                                <span class="text-[10px] font-extrabold uppercase">音源セット完了</span>
+                            </div>
+                            <p id="selectedFileName" class="text-xs font-bold text-slate-800 dark:text-slate-100 truncate"></p>
+                            <p id="selectedFileSize" class="text-[9px] text-slate-400 font-mono"></p>
+                        </div>
+
+                    </div>
+                </label>
+
                 <audio id="audioPlayer" controls class="w-full h-8 rounded"></audio>
+
                 <button id="startTranscribeBtn" onclick="window.processAudioWithGemini()" class="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition">
                     <span id="transcribeBtnText">高精度解析を開始</span>
                 </button>
@@ -1100,7 +955,7 @@ Text: ${fullText}`;
                 </div>
             </div>
 
-            <!-- 解析履歴パネル (任意保存・一括消去・復元コントロール復元) -->
+            <!-- 解析履歴パネル -->
             <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[160px]">
                 <div class="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-700 mb-2">
                     <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1">
@@ -1118,7 +973,6 @@ Text: ${fullText}`;
 
                 <div id="historyList" class="space-y-1 flex-1 overflow-y-auto"></div>
 
-                <!-- ファイル復元（JSONインポート）ボタン -->
                 <div class="pt-2 border-t border-slate-100 dark:border-slate-700 mt-1">
                     <label class="w-full py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
                         <i class="fa-solid fa-file-import"></i> JSONバックアップから復元
@@ -1128,15 +982,21 @@ Text: ${fullText}`;
             </div>
         </div>
 
-        <!-- 右パネル：本文・解説・単語帳 -->
+        <!-- 右パネル：メインビュー -->
         <div id="panelTranscript" class="hidden md:flex flex-1 flex-col bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             
-            <!-- サブヘッダー（文字サイズスライダー 20pt〜30pt） -->
+            <!-- サブヘッダー -->
             <div class="bg-white dark:bg-slate-800 px-3 py-2 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2 shrink-0">
-                <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg text-xs font-bold">
-                    <button onclick="setStudioSubView('transcript')" class="px-2.5 py-1 rounded bg-white dark:bg-slate-700 shadow-sm">本文・対訳</button>
-                    <button onclick="setStudioSubView('grammar')" class="px-2.5 py-1 rounded">文法解剖</button>
-                    <button onclick="setStudioSubView('vocab')" class="px-2.5 py-1 rounded">単語帳 (<span id="vocabCountBadge">0</span>)</button>
+                <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl">
+                    <button id="navTabTranscript" onclick="setStudioSubView('transcript')" class="px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-align-left"></i> 本文・対訳
+                    </button>
+                    <button id="navTabGrammar" onclick="setStudioSubView('grammar')" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-diagram-project"></i> 文法解剖
+                    </button>
+                    <button id="navTabVocab" onclick="setStudioSubView('vocab')" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-book-open"></i> 単語帳 (<span id="vocabCountBadge">0</span>)
+                    </button>
                 </div>
 
                 <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
@@ -1160,20 +1020,20 @@ Text: ${fullText}`;
                 <div id="grammarContainer" class="space-y-3"></div>
             </div>
 
-            <!-- View 3: 単語帳（品詞フィルター・検索・シャッフル・カード復元） -->
+            <!-- View 3: 単語帳 -->
             <div id="vocabView" class="hidden flex-1 flex-col overflow-hidden p-3 space-y-3">
                 <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 shrink-0">
                     <div class="flex items-center gap-2">
-                        <input type="text" id="vocabSearchInput" oninput="window.activeVocabSearchQuery=this.value; renderVocabContainer();" placeholder="検索..." class="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold">
-                        <button onclick="setVocabMode('card')" class="px-2.5 py-1 text-xs font-bold rounded bg-emerald-100 text-emerald-800">カード</button>
-                        <button onclick="setVocabMode('list')" class="px-2.5 py-1 text-xs font-bold rounded bg-slate-100 text-slate-700">一覧</button>
+                        <input type="text" id="vocabSearchInput" oninput="window.activeVocabSearchQuery=this.value; renderVocabContainer();" placeholder="インドネシア語・日本語・品詞で曖昧検索..." class="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold">
+                        <button id="btnModeCard" onclick="setVocabMode('card')" class="px-3 py-1.5 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition">カード</button>
+                        <button id="btnModeList" onclick="setVocabMode('list')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">一覧</button>
                     </div>
                     <div class="flex items-center gap-1 flex-wrap text-[10px] font-bold">
-                        <button onclick="setVocabPosFilter('all')" class="px-2 py-0.5 rounded bg-slate-100">すべて</button>
-                        <button onclick="setVocabPosFilter('noun')" class="px-2 py-0.5 rounded bg-blue-100 text-blue-800">名詞</button>
-                        <button onclick="setVocabPosFilter('verb')" class="px-2 py-0.5 rounded bg-red-100 text-red-800">動詞</button>
-                        <button onclick="setVocabPosFilter('adjective')" class="px-2 py-0.5 rounded bg-amber-100 text-amber-800">形容詞</button>
-                        <button onclick="setVocabPosFilter('adverb')" class="px-2 py-0.5 rounded bg-purple-100 text-purple-800">副詞</button>
+                        <button data-pos="all" onclick="setVocabPosFilter('all')" class="btn-pos-filter px-2.5 py-1 rounded-lg bg-red-600 text-white">すべて</button>
+                        <button data-pos="noun" onclick="setVocabPosFilter('noun')" class="btn-pos-filter px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">名詞</button>
+                        <button data-pos="verb" onclick="setVocabPosFilter('verb')" class="btn-pos-filter px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">動詞</button>
+                        <button data-pos="adjective" onclick="setVocabPosFilter('adjective')" class="btn-pos-filter px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">形容詞</button>
+                        <button data-pos="adverb" onclick="setVocabPosFilter('adverb')" class="btn-pos-filter px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">副詞</button>
                     </div>
                 </div>
 
@@ -1185,24 +1045,42 @@ Text: ${fullText}`;
                         <span id="flashcardProgressLabel">1 / 1</span>
                         <button onclick="toggleShuffleCards()" class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px]"><i class="fa-solid fa-shuffle"></i> シャッフル</button>
                     </div>
-                    <div onclick="flipFlashcard()" class="w-full max-w-sm h-52 perspective-1000 cursor-pointer">
-                        <div id="flashcardInner" class="relative w-full h-full duration-500 transform-style-3d shadow rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 flex flex-col justify-between">
-                            <span id="cardBadgeFront" class="self-start text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700">品詞</span>
-                            <div class="text-center space-y-1">
-                                <h2 id="cardIndoText" class="text-2xl font-black text-slate-800 dark:text-slate-100">---</h2>
-                                <h3 id="cardJapText" class="text-lg font-bold text-emerald-600 mt-2">---</h3>
-                                <p id="cardContextFull" class="text-xs text-slate-500 italic mt-1">---</p>
+
+                    <div onclick="flipFlashcard()" class="w-full max-w-sm h-60 perspective-1000 cursor-pointer">
+                        <div id="flashcardInner" class="relative w-full h-full transform-style-3d shadow-lg rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                            <!-- 表面 -->
+                            <div class="absolute inset-0 w-full h-full backface-hidden p-5 flex flex-col justify-between rounded-2xl bg-white dark:bg-slate-800">
+                                <span id="cardBadgeFront" class="self-start text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300">品詞</span>
+                                <div class="text-center space-y-2">
+                                    <h2 id="cardIndoText" class="text-2xl font-black text-slate-800 dark:text-slate-100">---</h2>
+                                    <p class="text-xs text-slate-400">タップして裏面を表示</p>
+                                </div>
+                                <div class="text-right">
+                                    <button onclick="event.stopPropagation(); speakIndonesian(document.getElementById('cardIndoText').textContent)" class="p-2 text-slate-400 hover:text-emerald-500">
+                                        <i class="fa-solid fa-volume-high text-base"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <div class="text-right">
-                                <button onclick="event.stopPropagation(); speakIndonesian(document.getElementById('cardIndoText').textContent)" class="p-2 text-slate-400 hover:text-emerald-500">
-                                    <i class="fa-solid fa-volume-high text-sm"></i>
-                                </button>
+
+                            <!-- 裏面 -->
+                            <div class="absolute inset-0 w-full h-full backface-hidden rotate-y-180 p-5 flex flex-col justify-between rounded-2xl bg-emerald-50/60 dark:bg-slate-900 border-2 border-emerald-500">
+                                <span id="cardPosBack" class="self-start text-[10px] font-bold text-emerald-800 dark:text-emerald-300">品詞詳細</span>
+                                <div class="text-center space-y-2">
+                                    <h3 id="cardJapText" class="text-xl font-extrabold text-emerald-800 dark:text-emerald-300">---</h3>
+                                    <p id="cardContextFull" class="text-xs text-slate-600 dark:text-slate-400 italic">---</p>
+                                </div>
+                                <div class="text-right">
+                                    <button onclick="event.stopPropagation(); speakIndonesian(document.getElementById('cardIndoText').textContent)" class="p-2 text-slate-400 hover:text-emerald-500">
+                                        <i class="fa-solid fa-volume-high text-base"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
+
                     <div class="flex gap-3 mt-4 w-full max-w-sm">
                         <button onclick="nextFlashcard(false)" class="flex-1 py-2 bg-slate-200 text-slate-700 rounded-xl text-xs font-bold">要復習</button>
-                        <button onclick="nextFlashcard(true)" class="flex-1 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold">習得済み</button>
+                        <button onclick="nextFlashcard(true)" class="flex-1 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow">習得済み</button>
                     </div>
                 </div>
             </div>
