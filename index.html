@@ -225,243 +225,6 @@ Text: ${fullText}`;
                 var vocabPayload = { contents: [{ parts: [{ text: vocabPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
                 var data = await fetchGeminiApi(apiKey, vocabPayload);
                 var text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                text = text.trim().replace(/^```json/g, '').replace(/^<!DOCTYPE html>
-<html lang="id" class="h-full">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SuaraTeks ID - 高精度長尺 Pro</title>
-    <!-- Tailwind CSS & FontAwesome -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <style>
-        :root {
-            --transcript-font-size: 20px;
-        }
-        .dynamic-text-indo { font-size: var(--transcript-font-size); line-height: 1.4; }
-        .dynamic-text-ja { font-size: calc(var(--transcript-font-size) * 0.75); line-height: 1.4; }
-        .rotate-y-180 { transform: rotateY(180deg); }
-        .perspective-1000 { perspective: 1000px; }
-        .transform-style-3d { transform-style: preserve-3d; }
-        .backface-hidden { backface-visibility: hidden; }
-        .word-clickable { cursor: pointer; border-bottom: 1.5px dotted #94a3b8; transition: all 0.15s; display: inline-block; }
-        .word-clickable:hover { color: #e70011; border-bottom-color: #e70011; background-color: rgba(231, 0, 17, 0.08); border-radius: 2px; }
-        .search-highlight { background-color: #fef08a; color: #854d0e; font-weight: bold; padding: 0 2px; border-radius: 2px; }
-    </style>
-
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
-                    colors: {
-                        indoRed: { 500: '#E70011', 600: '#C8000F', 700: '#A0000C' }
-                    }
-                }
-            }
-        };
-
-        window.currentLoadedFile = null;
-        window.currentAudioBase64 = null;
-        window.transcriptBlocks = [];
-        window.vocabList = [];
-        window.activeMobileTab = 'setup';
-        window.activeStudioSubView = 'transcript';
-        window.activeVocabMode = 'card';
-        window.activeVocabPosFilter = 'all';
-        window.activeVocabSearchQuery = '';
-        window.currentCardIndex = 0;
-        window.isCardFlipped = false;
-        window.isShuffled = false;
-        window.shuffledVocabList = [];
-        window.searchDebounceTimer = null;
-
-        window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
-
-        window.handleFileChange = function(event) {
-            var input = (event && event.target) ? event.target : document.getElementById('audioFileInput');
-            var files = input ? input.files : null;
-            if (!files || files.length === 0) return;
-
-            var file = files[0];
-            window.currentLoadedFile = file;
-
-            var loadedName = document.getElementById('loadedFileName');
-            if (loadedName) loadedName.textContent = file.name;
-
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                var dataUrl = e.target.result;
-                window.currentAudioBase64 = dataUrl.split(',')[1];
-
-                var audioPlayer = document.getElementById('audioPlayer');
-                if (audioPlayer) {
-                    audioPlayer.src = dataUrl;
-                    audioPlayer.load();
-                }
-
-                var playerCard = document.getElementById('playerCard');
-                if (playerCard) playerCard.classList.remove('opacity-60', 'pointer-events-none');
-
-                showToast('「' + file.name + '」を読み込みました！', 'info');
-            };
-            reader.readAsDataURL(file);
-        };
-
-        async function fetchGeminiApi(apiKey, payload) {
-            var modelName = 'gemini-3.6-flash';
-            if (!payload.generationConfig) payload.generationConfig = {};
-            payload.generationConfig.temperature = 0.1;
-
-            var response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent?key=' + apiKey, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            var data = await response.json();
-            if (!response.ok || data.error) {
-                throw new Error(data.error?.message || ('HTTP Error ' + response.status));
-            }
-            return data;
-        }
-
-        window.processAudioWithGemini = async function() {
-            if (!window.currentLoadedFile || !window.currentAudioBase64) {
-                showToast('先に「音源選択」から音声ファイルを選択してください。', 'error');
-                return;
-            }
-
-            var apiKey = getApiKey();
-            if (!apiKey) {
-                showToast('Gemini API Key が設定されていません。', 'error');
-                openModal('apiKeyModal');
-                return;
-            }
-
-            var btn = document.getElementById('startTranscribeBtn');
-            var btnText = document.getElementById('transcribeBtnText');
-            var progressContainer = document.getElementById('chunkProgressContainer');
-            var progressLabel = document.getElementById('chunkProgressLabel');
-            var progressPercent = document.getElementById('chunkProgressPercent');
-            var progressBar = document.getElementById('chunkProgressBar');
-
-            if (btn) btn.disabled = true;
-            if (progressContainer) progressContainer.classList.remove('hidden');
-
-            try {
-                if (btnText) btnText.textContent = "Pass 1: 解析中...";
-                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> <span>【Pass 1/2】音声認識・対訳・文法解剖...</span>';
-                if (progressBar) progressBar.style.width = '35%';
-                if (progressPercent) progressPercent.textContent = '35%';
-
-                var base64Data = window.currentAudioBase64;
-                var mimeType = window.currentLoadedFile.type || 'audio/mp3';
-
-                var transcribePrompt = `You are an Indonesian verbatim transcription specialist.
-Listen to the audio. Transcribe spoken Indonesian exactly.
-
-Return ONLY a valid JSON array matching this schema:
-[
-  {
-    "speaker": "Pembicara 1",
-    "indonesian": "exact spoken Indonesian",
-    "japanese": "Japanese translation",
-    "grammarExplanation": "【構文】...\n【語根と派生】...\n【ニュアンス】..."
-  }
-]`;
-
-                var transcribePayload = {
-                    contents: [{
-                        role: 'user',
-                        parts: [
-                            { text: transcribePrompt },
-                            { inlineData: { mimeType: mimeType, data: base64Data } }
-                        ]
-                    }],
-                    generationConfig: { responseMimeType: "application/json" }
-                };
-
-                var transcribeData = await fetchGeminiApi(apiKey, transcribePayload);
-                var transcriptRaw = transcribeData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                transcriptRaw = transcriptRaw.trim().replace(/^```json/g, '').replace(/^```/g, '').replace(/```$/g, '').trim();
-                var parsedTranscript = JSON.parse(transcriptRaw);
-                var rawBlocks = Array.isArray(parsedTranscript) ? parsedTranscript : (parsedTranscript.transcript || []);
-
-                if (!rawBlocks || rawBlocks.length === 0) {
-                    throw new Error('音声からテキストが読み取れませんでした');
-                }
-
-                window.transcriptBlocks = rawBlocks.map(function(item, index) {
-                    return {
-                        id: 'block-' + Date.now() + '-' + index,
-                        blockIndex: index,
-                        speaker: item.speaker || 'Pembicara 1',
-                        indonesian: item.indonesian || '',
-                        japanese: item.japanese || '',
-                        grammarExplanation: item.grammarExplanation || '構造解説なし'
-                    };
-                });
-
-                if (btnText) btnText.textContent = "Pass 2: 単語帳生成中...";
-                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-book-open text-emerald-500"></i> <span>【Pass 2/2】品詞分解・単語帳生成...</span>';
-                if (progressBar) progressBar.style.width = '75%';
-                if (progressPercent) progressPercent.textContent = '75%';
-
-                await extractAllVocabWithPosPass2(apiKey);
-
-                if (progressBar) progressBar.style.width = '100%';
-                if (progressPercent) progressPercent.textContent = '100%';
-
-                renderTranscriptContainer();
-                renderGrammarContainer();
-                renderVocabContainer();
-                
-                saveCurrentToHistory(window.currentLoadedFile.name, true);
-
-                showToast('解析が完了しました！', 'info');
-                if (window.innerWidth < 768) {
-                    switchMobileTab('transcript');
-                }
-
-            } catch (err) {
-                console.error('Gemini API Process Error:', err);
-                showToast('エラー: ' + (err.message || '解析処理に失敗しました'), 'error');
-            } finally {
-                if (btn) btn.disabled = false;
-                if (btnText) btnText.textContent = "高精度解析を開始";
-                setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
-            }
-        };
-
-        async function extractAllVocabWithPosPass2(apiKey) {
-            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
-
-            var fullText = window.transcriptBlocks.map(function(b) { return b.indonesian; }).join(' ');
-            var vocabPrompt = `Extract EVERY unique word from the text and categorize POS (noun, verb, adjective, adverb, other).
-Return ONLY a valid JSON array:
-[
-  {
-    "indonesian": "word",
-    "baseForm": "root word",
-    "japanese": "Japanese meaning",
-    "pos": "noun" | "verb" | "adjective" | "adverb" | "other",
-    "context": "Short context phrase"
-  }
-]
-Text: ${fullText}`;
-
-            try {
-                var vocabPayload = {
-                    contents: [{ parts: [{ text: vocabPrompt }] }],
-                    generationConfig: { responseMimeType: "application/json" }
-                };
-
-                var data = await fetchGeminiApi(apiKey, vocabPayload);
-                var text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
                 text = text.trim().replace(/^```json/g, '').replace(/^```/g, '').replace(/```$/g, '').trim();
                 var parsed = JSON.parse(text);
 
@@ -478,12 +241,10 @@ Text: ${fullText}`;
                         };
                     });
                 }
-            } catch (e) {
-                console.warn('Vocab Parsing Failed:', e);
-            }
+            } catch (e) { console.warn('Vocab Parsing Failed:', e); }
         }
 
-        // --- フォントサイズ調整機能 ---
+        // --- フォントサイズ調整 ---
         function adjustFontSize(delta) {
             var slider = document.getElementById('fontSizeSlider');
             if (slider) {
@@ -493,14 +254,13 @@ Text: ${fullText}`;
                 setFontSize(val);
             }
         }
-
         function setFontSize(val) {
             document.documentElement.style.setProperty('--transcript-font-size', val + 'px');
             var ptDisplay = document.getElementById('fontSizeDisplayPt');
             if (ptDisplay) ptDisplay.textContent = val + ' pt';
         }
 
-        // --- 音声再生エンジン (Web Speech API 安定化処理) ---
+        // --- 音声再生エンジン (Web Speech API 全端末完全互換対応) ---
         function speakIndonesian(text) {
             if (!('speechSynthesis' in window)) {
                 showToast('音声読み上げ非対応ブラウザです', 'error');
@@ -522,9 +282,7 @@ Text: ${fullText}`;
         function stopAllSpeech() {
             if (!('speechSynthesis' in window)) return;
             window.speechSynthesis.cancel();
-            if (window.activeSpeechState.blockId) {
-                updateBlockToggleUI(window.activeSpeechState.blockId, 'stopped');
-            }
+            if (window.activeSpeechState.blockId) updateBlockToggleUI(window.activeSpeechState.blockId, 'stopped');
             window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
         }
 
@@ -540,7 +298,6 @@ Text: ${fullText}`;
 
         function toggleSpeechBlock(blockId) {
             if (!('speechSynthesis' in window)) return;
-
             if (window.activeSpeechState.blockId === blockId) {
                 if (window.speechSynthesis.paused || window.activeSpeechState.isPaused) {
                     window.speechSynthesis.resume();
@@ -601,9 +358,8 @@ Text: ${fullText}`;
         function updateBlockToggleUI(blockId, state) {
             var btn = document.getElementById('btn-toggle-' + blockId);
             if (!btn) return;
-
             if (state === 'playing') {
-                btn.innerHTML = '<i class="fa-solid fa-pause text-red-500"></i><span>停止</span>';
+                btn.innerHTML = '<i class="fa-solid fa-pause text-red-500"></i><span>一時停止</span>';
             } else if (state === 'paused') {
                 btn.innerHTML = '<i class="fa-solid fa-play text-amber-500"></i><span>再開</span>';
             } else {
@@ -620,66 +376,51 @@ Text: ${fullText}`;
             }).join(' ');
         }
 
+        // --- 本文・文法表示 ---
         function renderTranscriptContainer() {
             var emptyState = document.getElementById('emptyState');
             var container = document.getElementById('transcriptContainer');
-
             if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
                 emptyState?.classList.remove('hidden');
                 if (container) container.innerHTML = '';
                 return;
             }
-
             emptyState?.classList.add('hidden');
             var html = '';
-
             window.transcriptBlocks.forEach(function(block) {
                 var clickableIndo = renderClickableIndonesianWords(block.indonesian, 't-' + block.id);
-                
-                html += '<div id="card-t-' + block.id + '" class="bg-white dark:bg-slate-800 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">' +
-                    '<div class="flex items-center justify-between text-xs text-slate-500 pb-1.5 border-b border-slate-100 dark:border-slate-700/60">' +
-                        '<span class="font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/60 px-2 py-0.5 rounded-full text-[10px]">' +
-                            '<i class="fa-solid fa-user text-[9px] mr-1"></i>' + escapeHtml(block.speaker) +
-                        '</span>' +
-                        '<div class="flex items-center gap-2">' +
-                            '<button id="btn-toggle-t-' + block.id + '" onclick="toggleSpeechBlock(\'t-' + block.id + '\')" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-red-50 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1">' +
-                                '<i class="fa-solid fa-play text-[10px]"></i><span>再生</span>' +
-                            '</button>' +
-                        '</div>' +
+                html += '<div id="card-t-' + block.id + '" class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">' +
+                    '<div class="flex items-center justify-between text-xs text-slate-500 pb-1 border-b border-slate-100 dark:border-slate-700">' +
+                        '<span class="font-bold text-red-600 bg-red-50 dark:bg-red-950/60 px-2 py-0.5 rounded-full text-[10px]">' + escapeHtml(block.speaker) + '</span>' +
+                        '<button id="btn-toggle-t-' + block.id + '" onclick="toggleSpeechBlock(\'t-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1">' +
+                            '<i class="fa-solid fa-play text-[10px]"></i><span>再生</span>' +
+                        '</button>' +
                     '</div>' +
-                    '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100 leading-relaxed">' + clickableIndo + '</p>' +
+                    '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + clickableIndo + '</p>' +
                     '<div class="bg-amber-50/70 dark:bg-slate-900/60 p-2.5 rounded-lg border border-amber-200/50 dark:border-amber-900/30">' +
-                        '<p class="dynamic-text-ja font-semibold text-amber-950 dark:text-amber-200 flex items-start gap-1.5">' +
-                            '<span class="text-[10px] bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200 px-1.5 py-0.5 rounded font-bold shrink-0 mt-0.5">訳</span>' +
-                            '<span>' + escapeHtml(block.japanese) + '</span>' +
-                        '</p>' +
+                        '<p class="dynamic-text-ja font-semibold text-amber-950 dark:text-amber-200">' + escapeHtml(block.japanese) + '</p>' +
                     '</div>' +
                 '</div>';
             });
-
             if (container) container.innerHTML = html;
         }
 
         function renderGrammarContainer() {
             var emptyState = document.getElementById('grammarEmptyState');
             var container = document.getElementById('grammarContainer');
-
             if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
                 emptyState?.classList.remove('hidden');
                 if (container) container.innerHTML = '';
                 return;
             }
-
             emptyState?.classList.add('hidden');
             var html = '';
-
             window.transcriptBlocks.forEach(function(block, idx) {
                 var clickableIndo = renderClickableIndonesianWords(block.indonesian, 'g-' + block.id);
-
                 html += '<div id="card-g-' + block.id + '" class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">' +
                     '<div class="flex items-center justify-between text-xs pb-1 border-b border-slate-100 dark:border-slate-700">' +
-                        '<span class="font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-full text-[10px]">文節 #' + (idx + 1) + '</span>' +
-                        '<button id="btn-toggle-g-' + block.id + '" onclick="toggleSpeechBlock(\'g-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold transition flex items-center gap-1">' +
+                        '<span class="font-bold text-blue-600 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-full text-[10px]">文節 #' + (idx + 1) + '</span>' +
+                        '<button id="btn-toggle-g-' + block.id + '" onclick="toggleSpeechBlock(\'g-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-xs font-bold">' +
                             '<i class="fa-solid fa-play text-[9px]"></i><span>再生</span>' +
                         '</button>' +
                     '</div>' +
@@ -690,16 +431,34 @@ Text: ${fullText}`;
                     '</div>' +
                 '</div>';
             });
-
             if (container) container.innerHTML = html;
+        }
+
+        // --- 単語帳エンジン (品詞フィルター・検索・シャッフル・カード表示復元) ---
+        function getFilteredVocabList() {
+            var filtered = window.isShuffled ? [...window.shuffledVocabList] : (window.vocabList || []);
+            if (window.activeVocabPosFilter !== 'all') {
+                filtered = filtered.filter(function(v) { return v.pos === window.activeVocabPosFilter; });
+            }
+            var query = (window.activeVocabSearchQuery || '').trim().toLowerCase();
+            if (query !== '') {
+                filtered = filtered.filter(function(v) {
+                    return (v.indonesian || '').toLowerCase().includes(query) || (v.japanese || '').toLowerCase().includes(query) || (v.baseForm || '').toLowerCase().includes(query);
+                });
+            }
+            return filtered;
         }
 
         function renderVocabContainer() {
             var emptyState = document.getElementById('vocabEmptyState');
             var listContainer = document.getElementById('vocabListContainer');
             var cardContainer = document.getElementById('vocabCardContainer');
+            var vocabBadge = document.getElementById('vocabCountBadge');
 
-            if (!window.vocabList || window.vocabList.length === 0) {
+            var filtered = getFilteredVocabList();
+            if (vocabBadge) vocabBadge.textContent = (window.vocabList || []).length;
+
+            if (!filtered || filtered.length === 0) {
                 emptyState?.classList.remove('hidden');
                 if (listContainer) listContainer.innerHTML = '';
                 cardContainer?.classList.add('hidden');
@@ -713,10 +472,11 @@ Text: ${fullText}`;
                 listContainer?.classList.remove('hidden');
 
                 var html = '';
-                window.vocabList.forEach(function(v) {
+                filtered.forEach(function(v) {
                     html += '<div class="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between gap-2">' +
                         '<div class="space-y-0.5 flex-1 min-w-0">' +
                             '<div class="flex items-center gap-2">' +
+                                '<span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">' + getPosLabel(v.pos) + '</span>' +
                                 '<h4 class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100 truncate">' + escapeHtml(v.indonesian) + '</h4>' +
                                 '<button onclick="speakIndonesian(\'' + escapeHtml(v.indonesian) + '\')" class="text-slate-400 hover:text-emerald-500 p-1">' +
                                     '<i class="fa-solid fa-volume-high text-xs"></i>' +
@@ -724,6 +484,9 @@ Text: ${fullText}`;
                             '</div>' +
                             '<p class="dynamic-text-ja text-emerald-700 dark:text-emerald-400 font-bold">' + escapeHtml(v.japanese) + '</p>' +
                         '</div>' +
+                        '<button onclick="toggleVocabMastered(\'' + v.id + '\')" class="px-2 py-1 rounded ' + (v.mastered ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400') + ' text-[10px] font-bold shrink-0">' +
+                            (v.mastered ? '習得' : '未修') +
+                        '</button>' +
                     '</div>';
                 });
                 if (listContainer) listContainer.innerHTML = html;
@@ -735,32 +498,61 @@ Text: ${fullText}`;
             }
         }
 
+        function getPosLabel(pos) {
+            switch(pos) {
+                case 'noun': return '名詞'; case 'verb': return '動詞'; case 'adjective': return '形容詞'; case 'adverb': return '副詞'; default: return 'その他';
+            }
+        }
+        function setVocabMode(mode) { window.activeVocabMode = mode; renderVocabContainer(); }
+        function setVocabPosFilter(pos) { window.activeVocabPosFilter = pos; window.currentCardIndex = 0; renderVocabContainer(); }
+        function toggleShuffleCards() {
+            window.isShuffled = !window.isShuffled;
+            if (window.isShuffled) window.shuffledVocabList = [...window.vocabList].sort(function() { return Math.random() - 0.5; });
+            window.currentCardIndex = 0;
+            renderVocabContainer();
+        }
+        function toggleVocabMastered(id) {
+            var item = window.vocabList.find(function(v) { return v.id === id; });
+            if (item) { item.mastered = !item.mastered; renderVocabContainer(); }
+        }
         function updateFlashcardUI() {
-            if (!window.vocabList || window.vocabList.length === 0) return;
-            var item = window.vocabList[window.currentCardIndex];
+            var filtered = getFilteredVocabList();
+            if (!filtered || filtered.length === 0) return;
+            if (window.currentCardIndex >= filtered.length) window.currentCardIndex = 0;
+
+            var item = filtered[window.currentCardIndex];
             if (!item) return;
 
             var cardIndo = document.getElementById('cardIndoText');
             var cardJap = document.getElementById('cardJapText');
+            var cardContext = document.getElementById('cardContextFull');
+            var cardPosFront = document.getElementById('cardBadgeFront');
+            var progressLabel = document.getElementById('flashcardProgressLabel');
+
             if (cardIndo) cardIndo.textContent = item.indonesian || '';
             if (cardJap) cardJap.textContent = item.japanese || '';
-        }
+            if (cardContext) cardContext.textContent = item.context ? ('文脈: ' + item.context) : '';
+            if (cardPosFront) cardPosFront.textContent = getPosLabel(item.pos);
+            if (progressLabel) progressLabel.textContent = (window.currentCardIndex + 1) + ' / ' + filtered.length;
 
+            window.isCardFlipped = false;
+            document.getElementById('flashcardInner')?.classList.remove('rotate-y-180');
+        }
         function flipFlashcard() {
-            var inner = document.getElementById('flashcardInner');
             window.isCardFlipped = !window.isCardFlipped;
+            var inner = document.getElementById('flashcardInner');
             if (window.isCardFlipped) inner?.classList.add('rotate-y-180');
             else inner?.classList.remove('rotate-y-180');
         }
-
-        function nextFlashcard() {
-            if (!window.vocabList || window.vocabList.length === 0) return;
-            window.currentCardIndex = (window.currentCardIndex + 1) % window.vocabList.length;
-            window.isCardFlipped = false;
-            document.getElementById('flashcardInner')?.classList.remove('rotate-y-180');
+        function nextFlashcard(mastered) {
+            var filtered = getFilteredVocabList();
+            if (filtered.length === 0) return;
+            if (mastered && filtered[window.currentCardIndex]) filtered[window.currentCardIndex].mastered = true;
+            window.currentCardIndex = (window.currentCardIndex + 1) % filtered.length;
             updateFlashcardUI();
         }
 
+        // --- 履歴機能 (重複排除・手動保存・一括消去・JSON復元) ---
         function loadHistoryFromStorage() {
             try {
                 var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
@@ -777,22 +569,133 @@ Text: ${fullText}`;
             }
             var html = '';
             history.forEach(function(item) {
-                html += '<div onclick="loadHistoryItem(\'' + item.id + '\')" class="p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-red-50 cursor-pointer flex justify-between items-center text-xs">' +
-                    '<span class="font-bold truncate">' + escapeHtml(item.fileName) + '</span>' +
+                html += '<div onclick="loadHistoryItem(\'' + item.id + '\')" class="p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer flex justify-between items-center text-xs transition mb-1">' +
+                    '<div class="min-w-0 flex-1">' +
+                        '<p class="font-bold text-slate-800 dark:text-slate-100 truncate leading-tight">' + escapeHtml(item.fileName) + '</p>' +
+                        '<p class="text-[9px] text-slate-400 mt-0.5">' + escapeHtml(item.date) + '</p>' +
+                    '</div>' +
+                    '<button onclick="deleteHistoryItem(\'' + item.id + '\', event)" class="text-slate-400 hover:text-rose-500 p-1 shrink-0 ml-1" title="削除">' +
+                        '<i class="fa-solid fa-trash-can text-xs"></i>' +
+                    '</button>' +
                 '</div>';
             });
             container.innerHTML = html;
         }
 
-        function saveCurrentToHistory(fileName) {
-            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
+        function saveCurrentToHistory(fileName, showToastNotification) {
+            if (showToastNotification === undefined) showToastNotification = true;
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
+                if (showToastNotification) showToast('保存するデータがありません', 'error');
+                return;
+            }
+
             try {
                 var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
-                history.unshift({ id: 'hist-' + Date.now(), fileName: fileName || '音源解析', blocks: window.transcriptBlocks, vocab: window.vocabList });
-                history = history.slice(0, 5);
-                localStorage.setItem('suarateks_history', JSON.stringify(history));
-                renderHistoryList(history);
-            } catch (e) {}
+                var targetName = fileName || (window.currentLoadedFile ? window.currentLoadedFile.name : '音源解析データ');
+
+                // 重複保存の排除（同じ名前の履歴があれば削除して最新化）
+                history = history.filter(function(h) { return h.fileName !== targetName; });
+
+                var item = {
+                    id: 'hist-' + Date.now(),
+                    fileName: targetName,
+                    date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                    blocks: window.transcriptBlocks,
+                    vocab: window.vocabList
+                };
+
+                history.unshift(item);
+
+                // 5件超え時の自動JSON出力＆リセット
+                if (history.length >= 5) {
+                    exportHistoryDataToFile(history, 'suarateks_5items_backup_' + new Date().toISOString().slice(0,10).replace(/-/g, '') + '.json');
+                    history = [];
+                    localStorage.removeItem('suarateks_history');
+                    renderHistoryList([]);
+                    if (showToastNotification) showToast('履歴が5件に達したためJSON出力しリセットしました', 'info');
+                } else {
+                    localStorage.setItem('suarateks_history', JSON.stringify(history));
+                    renderHistoryList(history);
+                    if (showToastNotification) showToast('履歴に保存しました (' + history.length + '/5件)', 'info');
+                }
+            } catch (e) { console.warn('LocalStorage Save Error:', e); }
+        }
+
+        function manualSaveHistory() {
+            var fileName = window.currentLoadedFile ? window.currentLoadedFile.name : '手動保存データ';
+            saveCurrentToHistory(fileName, true);
+        }
+
+        function clearHistory() {
+            if (confirm('すべての解析履歴を消去しますか？')) {
+                localStorage.removeItem('suarateks_history');
+                renderHistoryList([]);
+                showToast('履歴を全消去しました', 'info');
+            }
+        }
+
+        function loadHistoryItem(id) {
+            var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
+            var found = history.find(function(h) { return h.id === id; });
+            if (found) {
+                window.transcriptBlocks = found.blocks || [];
+                window.vocabList = found.vocab || [];
+                renderTranscriptContainer();
+                renderGrammarContainer();
+                renderVocabContainer();
+                var loadedName = document.getElementById('loadedFileName');
+                if (loadedName) loadedName.textContent = found.fileName;
+                showToast('「' + found.fileName + '」を復元読み込みしました', 'info');
+                if (window.innerWidth < 768) switchMobileTab('transcript');
+            }
+        }
+
+        function deleteHistoryItem(id, event) {
+            event.stopPropagation();
+            var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
+            history = history.filter(function(h) { return h.id !== id; });
+            localStorage.setItem('suarateks_history', JSON.stringify(history));
+            renderHistoryList(history);
+            showToast('削除しました', 'info');
+        }
+
+        function exportHistoryDataToFile(dataArr, customFilename) {
+            var dataStr = JSON.stringify(dataArr, null, 2);
+            var blob = new Blob([dataStr], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = customFilename || ('suarateks_backup_' + new Date().toISOString().slice(0,10).replace(/-/g, '') + '.json');
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importHistoryBackup(event) {
+            var file = event.target.files[0];
+            if (!file) return;
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    var importedData = JSON.parse(e.target.result);
+                    var targetHistory = Array.isArray(importedData) ? importedData : (importedData.history || [importedData]);
+
+                    if (!Array.isArray(targetHistory) || targetHistory.length === 0 || !targetHistory[0].blocks) {
+                        throw new Error('正しいバックアップJSONファイルではありません');
+                    }
+
+                    targetHistory = targetHistory.slice(0, 5);
+                    localStorage.setItem('suarateks_history', JSON.stringify(targetHistory));
+                    renderHistoryList(targetHistory);
+                    showToast(targetHistory.length + '件のデータを復元しました！', 'info');
+
+                    if (targetHistory[0]) loadHistoryItem(targetHistory[0].id);
+
+                } catch (err) {
+                    showToast('復元失敗: ' + err.message, 'error');
+                } finally { event.target.value = ''; }
+            };
+            reader.readAsText(file);
         }
 
         function switchMobileTab(tab) {
@@ -847,18 +750,40 @@ Text: ${fullText}`;
             if (val) localStorage.setItem('suarateks_gemini_key', val);
             closeModal('apiKeyModal');
         }
-        function showToast(msg) { alert(msg); }
-        function escapeHtml(str) { return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+        function showToast(message, type) {
+            if (type === undefined) type = 'info';
+            var container = document.getElementById('toastContainer');
+            if (!container) return;
+            var toast = document.createElement('div');
+            var bgColor = type === 'error' ? 'bg-rose-600' : 'bg-slate-800';
+            var icon = type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check';
+
+            toast.className = bgColor + ' text-white px-3 py-2 rounded-xl shadow-xl text-xs font-bold flex items-center gap-2 transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto border border-white/10';
+            toast.innerHTML = '<i class="fa-solid ' + icon + ' text-amber-400 text-sm"></i> <span>' + escapeHtml(message) + '</span>';
+
+            container.appendChild(toast);
+            setTimeout(function() { toast.classList.remove('translate-y-2', 'opacity-0'); }, 10);
+            setTimeout(function() {
+                toast.classList.add('opacity-0', 'translate-y-[-8px]');
+                setTimeout(function() { toast.remove(); }, 300);
+            }, 3500);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
 
         document.addEventListener('DOMContentLoaded', function() {
             loadHistoryFromStorage();
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.getVoices();
-            }
+            if ('speechSynthesis' in window) window.speechSynthesis.getVoices();
         });
     </script>
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 h-[100dvh] flex flex-col font-sans overflow-hidden">
+
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
     <!-- ヘッダー -->
     <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center justify-between shrink-0">
@@ -866,7 +791,7 @@ Text: ${fullText}`;
         <button onclick="openModal('apiKeyModal')" class="px-2.5 py-1 bg-amber-100 text-amber-900 rounded-lg text-xs font-bold">API Key</button>
     </header>
 
-    <!-- モバイル切替バー -->
+    <!-- モバイル切替ナビ -->
     <div class="md:hidden bg-slate-200 dark:bg-slate-800 p-1 flex items-center gap-1 shrink-0 border-b border-slate-300 dark:border-slate-700 text-xs font-bold">
         <button onclick="switchMobileTab('setup')" class="flex-1 py-1.5 text-center bg-white dark:bg-slate-700 rounded shadow-sm">設定・音源</button>
         <button onclick="switchMobileTab('transcript')" class="flex-1 py-1.5 text-center">本文</button>
@@ -876,7 +801,7 @@ Text: ${fullText}`;
     <!-- メイン領域 -->
     <div class="flex-1 flex overflow-hidden p-2 sm:p-3 gap-3 max-w-7xl mx-auto w-full">
 
-        <!-- 左パネル：音源・履歴 -->
+        <!-- 左パネル：音源・履歴コントロール -->
         <div id="panelSetup" class="w-full md:w-72 flex flex-col gap-3 shrink-0 overflow-y-auto">
             <div id="playerCard" class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2.5">
                 <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200"><i class="fa-solid fa-file-audio text-red-600"></i> 音源選択</h3>
@@ -898,31 +823,50 @@ Text: ${fullText}`;
                 </div>
             </div>
 
-            <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[140px]">
-                <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 mb-2 pb-1 border-b"><i class="fa-solid fa-clock-rotate-left text-amber-500"></i> 解析履歴</h4>
+            <!-- 解析履歴パネル (任意保存・一括消去・復元コントロール復元) -->
+            <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[160px]">
+                <div class="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-700 mb-2">
+                    <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1">
+                        <i class="fa-solid fa-clock-rotate-left text-amber-500"></i> 解析履歴
+                    </h4>
+                    <div class="flex items-center gap-1">
+                        <button onclick="manualSaveHistory()" class="px-1.5 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded text-[10px] font-bold transition" title="現在の解析結果を保存">
+                            保存
+                        </button>
+                        <button onclick="clearHistory()" class="px-1.5 py-0.5 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded text-[10px] font-bold transition" title="履歴を全消去">
+                            消去
+                        </button>
+                    </div>
+                </div>
+
                 <div id="historyList" class="space-y-1 flex-1 overflow-y-auto"></div>
+
+                <!-- ファイル復元（JSONインポート）ボタン -->
+                <div class="pt-2 border-t border-slate-100 dark:border-slate-700 mt-1">
+                    <label class="w-full py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+                        <i class="fa-solid fa-file-import"></i> JSONバックアップから復元
+                        <input type="file" accept=".json" onchange="importHistoryBackup(event)" class="hidden">
+                    </label>
+                </div>
             </div>
         </div>
 
         <!-- 右パネル：本文・解説・単語帳 -->
         <div id="panelTranscript" class="hidden md:flex flex-1 flex-col bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             
-            <!-- サブヘッダー（コントロール＋文字サイズスライダー 20pt〜30pt） -->
+            <!-- サブヘッダー（文字サイズスライダー 20pt〜30pt） -->
             <div class="bg-white dark:bg-slate-800 px-3 py-2 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2 shrink-0">
                 <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg text-xs font-bold">
                     <button onclick="setStudioSubView('transcript')" class="px-2.5 py-1 rounded bg-white dark:bg-slate-700 shadow-sm">本文・対訳</button>
                     <button onclick="setStudioSubView('grammar')" class="px-2.5 py-1 rounded">文法解剖</button>
-                    <button onclick="setStudioSubView('vocab')" class="px-2.5 py-1 rounded">単語帳</button>
+                    <button onclick="setStudioSubView('vocab')" class="px-2.5 py-1 rounded">単語帳 (<span id="vocabCountBadge">0</span>)</button>
                 </div>
 
-                <!-- 文字大きさ変更 (20pt ~ 30pt) -->
                 <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <span class="text-[11px] font-extrabold text-slate-500 flex items-center gap-1">
-                        <i class="fa-solid fa-[#]"></i> 文字サイズ
-                    </span>
-                    <button onclick="adjustFontSize(-1)" class="w-5 h-5 flex items-center justify-center rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-200 shadow-xs text-xs">-</button>
+                    <span class="text-[11px] font-extrabold text-slate-500">文字サイズ</span>
+                    <button onclick="adjustFontSize(-1)" class="w-5 h-5 flex items-center justify-center rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-200 text-xs">-</button>
                     <input type="range" id="fontSizeSlider" min="20" max="30" value="20" oninput="setFontSize(this.value)" class="w-16 accent-red-600 cursor-pointer">
-                    <button onclick="adjustFontSize(1)" class="w-5 h-5 flex items-center justify-center rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-200 shadow-xs text-xs">+</button>
+                    <button onclick="adjustFontSize(1)" class="w-5 h-5 flex items-center justify-center rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-200 text-xs">+</button>
                     <span id="fontSizeDisplayPt" class="text-[11px] font-black text-red-600 w-9 text-right">20 pt</span>
                 </div>
             </div>
@@ -939,18 +883,50 @@ Text: ${fullText}`;
                 <div id="grammarContainer" class="space-y-3"></div>
             </div>
 
-            <!-- View 3: 単語帳 -->
+            <!-- View 3: 単語帳（品詞フィルター・検索・シャッフル・カード復元） -->
             <div id="vocabView" class="hidden flex-1 flex-col overflow-hidden p-3 space-y-3">
+                <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 shrink-0">
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="vocabSearchInput" oninput="window.activeVocabSearchQuery=this.value; renderVocabContainer();" placeholder="検索..." class="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold">
+                        <button onclick="setVocabMode('card')" class="px-2.5 py-1 text-xs font-bold rounded bg-emerald-100 text-emerald-800">カード</button>
+                        <button onclick="setVocabMode('list')" class="px-2.5 py-1 text-xs font-bold rounded bg-slate-100 text-slate-700">一覧</button>
+                    </div>
+                    <div class="flex items-center gap-1 flex-wrap text-[10px] font-bold">
+                        <button onclick="setVocabPosFilter('all')" class="px-2 py-0.5 rounded bg-slate-100">すべて</button>
+                        <button onclick="setVocabPosFilter('noun')" class="px-2 py-0.5 rounded bg-blue-100 text-blue-800">名詞</button>
+                        <button onclick="setVocabPosFilter('verb')" class="px-2 py-0.5 rounded bg-red-100 text-red-800">動詞</button>
+                        <button onclick="setVocabPosFilter('adjective')" class="px-2 py-0.5 rounded bg-amber-100 text-amber-800">形容詞</button>
+                        <button onclick="setVocabPosFilter('adverb')" class="px-2 py-0.5 rounded bg-purple-100 text-purple-800">副詞</button>
+                    </div>
+                </div>
+
                 <div id="vocabEmptyState" class="h-full flex items-center justify-center text-xs text-slate-400 font-bold">単語データがありません</div>
                 <div id="vocabListContainer" class="hidden flex-1 overflow-y-auto space-y-2"></div>
+                
                 <div id="vocabCardContainer" class="hidden flex-1 flex-col items-center justify-center p-2">
-                    <div onclick="flipFlashcard()" class="w-full max-w-sm h-48 perspective-1000 cursor-pointer">
-                        <div id="flashcardInner" class="relative w-full h-full duration-500 transform-style-3d shadow rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 flex flex-col items-center justify-center">
-                            <h2 id="cardIndoText" class="text-2xl font-black text-slate-800 dark:text-slate-100">---</h2>
-                            <h3 id="cardJapText" class="text-lg font-bold text-emerald-600 mt-2">---</h3>
+                    <div class="w-full max-w-sm flex justify-between text-xs font-bold text-slate-500 mb-2">
+                        <span id="flashcardProgressLabel">1 / 1</span>
+                        <button onclick="toggleShuffleCards()" class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px]"><i class="fa-solid fa-shuffle"></i> シャッフル</button>
+                    </div>
+                    <div onclick="flipFlashcard()" class="w-full max-w-sm h-52 perspective-1000 cursor-pointer">
+                        <div id="flashcardInner" class="relative w-full h-full duration-500 transform-style-3d shadow rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 flex flex-col justify-between">
+                            <span id="cardBadgeFront" class="self-start text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700">品詞</span>
+                            <div class="text-center space-y-1">
+                                <h2 id="cardIndoText" class="text-2xl font-black text-slate-800 dark:text-slate-100">---</h2>
+                                <h3 id="cardJapText" class="text-lg font-bold text-emerald-600 mt-2">---</h3>
+                                <p id="cardContextFull" class="text-xs text-slate-500 italic mt-1">---</p>
+                            </div>
+                            <div class="text-right">
+                                <button onclick="event.stopPropagation(); speakIndonesian(document.getElementById('cardIndoText').textContent)" class="p-2 text-slate-400 hover:text-emerald-500">
+                                    <i class="fa-solid fa-volume-high text-sm"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <button onclick="nextFlashcard()" class="mt-4 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg shadow">次の単語</button>
+                    <div class="flex gap-3 mt-4 w-full max-w-sm">
+                        <button onclick="nextFlashcard(false)" class="flex-1 py-2 bg-slate-200 text-slate-700 rounded-xl text-xs font-bold">要復習</button>
+                        <button onclick="nextFlashcard(true)" class="flex-1 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold">習得済み</button>
+                    </div>
                 </div>
             </div>
 
