@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SuaraTeks ID - 高精度長尺 Pro</title>
+    <title>SuaraTeks ID Pro</title>
 
     <!-- PWA Web App化設定 -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -626,7 +626,7 @@ Text: ${fullText}`;
             updateFlashcardUI();
         }
 
-        // --- 履歴機能・複数結合 (マージ) エンジン ---
+        // 履歴機能・選択結合エンジン
         function loadHistoryFromStorage() {
             try {
                 var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
@@ -685,12 +685,10 @@ Text: ${fullText}`;
             updateMergeButtonState();
         }
 
-        // 複数履歴の結合（マージ）処理
         function mergeSelectedHistories() {
             if (window.selectedHistoryIds.length < 2) return;
             var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
             
-            // 選択された履歴を選択順に取得
             var selectedItems = window.selectedHistoryIds.map(function(id) {
                 return history.find(function(h) { return h.id === id; });
             }).filter(Boolean);
@@ -705,7 +703,6 @@ Text: ${fullText}`;
             selectedItems.forEach(function(item) {
                 titleParts.push(item.fileName.replace(/\.[^/.]+$/, ""));
                 
-                // 本文・文法ブロックの統合＆リナンバー
                 if (Array.isArray(item.blocks)) {
                     item.blocks.forEach(function(b) {
                         mergedBlocks.push({
@@ -720,7 +717,6 @@ Text: ${fullText}`;
                     });
                 }
 
-                // 単語帳の重複排除統合
                 if (Array.isArray(item.vocab)) {
                     item.vocab.forEach(function(v) {
                         var key = (v.indonesian || '').trim().toLowerCase();
@@ -731,7 +727,7 @@ Text: ${fullText}`;
                 }
             });
 
-            var mergedTitle = '結合_' + titleParts.join('_').substring(0, 25) + '...';
+            var mergedTitle = '結合_' + titleParts.join('_').substring(0, 20) + '...';
             window.transcriptBlocks = mergedBlocks;
             window.vocabList = Array.from(mergedVocabMap.values());
 
@@ -739,7 +735,6 @@ Text: ${fullText}`;
             renderGrammarContainer();
             renderVocabContainer();
 
-            // 結合結果を1つの新履歴として保存
             saveCurrentToHistory(mergedTitle, false);
             window.selectedHistoryIds = [];
             showToast('選択した ' + selectedItems.length + ' 件のデータを1本に結合しました！', 'info');
@@ -1164,7 +1159,7 @@ Text: ${fullText}`;
 
     </div>
 
-    <!-- モーダル -->
+    <!-- モーダル (閉じタグ完全正常化) -->
     <div id="apiKeyModal" class="fixed inset-0 bg-slate-900/60 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white dark:bg-slate-800 rounded-xl p-4 max-w-sm w-full space-y-3 shadow-xl">
             <h3 class="font-bold text-sm">Gemini API Key 設定</h3>
