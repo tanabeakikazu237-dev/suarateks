@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SuaraTeks ID - 高精度長尺 Pro</title>
+
+    <!-- PWA Web App化設定（ホーム画面からアプリ起動可能に） -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SuaraTeks">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2991 text/2991148.png">
+
     <!-- Tailwind CSS & FontAwesome -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -24,8 +32,12 @@
         .word-clickable:hover { color: #e70011; border-bottom-color: #e70011; background-color: rgba(231, 0, 17, 0.08); border-radius: 2px; }
         .search-highlight { background-color: #fef08a; color: #854d0e; font-weight: bold; padding: 0 2px; border-radius: 2px; }
 
-        /* ドラッグ＆ドロップゾーンのスタイリング */
         .dropzone-active { border-color: #e70011 !important; background-color: rgba(231, 0, 17, 0.05) !important; }
+        
+        /* タブの文字折り返し絶対防止 */
+        .no-wrap-tab { whitespace: nowrap !important; word-break: keep-all !important; flex-shrink: 0 !important; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 
     <script>
@@ -55,20 +67,15 @@
 
         window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
 
-        // ファイル選択・ドラッグ＆ドロップ処理
         window.handleFileChange = function(event) {
             var input = (event && event.target) ? event.target : document.getElementById('audioFileInput');
             var files = input ? input.files : null;
             if (!files || files.length === 0) return;
-
-            var file = files[0];
-            processSelectedFile(file);
+            processSelectedFile(files[0]);
         };
 
         function processSelectedFile(file) {
             window.currentLoadedFile = file;
-
-            // UIの変更（選択済み状態への表示更新）
             var dropzoneDefault = document.getElementById('dropzoneDefault');
             var dropzoneSelected = document.getElementById('dropzoneSelected');
             var selectedFileName = document.getElementById('selectedFileName');
@@ -97,27 +104,15 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
         }
 
-        // ドラッグ＆ドロップイベントの制御
         function initDropzoneEvents() {
             var label = document.getElementById('fileDropLabel');
             if (!label) return;
-
             ['dragenter', 'dragover'].forEach(function(eventName) {
-                label.addEventListener(eventName, function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    label.classList.add('dropzone-active');
-                }, false);
+                label.addEventListener(eventName, function(e) { e.preventDefault(); e.stopPropagation(); label.classList.add('dropzone-active'); }, false);
             });
-
             ['dragleave', 'drop'].forEach(function(eventName) {
-                label.addEventListener(eventName, function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    label.classList.remove('dropzone-active');
-                }, false);
+                label.addEventListener(eventName, function(e) { e.preventDefault(); e.stopPropagation(); label.classList.remove('dropzone-active'); }, false);
             });
-
             label.addEventListener('drop', function(e) {
                 var dt = e.dataTransfer;
                 var files = dt.files;
@@ -294,7 +289,6 @@ Text: ${fullText}`;
             } catch (e) { console.warn('Vocab Parsing Failed:', e); }
         }
 
-        // フォントサイズ調整
         function adjustFontSize(delta) {
             var slider = document.getElementById('fontSizeSlider');
             if (slider) {
@@ -310,7 +304,6 @@ Text: ${fullText}`;
             if (ptDisplay) ptDisplay.textContent = val + ' pt';
         }
 
-        // 音声再生エンジン
         function speakIndonesian(text) {
             if (!('speechSynthesis' in window)) return;
             window.speechSynthesis.cancel();
@@ -635,7 +628,6 @@ Text: ${fullText}`;
             updateFlashcardUI();
         }
 
-        // 履歴機能
         function loadHistoryFromStorage() {
             try {
                 var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
@@ -825,20 +817,20 @@ Text: ${fullText}`;
             viewVocab?.classList.remove('flex');
 
             [btnTranscript, btnGrammar, btnVocab].forEach(function(btn) {
-                if (btn) btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1.5";
+                if (btn) btn.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0";
             });
 
             if (subView === 'transcript') {
                 viewTranscript?.classList.remove('hidden');
-                if (btnTranscript) btnTranscript.className = "px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1.5";
+                if (btnTranscript) btnTranscript.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
             } else if (subView === 'grammar') {
                 viewGrammar?.classList.remove('hidden');
-                if (btnGrammar) btnGrammar.className = "px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1.5";
+                if (btnGrammar) btnGrammar.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
                 renderGrammarContainer();
             } else if (subView === 'vocab') {
                 viewVocab?.classList.remove('hidden');
                 viewVocab?.classList.add('flex');
-                if (btnVocab) btnVocab.className = "px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1.5";
+                if (btnVocab) btnVocab.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
                 renderVocabContainer();
             }
         }
@@ -910,13 +902,10 @@ Text: ${fullText}`;
                     <i class="fa-solid fa-file-audio text-red-600"></i> 音源選択
                 </h3>
                 
-                <!-- おしゃれなドラッグ＆ドロップファイル選択UI -->
                 <label id="fileDropLabel" for="audioFileInput" class="relative group cursor-pointer block">
                     <input type="file" id="audioFileInput" accept="audio/*" onchange="window.handleFileChange(event)" class="hidden">
                     
                     <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-red-500 dark:hover:border-red-500 rounded-xl p-3.5 text-center bg-slate-50 dark:bg-slate-900 transition-all duration-200 group-hover:bg-red-50/30">
-                        
-                        <!-- 初期状態 UI -->
                         <div id="dropzoneDefault" class="space-y-1.5">
                             <div class="w-9 h-9 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 flex items-center justify-center text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform">
                                 <i class="fa-solid fa-cloud-arrow-up text-base"></i>
@@ -925,7 +914,6 @@ Text: ${fullText}`;
                             <p class="text-[10px] text-slate-400 leading-tight">ドラッグ＆ドロップ、または<br>タップしてファイル指定</p>
                         </div>
 
-                        <!-- 選択完了時 UI -->
                         <div id="dropzoneSelected" class="hidden space-y-1 text-left">
                             <div class="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
                                 <i class="fa-solid fa-circle-check text-xs"></i>
@@ -934,7 +922,6 @@ Text: ${fullText}`;
                             <p id="selectedFileName" class="text-xs font-bold text-slate-800 dark:text-slate-100 truncate"></p>
                             <p id="selectedFileSize" class="text-[9px] text-slate-400 font-mono"></p>
                         </div>
-
                     </div>
                 </label>
 
@@ -955,19 +942,14 @@ Text: ${fullText}`;
                 </div>
             </div>
 
-            <!-- 解析履歴パネル -->
             <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[160px]">
                 <div class="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-700 mb-2">
                     <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1">
                         <i class="fa-solid fa-clock-rotate-left text-amber-500"></i> 解析履歴
                     </h4>
                     <div class="flex items-center gap-1">
-                        <button onclick="manualSaveHistory()" class="px-1.5 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded text-[10px] font-bold transition" title="現在の解析結果を保存">
-                            保存
-                        </button>
-                        <button onclick="clearHistory()" class="px-1.5 py-0.5 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded text-[10px] font-bold transition" title="履歴を全消去">
-                            消去
-                        </button>
+                        <button onclick="manualSaveHistory()" class="px-1.5 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded text-[10px] font-bold transition">保存</button>
+                        <button onclick="clearHistory()" class="px-1.5 py-0.5 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded text-[10px] font-bold transition">消去</button>
                     </div>
                 </div>
 
@@ -985,26 +967,26 @@ Text: ${fullText}`;
         <!-- 右パネル：メインビュー -->
         <div id="panelTranscript" class="hidden md:flex flex-1 flex-col bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             
-            <!-- サブヘッダー -->
-            <div class="bg-white dark:bg-slate-800 px-3 py-2 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2 shrink-0">
-                <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl">
-                    <button id="navTabTranscript" onclick="setStudioSubView('transcript')" class="px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-align-left"></i> 本文・対訳
+            <!-- サブヘッダー (スマホ折り返し絶対防止＆横スクロール化) -->
+            <div class="bg-white dark:bg-slate-800 px-2 sm:px-3 py-2 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 shrink-0 overflow-x-auto hide-scrollbar">
+                <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl shrink-0 overflow-x-auto hide-scrollbar max-w-full">
+                    <button id="navTabTranscript" onclick="setStudioSubView('transcript')" class="no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0">
+                        <i class="fa-solid fa-align-left text-[11px]"></i> 本文
                     </button>
-                    <button id="navTabGrammar" onclick="setStudioSubView('grammar')" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-diagram-project"></i> 文法解剖
+                    <button id="navTabGrammar" onclick="setStudioSubView('grammar')" class="no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
+                        <i class="fa-solid fa-diagram-project text-[11px]"></i> 文法解剖
                     </button>
-                    <button id="navTabVocab" onclick="setStudioSubView('vocab')" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-book-open"></i> 単語帳 (<span id="vocabCountBadge">0</span>)
+                    <button id="navTabVocab" onclick="setStudioSubView('vocab')" class="no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
+                        <i class="fa-solid fa-book-open text-[11px]"></i> 単語帳 (<span id="vocabCountBadge">0</span>)
                     </button>
                 </div>
 
-                <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <span class="text-[11px] font-extrabold text-slate-500">文字サイズ</span>
-                    <button onclick="adjustFontSize(-1)" class="w-5 h-5 flex items-center justify-center rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-200 text-xs">-</button>
-                    <input type="range" id="fontSizeSlider" min="20" max="30" value="20" oninput="setFontSize(this.value)" class="w-16 accent-red-600 cursor-pointer">
-                    <button onclick="adjustFontSize(1)" class="w-5 h-5 flex items-center justify-center rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-200 text-xs">+</button>
-                    <span id="fontSizeDisplayPt" class="text-[11px] font-black text-red-600 w-9 text-right">20 pt</span>
+                <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
+                    <span class="text-[10px] font-extrabold text-slate-500 shrink-0">文字</span>
+                    <button onclick="adjustFontSize(-1)" class="w-4 h-4 flex items-center justify-center rounded bg-white dark:bg-slate-700 text-slate-700 font-bold hover:bg-slate-200 text-xs shrink-0">-</button>
+                    <input type="range" id="fontSizeSlider" min="20" max="30" value="20" oninput="setFontSize(this.value)" class="w-12 accent-red-600 cursor-pointer shrink-0">
+                    <button onclick="adjustFontSize(1)" class="w-4 h-4 flex items-center justify-center rounded bg-white dark:bg-slate-700 text-slate-700 font-bold hover:bg-slate-200 text-xs shrink-0">+</button>
+                    <span id="fontSizeDisplayPt" class="text-[10px] font-black text-red-600 w-7 text-right shrink-0">20pt</span>
                 </div>
             </div>
 
@@ -1024,7 +1006,7 @@ Text: ${fullText}`;
             <div id="vocabView" class="hidden flex-1 flex-col overflow-hidden p-3 space-y-3">
                 <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 shrink-0">
                     <div class="flex items-center gap-2">
-                        <input type="text" id="vocabSearchInput" oninput="window.activeVocabSearchQuery=this.value; renderVocabContainer();" placeholder="インドネシア語・日本語・品詞で曖昧検索..." class="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold">
+                        <input type="text" id="vocabSearchInput" oninput="window.activeVocabSearchQuery=this.value; renderVocabContainer();" placeholder="検索..." class="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold">
                         <button id="btnModeCard" onclick="setVocabMode('card')" class="px-3 py-1.5 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition">カード</button>
                         <button id="btnModeList" onclick="setVocabMode('list')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">一覧</button>
                     </div>
@@ -1048,7 +1030,6 @@ Text: ${fullText}`;
 
                     <div onclick="flipFlashcard()" class="w-full max-w-sm h-60 perspective-1000 cursor-pointer">
                         <div id="flashcardInner" class="relative w-full h-full transform-style-3d shadow-lg rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-                            <!-- 表面 -->
                             <div class="absolute inset-0 w-full h-full backface-hidden p-5 flex flex-col justify-between rounded-2xl bg-white dark:bg-slate-800">
                                 <span id="cardBadgeFront" class="self-start text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300">品詞</span>
                                 <div class="text-center space-y-2">
@@ -1062,7 +1043,6 @@ Text: ${fullText}`;
                                 </div>
                             </div>
 
-                            <!-- 裏面 -->
                             <div class="absolute inset-0 w-full h-full backface-hidden rotate-y-180 p-5 flex flex-col justify-between rounded-2xl bg-emerald-50/60 dark:bg-slate-900 border-2 border-emerald-500">
                                 <span id="cardPosBack" class="self-start text-[10px] font-bold text-emerald-800 dark:text-emerald-300">品詞詳細</span>
                                 <div class="text-center space-y-2">
