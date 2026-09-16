@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SuaraTeks ID - 高精度長尺 Pro</title>
+    <!-- Tailwind CSS & FontAwesome -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: {
+                        indoRed: { 500: '#E70011', 600: '#C8000F', 700: '#A0000C' }
+                    }
+                }
+            }
+        };
+
+        window.currentLoadedFile = null;
+        window.currentAudioBase64 = null;
+        window.transcriptBlocks = [];
+        window.vocabList = [];
+        window.activeMobileTab = 'setup';
+        window.activeStudioSubView = 'transcript';
+        window.activeVocabMode = 'card';
+        window.activeVocabPosFilter = 'all';
+        window.activeVocabSearchQuery = '';
+        window.currentCardIndex = 0;
+        window.isCardFlipped = false;
+        window.isShuffled = false;
+        window.shuffledVocabList = [];
+        window.searchDebounceTimer = null;
+
+        window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
+
+        window.handleFileChange = function(event) {
+            var input = (event && event.target) ? event.target : document.getElementById('audioFileInput');
+            var files = input ? input.files : null;
+            if (!files || files.length === 0) return;
+
+            var file = files[0];
+            window.currentLoadedFile = file;
+
+            var loadedName = document.getElementById('loadedFileName');
+            if (loadedName) loadedName.textContent = file.name;
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var dataUrl = e.target.result;
+                window.currentAudioBase64 = dataUrl.split(',')[1];
+
+                var audioPlayer = document.getElementById('audioPlayer');
+                if (audioPlayer) {
+                    audioPlayer.src = dataUrl;
+                    audioPlayer.load();
+                }
+
+                var playerCard = document.getElementById('playerCard');
+                if (playerCard) playerCard.classList.remove('opacity-60', 'pointer-events-none');
+
+                if (typeof showToast === 'function') {
+                    showToast('「' + file.name + '」を読み込みました！', 'info');
+                }
+            };
+            reader.readAsDataURL(file);
+        };
+
+        async function fetchGeminiApi(apiKey, payload) {
+            var modelName = 'gemini-3.6-flash';
+            if (!payload.generationConfig) payload.generationConfig = {};
+            payload.generationConfig.temperature = 0.1;
+
+            var response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent?key=' + apiKey, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            var data = await response.json();
+            if (!response.ok || data.error) {
+                throw new Error(data.error?.message || ('HTTP Error ' + response.status));
+            }
+            return data;
+        }
+
+        window.processAudioWithGemini = async function() {
+            if (!window.currentLoadedFile || !window.currentAudioBase64) {
+                showToast('先に「音源選択」から音声ファイルを選択してください。', 'error');
+                return;
+            }
+
+            var apiKey = getApiKey();
+            if (!apiKey) {
+                showToast('Gemini API Key が設定されていません。', 'error');
+                openModal('apiKeyModal');
+                return;
+            }
+
+            var btn = document.getElementById('startTranscribeBtn');
+            var btnText = document.getElementById('transcribeBtnText');
+            var progressContainer = document.getElementById('chunkProgressContainer');
+            var progressLabel = document.getElementById('chunkProgressLabel');
+            var progressPercent = document.getElementById('chunkProgressPercent');
+            var progressBar = document.getElementById('chunkProgressBar');
+
+            if (btn) btn.disabled = true;
+            if (progressContainer) progressContainer.classList.remove('hidden');
+
+            try {
+                if (btnText) btnText.textContent = "Pass 1: 高精度文字起こし＆文法解剖中...";
+                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> <span>【Pass 1/2】音声認識・対訳・文法解剖を実行中...</span>';
+                if (progressBar) progressBar.style.width = '35%';
+                if (progressPercent) progressPercent.textContent = '35%';
+
+                var base64Data = window.currentAudioBase64;
+                var mimeType = window.currentLoadedFile.type || 'audio/mp3';
+
+                var transcribePrompt = `You are a world-class Indonesian verbatim transcription specialist and linguist. Listen carefully to the entire audio file from absolute start to finish. Transcribe spoken Indonesian exactly as spoken with zero omissions. Return ONLY a valid JSON array matching this schema: [{"speaker": "Pembicara 1", "indonesian": "exact spoken Indonesian", "japanese": "Japanese translation", "grammarExplanation": "【構文】...\n【語根と派生】...\n【ニュアンス】..."}]`;
+
+                var transcribePayload = {
+                    contents: [{
+                        role: 'user',
+                        parts: [
+                            { text: transcribePrompt },
+                            { inlineData: { mimeType: mimeType, data: base64Data } }
+                        ]
+                    }],
+                    generationConfig: { responseMimeType: "application/json" }
+                };
+
+                var transcribeData = await fetchGeminiApi(apiKey, transcribePayload);
+                var transcriptRaw = transcribeData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                transcriptRaw = transcriptRaw.trim().replace(/^```json/g, '').replace(/^```/g, '').replace(/```$/g, '').trim();
+                var parsedTranscript = JSON.parse(transcriptRaw);
+                var rawBlocks = Array.isArray(parsedTranscript) ? parsedTranscript : (parsedTranscript.transcript || []);
+
+                if (!rawBlocks || rawBlocks.length === 0) throw new Error('音声からテキストが読み取れませんでした');
+
+                window.transcriptBlocks = rawBlocks.map(function(item, index) {
+                    return {
+                        id: 'block-' + Date.now() + '-' + index,
+                        blockIndex: index,
+                        speaker: item.speaker || 'Pembicara 1',
+                        indonesian: item.indonesian || '',
+                        japanese: item.japanese || '',
+                        grammarExplanation: item.grammarExplanation || '構造解説なし'
+                    };
+                });
+
+                if (btnText) btnText.textContent = "Pass 2: 全単語の網羅抽出・品詞分類中...";
+                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-book-open text-emerald-500"></i> <span>【Pass 2/2】全単語の品詞分解・単語帳生成中...</span>';
+                if (progressBar) progressBar.style.width = '75%';
+                if (progressPercent) progressPercent.textContent = '75%';
+
+                await extractAllVocabWithPosPass2(apiKey);
+
+                if (progressBar) progressBar.style.width = '100%';
+                if (progressPercent) progressPercent.textContent = '100%';
+
+                renderTranscriptContainer();
+                renderGrammarContainer();
+                renderVocabContainer();
+                saveCurrentToHistory(window.currentLoadedFile.name, true);
+
+                showToast('2Pass全自動精密解析が完了しました！', 'info');
+                if (window.innerWidth < 768) switchMobileTab('transcript');
+
+            } catch (err) {
+                console.error('Gemini API Process Error:', err);
+                showToast('エラー: ' + (err.message || '解析処理に失敗しました'), 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+                if (btnText) btnText.textContent = "高精度解析を開始";
+                setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
+            }
+        };
+
+        async function extractAllVocabWithPosPass2(apiKey) {
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
+            var fullText = window.transcriptBlocks.map(function(b) { return b.indonesian; }).join(' ');
+            var vocabPrompt = `Perform a comprehensive lexicographical analysis on the following Indonesian text. Extract EVERY unique word without skipping, and categorize each into its exact Part of Speech (POS: noun, verb, adjective, adverb, other). Return ONLY a valid JSON array: [{"indonesian": "word", "baseForm": "root word", "japanese": "meaning", "pos": "noun", "context": "phrase"}]. Text: ${fullText}`;
+
+            try {
+                var vocabPayload = {
+                    contents: [{ parts: [{ text: vocabPrompt }] }],
+                    generationConfig: { responseMimeType: "application/json" }
+                };
+                var data = await fetchGeminiApi(apiKey, vocabPayload);
+                var text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                text = text.trim().replace(/^```json/g, '').replace(/^```/g, '').replace(/```$/g, '').trim();
+                var parsed = JSON.parse(text);
+
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    window.vocabList = parsed.map(function(v, i) {
+                        return {
+                            id: 'vocab-' + Date.now() + '-' + i,
+                            indonesian: v.indonesian,
+                            baseForm: v.baseForm || v.indonesian,
+                            japanese: v.japanese || '',
+                            pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(v.pos) ? v.pos : 'other',
+                            context: v.context || '',
+                            mastered: false
+                        };
+                    });
+                } else {
+                    window.vocabList = [];
+                }
+            } catch (e) {
+                window.vocabList = [];
+            }
+        }
+
+        function renderTranscriptContainer() {
+            var emptyState = document.getElementById('emptyState');
+            var container = document.getElementById('transcriptContainer');
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
+                emptyState?.classList.remove('hidden');
+                if (container) container.innerHTML = '';
+                return;
+            }
+            emptyState?.classList.add('hidden');
+            var html = '';
+            window.transcriptBlocks.forEach(function(block) {
+                html += '<div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-1.5">' +
+                    '<p class="font-extrabold text-slate-800 dark:text-slate-100">' + escapeHtml(block.indonesian) + '</p>' +
+                    '<p class="text-amber-900 dark:text-amber-200 font-semibold">' + escapeHtml(block.japanese) + '</p>' +
+                '</div>';
+            });
+            if (container) container.innerHTML = html;
+        }
+
+        function renderGrammarContainer() {}
+        function renderVocabContainer() {}
+
+        function openModal(id) { document.getElementById(id)?.classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
+        function getApiKey() { return localStorage.getItem('suarateks_gemini_key') || localStorage.getItem('gemini_api_key') || ''; }
+        function loadSavedApiKey() {
+            var key = getApiKey();
+            var input = document.getElementById('apiKeyInput');
+            if (key && input) input.value = key;
+        }
+        function saveApiKeyFromModal() {
+            var val = document.getElementById('apiKeyInput')?.value.trim() || '';
+            if (val) localStorage.setItem('suarateks_gemini_key', val);
+            closeModal('apiKeyModal');
+        }
+        function showToast(msg) { alert(msg); }
+        function escapeHtml(str) { return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+        document.addEventListener('DOMContentLoaded', loadSavedApiKey);
+    </script>
+</head>
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 h-[100dvh] flex flex-col font-sans">
+    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
+        <h1 class="font-extrabold text-sm">SuaraTeks<span class="text-red-600">ID</span> 高精度 Pro</h1>
+        <button onclick="openModal('apiKeyModal')" class="px-3 py-1 bg-amber-100 text-amber-800 rounded-lg text-xs font-bold">API Key</button>
+    </header>
+    <main class="flex-1 p-4 flex flex-col gap-4 max-w-2xl mx-auto w-full">
+        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+            <input type="file" id="audioFileInput" accept="audio/*" onchange="window.handleFileChange(event)" class="text-xs">
+            <p id="loadedFileName" class="text-xs font-bold text-slate-500">音源未選択</p>
+            <audio id="audioPlayer" controls class="w-full h-8"></audio>
+            <button onclick="window.processAudioWithGemini()" class="w-full py-2 bg-red-600 text-white rounded-lg text-xs font-bold">高精度解析を開始</button>
+        </div>
+        <div id="transcriptContainer" class="flex-1 overflow-y-auto space-y-2">
+            <p id="emptyState" class="text-xs text-slate-400 text-center py-8">音源を読み込んで解析を開始してください</p>
+        </div>
+    </main>
+    <div id="apiKeyModal" class="fixed inset-0 bg-slate-900/60 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 max-w-sm w-full space-y-3">
+            <h3 class="font-bold text-sm">Gemini API Key 設定</h3>
+            <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full px-3 py-2 rounded border text-xs dark:bg-slate-900 dark:border-slate-700">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('apiKeyModal')" class="px-3 py-1.5 text-xs">キャンセル</button>
+                <button onclick="saveApiKeyFromModal()" class="px-3 py-1.5 bg-red-600 text-white rounded text-xs font-bold">保存</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
