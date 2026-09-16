@@ -10,12 +10,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <style>
+        :root {
+            --transcript-font-size: 20px;
+        }
+        .dynamic-text-indo { font-size: var(--transcript-font-size); line-height: 1.4; }
+        .dynamic-text-ja { font-size: calc(var(--transcript-font-size) * 0.75); line-height: 1.4; }
         .rotate-y-180 { transform: rotateY(180deg); }
         .perspective-1000 { perspective: 1000px; }
         .transform-style-3d { transform-style: preserve-3d; }
         .backface-hidden { backface-visibility: hidden; }
-        .word-clickable { cursor: pointer; border-bottom: 1px dotted #94a3b8; transition: all 0.2s; }
-        .word-clickable:hover { color: #e70011; border-bottom-color: #e70011; background-color: rgba(231, 0, 17, 0.05); }
+        .word-clickable { cursor: pointer; border-bottom: 1.5px dotted #94a3b8; transition: all 0.15s; display: inline-block; }
+        .word-clickable:hover { color: #e70011; border-bottom-color: #e70011; background-color: rgba(231, 0, 17, 0.08); border-radius: 2px; }
         .search-highlight { background-color: #fef08a; color: #854d0e; font-weight: bold; padding: 0 2px; border-radius: 2px; }
     </style>
 
@@ -121,25 +126,16 @@
             if (progressContainer) progressContainer.classList.remove('hidden');
 
             try {
-                if (btnText) btnText.textContent = "Pass 1: 高精度文字起こし＆文法解剖中...";
-                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> <span>【Pass 1/2】音声認識・対訳・文法解剖を実行中...</span>';
+                if (btnText) btnText.textContent = "Pass 1: 解析中...";
+                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> <span>【Pass 1/2】音声認識・対訳・文法解剖...</span>';
                 if (progressBar) progressBar.style.width = '35%';
                 if (progressPercent) progressPercent.textContent = '35%';
 
                 var base64Data = window.currentAudioBase64;
                 var mimeType = window.currentLoadedFile.type || 'audio/mp3';
 
-                var transcribePrompt = `You are a world-class Indonesian verbatim transcription specialist and linguist.
-Listen carefully to the entire audio file from absolute start to finish. Transcribe spoken Indonesian exactly as spoken with zero omissions.
-
-For each phrase block, provide:
-1. "speaker": Speaker identification (Pembicara 1, Pembicara 2, etc.)
-2. "indonesian": Complete, verbatim spoken Indonesian text
-3. "japanese": Precise Japanese translation
-4. "grammarExplanation": Professional linguistic breakdown in Japanese:
-   - 【構文】 Main/subordinate clauses, prepositions, conjunctions.
-   - 【語根と派生】 Kata dasar and affix mechanics (me-, di-, ter-, -kan, -an).
-   - 【ニュアンス】 Spoken context and nuance.
+                var transcribePrompt = `You are an Indonesian verbatim transcription specialist.
+Listen to the audio. Transcribe spoken Indonesian exactly.
 
 Return ONLY a valid JSON array matching this schema:
 [
@@ -183,8 +179,8 @@ Return ONLY a valid JSON array matching this schema:
                     };
                 });
 
-                if (btnText) btnText.textContent = "Pass 2: 全単語の網羅抽出・品詞分類中...";
-                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-book-open text-emerald-500"></i> <span>【Pass 2/2】全単語の品詞分解・単語帳生成中...</span>';
+                if (btnText) btnText.textContent = "Pass 2: 単語帳生成中...";
+                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-book-open text-emerald-500"></i> <span>【Pass 2/2】品詞分解・単語帳生成...</span>';
                 if (progressBar) progressBar.style.width = '75%';
                 if (progressPercent) progressPercent.textContent = '75%';
 
@@ -199,7 +195,7 @@ Return ONLY a valid JSON array matching this schema:
                 
                 saveCurrentToHistory(window.currentLoadedFile.name, true);
 
-                showToast('2Pass全自動精密解析が完了しました！', 'info');
+                showToast('解析が完了しました！', 'info');
                 if (window.innerWidth < 768) {
                     switchMobileTab('transcript');
                 }
@@ -218,21 +214,7 @@ Return ONLY a valid JSON array matching this schema:
             if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
 
             var fullText = window.transcriptBlocks.map(function(b) { return b.indonesian; }).join(' ');
-            var vocabPrompt = `Perform a comprehensive lexicographical analysis on the following Indonesian text.
-Extract EVERY unique word without skipping, and categorize each into its exact Part of Speech (POS).
-
-Categories (pos):
-- "noun" (Kata Benda / 名詞)
-- "verb" (Kata Kerja / 動詞)
-- "adjective" (Kata Sifat / 形容詞)
-- "adverb" (Kata Keterangan / 副詞)
-- "other" (Prepositions, Conjunctions, Pronouns, Particles)
-
-Rules:
-1. Deduplicate words.
-2. Provide dictionary root word (kata dasar).
-3. Accurate Japanese context-aware translation.
-
+            var vocabPrompt = `Extract EVERY unique word from the text and categorize POS (noun, verb, adjective, adverb, other).
 Return ONLY a valid JSON array:
 [
   {
@@ -243,9 +225,7 @@ Return ONLY a valid JSON array:
     "context": "Short context phrase"
   }
 ]
-
-Text:
-${fullText}`;
+Text: ${fullText}`;
 
             try {
                 var vocabPayload = {
@@ -270,497 +250,43 @@ ${fullText}`;
                             mastered: false
                         };
                     });
-                } else {
-                    window.vocabList = fallbackSimpleVocabList();
                 }
             } catch (e) {
-                console.warn('Vocab Parsing Failed, using fallback:', e);
-                window.vocabList = fallbackSimpleVocabList();
+                console.warn('Vocab Parsing Failed:', e);
             }
         }
 
-        function fallbackSimpleVocabList() {
-            var words = new Set();
-            var list = [];
-            window.transcriptBlocks.forEach(function(b) {
-                var tokens = b.indonesian.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").split(/\s+/);
-                tokens.forEach(function(tok) {
-                    var clean = tok.toLowerCase().trim();
-                    if (clean.length > 2 && !words.has(clean)) {
-                        words.add(clean);
-                        list.push({
-                            id: 'v-fallback-' + list.length,
-                            indonesian: tok,
-                            baseForm: tok,
-                            japanese: '（要確認）',
-                            pos: 'other',
-                            context: b.indonesian,
-                            mastered: false
-                        });
-                    }
-                });
-            });
-            return list;
-        }
-
-        function renderClickableIndonesianWords(text, blockId) {
-            if (!text) return '';
-            var words = text.split(/\s+/);
-            return words.map(function(w, idx) {
-                var cleanWord = escapeHtml(w);
-                return '<span class="word-clickable" onclick="speakFromWord(\'' + blockId + '\', ' + idx + ')" title="ここから再生">' + cleanWord + '</span>';
-            }).join(' ');
-        }
-
-        function renderTranscriptContainer() {
-            var emptyState = document.getElementById('emptyState');
-            var container = document.getElementById('transcriptContainer');
-
-            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
-                emptyState?.classList.remove('hidden');
-                if (container) container.innerHTML = '';
-                var b = document.getElementById('statBlocks');
-                var c = document.getElementById('statChars');
-                if (b) b.textContent = '0';
-                if (c) c.textContent = '0';
-                return;
-            }
-
-            emptyState?.classList.add('hidden');
-            var html = '';
-            var totalChars = 0;
-
-            window.transcriptBlocks.forEach(function(block) {
-                totalChars += (block.indonesian ? block.indonesian.length : 0);
-                var clickableIndo = renderClickableIndonesianWords(block.indonesian, 't-' + block.id);
-                
-                html += '<div id="card-t-' + block.id + '" class="bg-white dark:bg-slate-800 p-3 sm:p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-1.5">' +
-                    '<div class="flex items-center justify-between text-xs text-slate-500 pb-1 border-b border-slate-100 dark:border-slate-700/60">' +
-                        '<span class="font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/60 px-2 py-0.2 rounded-full text-[9px]">' +
-                            '<i class="fa-solid fa-user text-[8px] mr-1"></i>' + escapeHtml(block.speaker) +
-                        '</span>' +
-                        '<div class="flex items-center gap-1.5">' +
-                            '<button id="btn-toggle-t-' + block.id + '" onclick="toggleSpeechBlock(\'t-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-red-500 text-[10px] font-bold transition flex items-center gap-1" title="再生/一時停止">' +
-                                '<i class="fa-solid fa-play"></i><span>再生</span>' +
-                            '</button>' +
-                            '<button onclick="copyChunkText(\'' + escapeHtml(block.indonesian) + '\')" class="p-1 hover:text-red-500 text-slate-400 transition" title="テキストをコピー">' +
-                                '<i class="fa-solid fa-copy text-xs"></i>' +
-                            '</button>' +
-                        '</div>' +
-                    '</div>' +
-                    '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + clickableIndo + '</p>' +
-                    '<div class="bg-amber-50/70 dark:bg-slate-900/60 p-2 rounded-lg border border-amber-200/50 dark:border-amber-900/30">' +
-                        '<p class="dynamic-text-ja font-semibold text-amber-900 dark:text-amber-200 flex items-start gap-1">' +
-                            '<span class="text-[9px] bg-amber-200 dark:bg-amber-900/80 text-amber-800 dark:text-amber-300 px-1 rounded font-bold shrink-0 mt-0.5">訳</span>' +
-                            '<span>' + escapeHtml(block.japanese) + '</span>' +
-                        '</p>' +
-                    '</div>' +
-                '</div>';
-            });
-
-            if (container) container.innerHTML = html;
-            var b = document.getElementById('statBlocks');
-            var c = document.getElementById('statChars');
-            if (b) b.textContent = window.transcriptBlocks.length;
-            if (c) c.textContent = totalChars;
-        }
-
-        function renderGrammarContainer() {
-            var emptyState = document.getElementById('grammarEmptyState');
-            var container = document.getElementById('grammarContainer');
-
-            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
-                emptyState?.classList.remove('hidden');
-                if (container) container.innerHTML = '';
-                return;
-            }
-
-            emptyState?.classList.add('hidden');
-            var html = '';
-
-            window.transcriptBlocks.forEach(function(block, idx) {
-                var clickableIndo = renderClickableIndonesianWords(block.indonesian, 'g-' + block.id);
-
-                html += '<div id="card-g-' + block.id + '" class="bg-white dark:bg-slate-800 p-3 sm:p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">' +
-                    '<div class="flex items-center justify-between text-xs pb-1 border-b border-slate-100 dark:border-slate-700">' +
-                        '<span class="font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.2 rounded-full text-[9px]">文節 #' + (idx + 1) + '</span>' +
-                        '<div class="flex items-center gap-1.5">' +
-                            '<span class="text-slate-400 text-[10px] font-bold mr-1">' + escapeHtml(block.speaker) + '</span>' +
-                            '<button id="btn-toggle-g-' + block.id + '" onclick="toggleSpeechBlock(\'g-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-blue-500 text-[10px] font-bold transition flex items-center gap-1" title="再生/一時停止">' +
-                                '<i class="fa-solid fa-play"></i><span>再生</span>' +
-                            '</button>' +
-                        '</div>' +
-                    '</div>' +
-                    '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-900 p-2 rounded border border-slate-200 dark:border-slate-700">' + clickableIndo + '</p>' +
-                    '<div class="bg-blue-50/60 dark:bg-blue-950/30 p-2.5 rounded-lg border border-blue-200/60 dark:border-blue-900/40 text-xs leading-relaxed text-blue-950 dark:text-blue-200 space-y-1">' +
-                        '<h5 class="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1 text-[10px] uppercase tracking-wider"><i class="fa-solid fa-diagram-project"></i> 精密構文・文法解説</h5>' +
-                        '<div class="dynamic-text-ja whitespace-pre-line font-medium pt-0.5">' + escapeHtml(block.grammarExplanation) + '</div>' +
-                    '</div>' +
-                '</div>';
-            });
-
-            if (container) container.innerHTML = html;
-        }
-
-        function calculateSearchScore(item, query) {
-            var q = query.toLowerCase().trim();
-            if (!q) return 0;
-
-            var indo = (item.indonesian || '').toLowerCase();
-            var base = (item.baseForm || '').toLowerCase();
-            var jap = (item.japanese || '').toLowerCase();
-            var pos = getPosLabel(item.pos).toLowerCase();
-
-            var score = 0;
-            if (indo === q || base === q) score += 100;
-            if (jap === q) score += 90;
-            if (indo.startsWith(q) || base.startsWith(q)) score += 60;
-            if (jap.startsWith(q)) score += 50;
-            if (indo.includes(q) || base.includes(q)) score += 30;
-            if (jap.includes(q)) score += 20;
-            if (pos.includes(q)) score += 10;
-
-            return score;
-        }
-
-        function getFilteredVocabList() {
-            var filtered = window.isShuffled ? [...window.shuffledVocabList] : (window.vocabList || []);
-            
-            if (window.activeVocabPosFilter !== 'all') {
-                filtered = filtered.filter(function(v) { return v.pos === window.activeVocabPosFilter; });
-            }
-
-            var query = (window.activeVocabSearchQuery || '').trim();
-            if (query !== '') {
-                var scoredList = filtered.map(function(item) {
-                    return { item: item, score: calculateSearchScore(item, query) };
-                }).filter(function(x) { return x.score > 0; });
-
-                scoredList.sort(function(a, b) { return b.score - a.score; });
-                filtered = scoredList.map(function(x) { return x.item; });
-            }
-
-            return filtered;
-        }
-
-        function onVocabSearchInput(val) {
-            clearTimeout(window.searchDebounceTimer);
-            window.searchDebounceTimer = setTimeout(function() {
-                window.activeVocabSearchQuery = val || '';
-                var clearBtn = document.getElementById('vocabSearchClearBtn');
-                var suggContainer = document.getElementById('searchSuggestionsContainer');
-
-                if (clearBtn) {
-                    if (window.activeVocabSearchQuery.trim().length > 0) {
-                        clearBtn.classList.remove('hidden');
-                    } else {
-                        clearBtn.classList.add('hidden');
-                    }
-                }
-
-                var filtered = getFilteredVocabList();
-
-                if (window.activeVocabSearchQuery.trim().length > 0 && filtered.length > 0) {
-                    var suggHtml = '';
-                    filtered.slice(0, 10).forEach(function(item) {
-                        var hIndo = highlightSearchMatch(item.indonesian, window.activeVocabSearchQuery);
-                        var hJap = highlightSearchMatch(item.japanese, window.activeVocabSearchQuery);
-                        suggHtml += '<div onclick="selectWordForCardPractice(\'' + item.id + '\')" class="p-2.5 hover:bg-emerald-50 dark:hover:bg-slate-700 cursor-pointer flex items-center justify-between text-xs transition">' +
-                            '<div class="truncate flex-1 pr-2">' +
-                                '<span class="font-extrabold text-slate-800 dark:text-slate-100">' + hIndo + '</span>' +
-                                '<span class="text-[10px] text-slate-400 ml-1">(' + getPosLabel(item.pos) + ')</span>' +
-                            '</div>' +
-                            '<span class="text-emerald-600 dark:text-emerald-400 font-bold truncate max-w-[130px] text-right">' + hJap + '</span>' +
-                        '</div>';
-                    });
-                    if (suggContainer) {
-                        suggContainer.innerHTML = suggHtml;
-                        suggContainer.classList.remove('hidden');
-                    }
-                } else {
-                    if (suggContainer) suggContainer.classList.add('hidden');
-                }
-
-                window.currentCardIndex = 0;
-                renderVocabContainer();
-            }, 100);
-        }
-
-        function selectWordForCardPractice(wordId) {
-            var filtered = getFilteredVocabList();
-            var targetIndex = filtered.findIndex(function(v) { return v.id === wordId; });
-
-            if (targetIndex !== -1) {
-                window.currentCardIndex = targetIndex;
-            } else {
-                window.currentCardIndex = 0;
-            }
-
-            var suggContainer = document.getElementById('searchSuggestionsContainer');
-            if (suggContainer) suggContainer.classList.add('hidden');
-
-            setVocabMode('card');
-        }
-
-        function clearVocabSearch() {
-            var input = document.getElementById('vocabSearchInput');
-            if (input) input.value = '';
-            var suggContainer = document.getElementById('searchSuggestionsContainer');
-            if (suggContainer) suggContainer.classList.add('hidden');
-            onVocabSearchInput('');
-        }
-
-        function toggleShuffleCards() {
-            window.isShuffled = !window.isShuffled;
-            var btn = document.getElementById('shuffleCardsBtn');
-            var label = document.getElementById('shuffleBtnLabel');
-
-            if (window.isShuffled) {
-                window.shuffledVocabList = [...window.vocabList].sort(function() { return Math.random() - 0.5; });
-                if (btn) btn.className = "px-2 py-0.5 rounded-md bg-amber-500 text-white font-bold transition flex items-center gap-1 text-[11px] shadow";
-                if (label) label.textContent = "ランダム中";
-                showToast('単語カードをシャッフルしました！', 'info');
-            } else {
-                if (btn) btn.className = "px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 hover:bg-amber-100 dark:hover:bg-amber-950 text-slate-600 dark:text-slate-300 hover:text-amber-600 transition flex items-center gap-1 text-[11px]";
-                if (label) label.textContent = "シャッフル";
-                showToast('元の順番に戻しました', 'info');
-            }
-
-            window.currentCardIndex = 0;
-            renderVocabContainer();
-        }
-
-        function highlightSearchMatch(str, query) {
-            var raw = str || '';
-            var safe = escapeHtml(raw);
-            var q = (query || '').trim();
-            if (!q) return safe;
-
-            try {
-                var escQuery = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                var regex = new RegExp('(' + escQuery + ')', 'gi');
-                return safe.replace(regex, '<mark class="search-highlight">$1</mark>');
-            } catch (e) {
-                return safe;
+        // --- フォントサイズ調整機能 ---
+        function adjustFontSize(delta) {
+            var slider = document.getElementById('fontSizeSlider');
+            if (slider) {
+                var val = parseInt(slider.value) + delta;
+                val = Math.max(20, Math.min(30, val));
+                slider.value = val;
+                setFontSize(val);
             }
         }
 
-        function renderVocabContainer() {
-            var emptyState = document.getElementById('vocabEmptyState');
-            var listContainer = document.getElementById('vocabListContainer');
-            var cardContainer = document.getElementById('vocabCardContainer');
-            var vocabBadge = document.getElementById('vocabCountBadge');
-
-            var filtered = getFilteredVocabList();
-
-            if (vocabBadge) vocabBadge.textContent = (window.vocabList || []).length;
-            var statVocab = document.getElementById('statVocab');
-            if (statVocab) statVocab.textContent = (window.vocabList || []).length;
-
-            if (!filtered || filtered.length === 0) {
-                emptyState?.classList.remove('hidden');
-                if (listContainer) listContainer.innerHTML = '';
-                cardContainer?.classList.add('hidden');
-                return;
-            }
-
-            emptyState?.classList.add('hidden');
-
-            if (window.activeVocabMode === 'list') {
-                cardContainer?.classList.add('hidden');
-                listContainer?.classList.remove('hidden');
-
-                var html = '';
-                var query = window.activeVocabSearchQuery;
-
-                filtered.forEach(function(v) {
-                    var posLabel = getPosLabel(v.pos);
-                    var posBadgeClass = getPosBadgeClass(v.pos);
-
-                    var highlightedIndo = highlightSearchMatch(v.indonesian, query);
-                    var highlightedBase = (v.baseForm && v.baseForm !== v.indonesian) ? highlightSearchMatch(v.baseForm, query) : '';
-                    var highlightedJap = highlightSearchMatch(v.japanese, query);
-                    var highlightedCtx = v.context ? highlightSearchMatch(v.context, query) : '';
-
-                    html += '<div class="bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between gap-2 hover:border-emerald-400 transition">' +
-                        '<div class="space-y-0.5 flex-1 min-w-0">' +
-                            '<div class="flex items-center gap-1.5 flex-wrap">' +
-                                '<span class="dynamic-text-sub font-bold px-1.5 py-0.2 rounded ' + posBadgeClass + '">' + posLabel + '</span>' +
-                                '<h4 class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100 truncate">' +
-                                    highlightedIndo + (highlightedBase ? ' <span class="dynamic-text-sub text-slate-400 font-normal">(' + highlightedBase + ')</span>' : '') +
-                                '</h4>' +
-                                '<button onclick="speakIndonesian(\'' + escapeHtml(v.indonesian) + '\')" class="text-slate-400 hover:text-emerald-500 p-1" title="単語読み上げ">' +
-                                    '<i class="fa-solid fa-volume-high text-xs"></i>' +
-                                '</button>' +
-                            '</div>' +
-                            '<p class="dynamic-text-ja text-emerald-700 dark:text-emerald-400 font-bold leading-tight">' + highlightedJap + '</p>' +
-                            (v.context ? '<p class="dynamic-text-ja text-slate-500 italic truncate">"…' + highlightedCtx + '…"</p>' : '') +
-                        '</div>' +
-                        '<button onclick="toggleVocabMastered(\'' + v.id + '\')" class="px-2 py-0.5 rounded ' + (v.mastered ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400') + ' text-[10px] font-bold transition flex items-center gap-1 shrink-0">' +
-                            '<i class="fa-solid fa-check text-[9px]"></i> ' + (v.mastered ? '習得' : '未修') +
-                        '</button>' +
-                    '</div>';
-                });
-                if (listContainer) listContainer.innerHTML = html;
-            } else {
-                listContainer?.classList.add('hidden');
-                cardContainer?.classList.remove('hidden');
-                cardContainer?.classList.add('flex');
-                updateFlashcardUI();
-            }
+        function setFontSize(val) {
+            document.documentElement.style.setProperty('--transcript-font-size', val + 'px');
+            var ptDisplay = document.getElementById('fontSizeDisplayPt');
+            if (ptDisplay) ptDisplay.textContent = val + ' pt';
         }
 
-        function getPosLabel(pos) {
-            switch(pos) {
-                case 'noun': return '名詞';
-                case 'verb': return '動詞';
-                case 'adjective': return '形容詞';
-                case 'adverb': return '副詞';
-                default: return 'その他';
-            }
-        }
-
-        function getPosBadgeClass(pos) {
-            switch(pos) {
-                case 'noun': return 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300';
-                case 'verb': return 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300';
-                case 'adjective': return 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300';
-                case 'adverb': return 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300';
-                default: return 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
-            }
-        }
-
-        function setVocabMode(mode) {
-            window.activeVocabMode = mode;
-            var listBtn = document.getElementById('vocabModeListBtn');
-            var cardBtn = document.getElementById('vocabModeCardBtn');
-
-            if (listBtn) {
-                listBtn.className = mode === 'list'
-                    ? "px-2.5 py-1 text-xs font-extrabold rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm flex items-center gap-1 transition"
-                    : "px-2.5 py-1 text-xs font-extrabold rounded text-slate-500 dark:text-slate-400 hover:text-slate-800 transition flex items-center gap-1";
-            }
-
-            if (cardBtn) {
-                cardBtn.className = mode === 'card'
-                    ? "px-2.5 py-1 text-xs font-extrabold rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm flex items-center gap-1 transition"
-                    : "px-2.5 py-1 text-xs font-extrabold rounded text-slate-500 dark:text-slate-400 hover:text-slate-800 transition flex items-center gap-1";
-            }
-
-            renderVocabContainer();
-        }
-
-        function setVocabPosFilter(pos) {
-            window.activeVocabPosFilter = pos;
-            document.querySelectorAll('.vocab-pos-btn').forEach(function(btn) {
-                if (btn.dataset.pos === pos) {
-                    btn.className = "vocab-pos-btn px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800";
-                } else {
-                    btn.className = "vocab-pos-btn px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300";
-                }
-            });
-            window.currentCardIndex = 0;
-            renderVocabContainer();
-        }
-
-        function toggleVocabMastered(id) {
-            var item = window.vocabList.find(function(v) { return v.id === id; });
-            if (item) {
-                item.mastered = !item.mastered;
-                renderVocabContainer();
-                var fileName = window.currentLoadedFile ? window.currentLoadedFile.name : (document.getElementById('loadedFileName').textContent || '音源データ');
-                saveCurrentToHistory(fileName, false);
-            }
-        }
-
-        function updateFlashcardUI() {
-            var filtered = getFilteredVocabList();
-
-            if (!filtered || filtered.length === 0) return;
-            if (window.currentCardIndex >= filtered.length) window.currentCardIndex = 0;
-
-            var item = filtered[window.currentCardIndex];
-            if (!item) return;
-
-            var inner = document.getElementById('flashcardInner');
-            
-            window.isCardFlipped = false;
-            inner?.classList.remove('rotate-y-180');
-
-            var cardIndoText = document.getElementById('cardIndoText');
-            if (cardIndoText) cardIndoText.textContent = item.indonesian || '';
-
-            var cardJapText = document.getElementById('cardJapText');
-            if (cardJapText) cardJapText.textContent = item.japanese || '';
-
-            var cardContextFull = document.getElementById('cardContextFull');
-            if (cardContextFull) cardContextFull.textContent = item.context ? ('文脈: ' + item.context) : "";
-
-            var cardBadgeFront = document.getElementById('cardBadgeFront');
-            if (cardBadgeFront) cardBadgeFront.textContent = getPosLabel(item.pos);
-
-            var cardPosLabel = document.getElementById('cardPosLabel');
-            if (cardPosLabel) cardPosLabel.textContent = '品詞: ' + getPosLabel(item.pos) + ' (原形: ' + (item.baseForm || item.indonesian) + ')';
-
-            var masteredCount = filtered.filter(function(v) { return v.mastered; }).length;
-            var flashcardProgressLabel = document.getElementById('flashcardProgressLabel');
-            if (flashcardProgressLabel) {
-                var searchNotice = window.activeVocabSearchQuery.trim() !== '' ? ' (検索中)' : '';
-                var shuffleNotice = window.isShuffled ? ' (ランダム)' : '';
-                flashcardProgressLabel.textContent = (window.currentCardIndex + 1) + ' / ' + filtered.length + searchNotice + shuffleNotice;
-            }
-
-            var flashcardMasteredLabel = document.getElementById('flashcardMasteredLabel');
-            if (flashcardMasteredLabel) flashcardMasteredLabel.textContent = '習得: ' + masteredCount;
-        }
-
-        function flipFlashcard() {
-            window.isCardFlipped = !window.isCardFlipped;
-            var inner = document.getElementById('flashcardInner');
-            if (window.isCardFlipped) {
-                inner?.classList.add('rotate-y-180');
-            } else {
-                inner?.classList.remove('rotate-y-180');
-            }
-        }
-
-        function nextFlashcard(mastered) {
-            if (mastered === undefined) mastered = false;
-            var filtered = getFilteredVocabList();
-            if (filtered.length === 0) return;
-
-            if (mastered && filtered[window.currentCardIndex]) {
-                filtered[window.currentCardIndex].mastered = true;
-            }
-            window.currentCardIndex = (window.currentCardIndex + 1) % filtered.length;
-            updateFlashcardUI();
-        }
-
-        function reviewFlashcard() {
-            var filtered = getFilteredVocabList();
-            if (filtered.length === 0) return;
-
-            if (filtered[window.currentCardIndex]) {
-                filtered[window.currentCardIndex].mastered = false;
-            }
-            window.currentCardIndex = (window.currentCardIndex + 1) % filtered.length;
-            updateFlashcardUI();
-        }
-
+        // --- 音声再生エンジン (Web Speech API 安定化処理) ---
         function speakIndonesian(text) {
             if (!('speechSynthesis' in window)) {
                 showToast('音声読み上げ非対応ブラウザです', 'error');
                 return;
             }
-            stopAllSpeech();
+            window.speechSynthesis.cancel();
 
             var utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'id-ID';
             utterance.rate = 0.85;
 
             var voices = window.speechSynthesis.getVoices();
-            var indoVoice = voices.find(function(v) { return v.lang.startsWith('id') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Premium')); }) 
-                           || voices.find(function(v) { return v.lang.startsWith('id'); });
+            var indoVoice = voices.find(function(v) { return v.lang.startsWith('id') || v.lang.includes('ID'); });
             if (indoVoice) utterance.voice = indoVoice;
 
             window.speechSynthesis.speak(utterance);
@@ -782,7 +308,6 @@ ${fullText}`;
 
             var words = block.indonesian.split(/\s+/);
             var remainingText = words.slice(wordIndex).join(' ');
-            
             startSpeechBlock(blockId, remainingText);
         }
 
@@ -809,9 +334,7 @@ ${fullText}`;
         }
 
         function startSpeechBlock(blockId, customText) {
-            if (customText === undefined) customText = null;
             if (!('speechSynthesis' in window)) return;
-
             stopAllSpeech();
 
             var cleanId = blockId.replace(/^[tg]-/, '');
@@ -824,32 +347,22 @@ ${fullText}`;
             utterance.rate = 0.85;
 
             var voices = window.speechSynthesis.getVoices();
-            var indoVoice = voices.find(function(v) { return v.lang.startsWith('id') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Premium')); }) 
-                           || voices.find(function(v) { return v.lang.startsWith('id'); });
+            var indoVoice = voices.find(function(v) { return v.lang.startsWith('id') || v.lang.includes('ID'); });
             if (indoVoice) utterance.voice = indoVoice;
 
             utterance.onstart = function() {
                 window.activeSpeechState = { blockId: blockId, utterance: utterance, isPlaying: true, isPaused: false };
                 updateBlockToggleUI(blockId, 'playing');
             };
-
             utterance.onpause = function() {
                 window.activeSpeechState.isPaused = true;
                 window.activeSpeechState.isPlaying = false;
                 updateBlockToggleUI(blockId, 'paused');
             };
-
-            utterance.onresume = function() {
-                window.activeSpeechState.isPaused = false;
-                window.activeSpeechState.isPlaying = true;
-                updateBlockToggleUI(blockId, 'playing');
-            };
-
             utterance.onend = function() {
                 updateBlockToggleUI(blockId, 'stopped');
                 window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
             };
-
             utterance.onerror = function() {
                 updateBlockToggleUI(blockId, 'stopped');
                 window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
@@ -863,175 +376,216 @@ ${fullText}`;
             if (!btn) return;
 
             if (state === 'playing') {
-                btn.innerHTML = '<i class="fa-solid fa-pause text-red-500"></i><span>一時停止</span>';
-                btn.className = "px-2 py-0.5 rounded bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 text-[10px] font-bold transition flex items-center gap-1 shadow-sm";
+                btn.innerHTML = '<i class="fa-solid fa-pause text-red-500"></i><span>停止</span>';
             } else if (state === 'paused') {
                 btn.innerHTML = '<i class="fa-solid fa-play text-amber-500"></i><span>再開</span>';
-                btn.className = "px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 text-[10px] font-bold transition flex items-center gap-1 shadow-sm";
             } else {
                 btn.innerHTML = '<i class="fa-solid fa-play"></i><span>再生</span>';
-                btn.className = "px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-red-500 text-[10px] font-bold transition flex items-center gap-1";
             }
         }
 
-        function copyChunkText(text) {
-            navigator.clipboard.writeText(text).then(function() {
-                showToast('コピーしました', 'info');
-            }).catch(function() {
-                var textarea = document.createElement('textarea');
-                textarea.value = text;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                showToast('コピーしました', 'info');
+        function renderClickableIndonesianWords(text, blockId) {
+            if (!text) return '';
+            var words = text.split(/\s+/);
+            return words.map(function(w, idx) {
+                var cleanWord = escapeHtml(w);
+                return '<span class="word-clickable" onclick="speakFromWord(\'' + blockId + '\', ' + idx + ')" title="ここから再生">' + cleanWord + '</span>';
+            }).join(' ');
+        }
+
+        function renderTranscriptContainer() {
+            var emptyState = document.getElementById('emptyState');
+            var container = document.getElementById('transcriptContainer');
+
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
+                emptyState?.classList.remove('hidden');
+                if (container) container.innerHTML = '';
+                return;
+            }
+
+            emptyState?.classList.add('hidden');
+            var html = '';
+
+            window.transcriptBlocks.forEach(function(block) {
+                var clickableIndo = renderClickableIndonesianWords(block.indonesian, 't-' + block.id);
+                
+                html += '<div id="card-t-' + block.id + '" class="bg-white dark:bg-slate-800 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">' +
+                    '<div class="flex items-center justify-between text-xs text-slate-500 pb-1.5 border-b border-slate-100 dark:border-slate-700/60">' +
+                        '<span class="font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/60 px-2 py-0.5 rounded-full text-[10px]">' +
+                            '<i class="fa-solid fa-user text-[9px] mr-1"></i>' + escapeHtml(block.speaker) +
+                        '</span>' +
+                        '<div class="flex items-center gap-2">' +
+                            '<button id="btn-toggle-t-' + block.id + '" onclick="toggleSpeechBlock(\'t-' + block.id + '\')" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-red-50 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1">' +
+                                '<i class="fa-solid fa-play text-[10px]"></i><span>再生</span>' +
+                            '</button>' +
+                        '</div>' +
+                    '</div>' +
+                    '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100 leading-relaxed">' + clickableIndo + '</p>' +
+                    '<div class="bg-amber-50/70 dark:bg-slate-900/60 p-2.5 rounded-lg border border-amber-200/50 dark:border-amber-900/30">' +
+                        '<p class="dynamic-text-ja font-semibold text-amber-950 dark:text-amber-200 flex items-start gap-1.5">' +
+                            '<span class="text-[10px] bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200 px-1.5 py-0.5 rounded font-bold shrink-0 mt-0.5">訳</span>' +
+                            '<span>' + escapeHtml(block.japanese) + '</span>' +
+                        '</p>' +
+                    '</div>' +
+                '</div>';
             });
+
+            if (container) container.innerHTML = html;
+        }
+
+        function renderGrammarContainer() {
+            var emptyState = document.getElementById('grammarEmptyState');
+            var container = document.getElementById('grammarContainer');
+
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
+                emptyState?.classList.remove('hidden');
+                if (container) container.innerHTML = '';
+                return;
+            }
+
+            emptyState?.classList.add('hidden');
+            var html = '';
+
+            window.transcriptBlocks.forEach(function(block, idx) {
+                var clickableIndo = renderClickableIndonesianWords(block.indonesian, 'g-' + block.id);
+
+                html += '<div id="card-g-' + block.id + '" class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">' +
+                    '<div class="flex items-center justify-between text-xs pb-1 border-b border-slate-100 dark:border-slate-700">' +
+                        '<span class="font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-full text-[10px]">文節 #' + (idx + 1) + '</span>' +
+                        '<button id="btn-toggle-g-' + block.id + '" onclick="toggleSpeechBlock(\'g-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold transition flex items-center gap-1">' +
+                            '<i class="fa-solid fa-play text-[9px]"></i><span>再生</span>' +
+                        '</button>' +
+                    '</div>' +
+                    '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700">' + clickableIndo + '</p>' +
+                    '<div class="bg-blue-50/60 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200/60 dark:border-blue-900/40 text-xs leading-relaxed text-blue-950 dark:text-blue-200 space-y-1">' +
+                        '<h5 class="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1 text-[10px] uppercase tracking-wider"><i class="fa-solid fa-diagram-project"></i> 精密構文・文法解説</h5>' +
+                        '<div class="dynamic-text-ja whitespace-pre-line font-medium pt-0.5">' + escapeHtml(block.grammarExplanation) + '</div>' +
+                    '</div>' +
+                '</div>';
+            });
+
+            if (container) container.innerHTML = html;
+        }
+
+        function renderVocabContainer() {
+            var emptyState = document.getElementById('vocabEmptyState');
+            var listContainer = document.getElementById('vocabListContainer');
+            var cardContainer = document.getElementById('vocabCardContainer');
+
+            if (!window.vocabList || window.vocabList.length === 0) {
+                emptyState?.classList.remove('hidden');
+                if (listContainer) listContainer.innerHTML = '';
+                cardContainer?.classList.add('hidden');
+                return;
+            }
+
+            emptyState?.classList.add('hidden');
+
+            if (window.activeVocabMode === 'list') {
+                cardContainer?.classList.add('hidden');
+                listContainer?.classList.remove('hidden');
+
+                var html = '';
+                window.vocabList.forEach(function(v) {
+                    html += '<div class="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between gap-2">' +
+                        '<div class="space-y-0.5 flex-1 min-w-0">' +
+                            '<div class="flex items-center gap-2">' +
+                                '<h4 class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100 truncate">' + escapeHtml(v.indonesian) + '</h4>' +
+                                '<button onclick="speakIndonesian(\'' + escapeHtml(v.indonesian) + '\')" class="text-slate-400 hover:text-emerald-500 p-1">' +
+                                    '<i class="fa-solid fa-volume-high text-xs"></i>' +
+                                '</button>' +
+                            '</div>' +
+                            '<p class="dynamic-text-ja text-emerald-700 dark:text-emerald-400 font-bold">' + escapeHtml(v.japanese) + '</p>' +
+                        '</div>' +
+                    '</div>';
+                });
+                if (listContainer) listContainer.innerHTML = html;
+            } else {
+                listContainer?.classList.add('hidden');
+                cardContainer?.classList.remove('hidden');
+                cardContainer?.classList.add('flex');
+                updateFlashcardUI();
+            }
+        }
+
+        function updateFlashcardUI() {
+            if (!window.vocabList || window.vocabList.length === 0) return;
+            var item = window.vocabList[window.currentCardIndex];
+            if (!item) return;
+
+            var cardIndo = document.getElementById('cardIndoText');
+            var cardJap = document.getElementById('cardJapText');
+            if (cardIndo) cardIndo.textContent = item.indonesian || '';
+            if (cardJap) cardJap.textContent = item.japanese || '';
+        }
+
+        function flipFlashcard() {
+            var inner = document.getElementById('flashcardInner');
+            window.isCardFlipped = !window.isCardFlipped;
+            if (window.isCardFlipped) inner?.classList.add('rotate-y-180');
+            else inner?.classList.remove('rotate-y-180');
+        }
+
+        function nextFlashcard() {
+            if (!window.vocabList || window.vocabList.length === 0) return;
+            window.currentCardIndex = (window.currentCardIndex + 1) % window.vocabList.length;
+            window.isCardFlipped = false;
+            document.getElementById('flashcardInner')?.classList.remove('rotate-y-180');
+            updateFlashcardUI();
         }
 
         function loadHistoryFromStorage() {
             try {
                 var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
                 renderHistoryList(history);
-            } catch (e) {
-                renderHistoryList([]);
-            }
+            } catch (e) { renderHistoryList([]); }
         }
 
         function renderHistoryList(history) {
             var container = document.getElementById('historyList');
             if (!container) return;
-            
             if (!history || history.length === 0) {
-                container.innerHTML = '<p class="text-xs text-slate-400 py-1.5 text-center">履歴はありません (0/5)</p>';
+                container.innerHTML = '<p class="text-xs text-slate-400 py-1.5 text-center">履歴なし (0/5)</p>';
                 return;
             }
-
             var html = '';
             history.forEach(function(item) {
-                html += '<div onclick="loadHistoryItem(\'' + item.id + '\')" class="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/60 hover:bg-red-50 dark:hover:bg-red-950/40 border border-slate-200 dark:border-slate-700 transition cursor-pointer flex items-center justify-between gap-1.5">' +
-                    '<div class="min-w-0 flex-1">' +
-                        '<p class="text-xs font-bold text-slate-800 dark:text-slate-100 truncate leading-tight">' + escapeHtml(item.fileName) + '</p>' +
-                        '<p class="text-[9px] text-slate-400 mt-0.5">' + escapeHtml(item.date) + ' / 文節:' + (item.blocks ? item.blocks.length : 0) + '件</p>' +
-                    '</div>' +
-                    '<button onclick="deleteHistoryItem(\'' + item.id + '\', event)" class="text-slate-400 hover:text-rose-500 p-1 shrink-0" title="削除">' +
-                        '<i class="fa-solid fa-trash-can text-xs"></i>' +
-                    '</button>' +
+                html += '<div onclick="loadHistoryItem(\'' + item.id + '\')" class="p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-red-50 cursor-pointer flex justify-between items-center text-xs">' +
+                    '<span class="font-bold truncate">' + escapeHtml(item.fileName) + '</span>' +
                 '</div>';
             });
             container.innerHTML = html;
         }
 
-        function saveCurrentToHistory(fileName, showToastNotification) {
-            if (showToastNotification === undefined) showToastNotification = true;
+        function saveCurrentToHistory(fileName) {
             if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
-
             try {
                 var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
-                history = history.filter(function(h) { return h.fileName !== fileName; });
-
-                var item = {
-                    id: 'hist-' + Date.now(),
-                    fileName: fileName || '音源解析データ',
-                    date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                    blocks: window.transcriptBlocks,
-                    vocab: window.vocabList
-                };
-
-                history.unshift(item);
-
-                if (history.length >= 5) {
-                    exportHistoryDataToFile(history, 'suarateks_5items_backup_' + new Date().toISOString().slice(0,10).replace(/-/g, '') + '.json');
-                    history = [];
-                    localStorage.removeItem('suarateks_history');
-                    renderHistoryList([]);
-                    if (showToastNotification) {
-                        showToast('履歴が5件に達したため全保存（JSON出力）し、履歴をリセットしました', 'info');
-                    }
-                } else {
-                    localStorage.setItem('suarateks_history', JSON.stringify(history));
-                    renderHistoryList(history);
-                    if (showToastNotification) {
-                        showToast('履歴に保存しました (' + history.length + '/5件)', 'info');
-                    }
-                }
-            } catch (e) {
-                console.warn('LocalStorage Save Warning:', e);
-            }
-        }
-
-        function exportHistoryDataToFile(dataArr, customFilename) {
-            var dataStr = JSON.stringify(dataArr, null, 2);
-            var blob = new Blob([dataStr], { type: 'application/json' });
-            var url = URL.createObjectURL(blob);
-            var a = document.createElement('a');
-            var dateStr = new Date().toISOString().slice(0,10).replace(/-/g, '');
-            a.href = url;
-            a.download = customFilename || ('suarateks_backup_' + dateStr + '.json');
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function loadHistoryItem(id) {
-            var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
-            var found = history.find(function(h) { return h.id === id; });
-            if (found) {
-                window.transcriptBlocks = found.blocks || [];
-                window.vocabList = found.vocab || [];
-                renderTranscriptContainer();
-                renderGrammarContainer();
-                renderVocabContainer();
-                var loadedName = document.getElementById('loadedFileName');
-                if (loadedName) loadedName.textContent = found.fileName;
-                showToast('「' + found.fileName + '」を読み込みました', 'info');
-                if (window.innerWidth < 768) {
-                    switchMobileTab('transcript');
-                }
-            }
-        }
-
-        function deleteHistoryItem(id, event) {
-            event.stopPropagation();
-            var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
-            history = history.filter(function(h) { return h.id !== id; });
-            localStorage.setItem('suarateks_history', JSON.stringify(history));
-            renderHistoryList(history);
-            showToast('履歴を削除しました', 'info');
+                history.unshift({ id: 'hist-' + Date.now(), fileName: fileName || '音源解析', blocks: window.transcriptBlocks, vocab: window.vocabList });
+                history = history.slice(0, 5);
+                localStorage.setItem('suarateks_history', JSON.stringify(history));
+                renderHistoryList(history);
+            } catch (e) {}
         }
 
         function switchMobileTab(tab) {
             window.activeMobileTab = tab;
             var panelSetup = document.getElementById('panelSetup');
             var panelTranscript = document.getElementById('panelTranscript');
-            var btnSetup = document.getElementById('tabSetupBtn');
-            var btnTranscript = document.getElementById('tabTranscriptBtn');
-            var btnVocab = document.getElementById('tabVocabBtn');
 
             if (window.innerWidth >= 768) {
-                if (panelSetup) { panelSetup.classList.remove('hidden'); panelSetup.style.display = 'flex'; }
-                if (panelTranscript) { panelTranscript.classList.remove('hidden'); panelTranscript.style.display = 'flex'; }
+                if (panelSetup) panelSetup.style.display = 'flex';
+                if (panelTranscript) panelTranscript.style.display = 'flex';
                 return;
             }
 
             if (tab === 'setup') {
                 if (panelSetup) panelSetup.style.display = 'flex';
                 if (panelTranscript) panelTranscript.style.display = 'none';
-                if (btnSetup) btnSetup.className = "flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-md flex items-center justify-center gap-1";
-                if (btnTranscript) btnTranscript.className = "flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all text-slate-600 dark:text-slate-400 flex items-center justify-center gap-1";
-                if (btnVocab) btnVocab.className = "flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all text-slate-600 dark:text-slate-400 flex items-center justify-center gap-1";
-            } else if (tab === 'transcript') {
+            } else {
                 if (panelSetup) panelSetup.style.display = 'none';
                 if (panelTranscript) panelTranscript.style.display = 'flex';
-                setStudioSubView('transcript');
-                if (btnTranscript) btnTranscript.className = "flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-md flex items-center justify-center gap-1";
-                if (btnSetup) btnSetup.className = "flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all text-slate-600 dark:text-slate-400 flex items-center justify-center gap-1";
-                if (btnVocab) btnVocab.className = "flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all text-slate-600 dark:text-slate-400 flex items-center justify-center gap-1";
-            } else if (tab === 'vocab') {
-                if (panelSetup) panelSetup.style.display = 'none';
-                if (panelTranscript) panelTranscript.style.display = 'flex';
-                setStudioSubView('vocab');
-                if (btnVocab) btnVocab.className = "flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-md flex items-center justify-center gap-1";
-                if (btnSetup) btnSetup.className = "flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all text-slate-600 dark:text-slate-400 flex items-center justify-center gap-1";
-                if (btnTranscript) btnTranscript.className = "flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all text-slate-600 dark:text-slate-400 flex items-center justify-center gap-1";
+                setStudioSubView(tab);
             }
         }
 
@@ -1040,311 +594,151 @@ ${fullText}`;
             var viewTranscript = document.getElementById('transcriptView');
             var viewGrammar = document.getElementById('grammarView');
             var viewVocab = document.getElementById('vocabView');
-            var btnTranscript = document.getElementById('viewTranscriptBtn');
-            var btnGrammar = document.getElementById('viewGrammarBtn');
-            var btnVocab = document.getElementById('viewVocabBtn');
 
             viewTranscript?.classList.add('hidden');
             viewGrammar?.classList.add('hidden');
             viewVocab?.classList.add('hidden');
             viewVocab?.classList.remove('flex');
 
-            if (btnTranscript) btnTranscript.className = "px-2.5 py-1 rounded text-slate-600 dark:text-slate-400 hover:text-slate-800 transition flex items-center gap-1";
-            if (btnGrammar) btnGrammar.className = "px-2.5 py-1 rounded text-slate-600 dark:text-slate-400 hover:text-slate-800 transition flex items-center gap-1";
-            if (btnVocab) btnVocab.className = "px-2.5 py-1 rounded text-slate-600 dark:text-slate-400 hover:text-slate-800 transition flex items-center gap-1";
-
             if (subView === 'transcript') {
                 viewTranscript?.classList.remove('hidden');
-                if (btnTranscript) btnTranscript.className = "px-2.5 py-1 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm transition flex items-center gap-1";
             } else if (subView === 'grammar') {
                 viewGrammar?.classList.remove('hidden');
-                if (btnGrammar) btnGrammar.className = "px-2.5 py-1 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm transition flex items-center gap-1";
                 renderGrammarContainer();
             } else if (subView === 'vocab') {
                 viewVocab?.classList.remove('hidden');
                 viewVocab?.classList.add('flex');
-                if (btnVocab) btnVocab.className = "px-2.5 py-1 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm transition flex items-center gap-1";
                 renderVocabContainer();
             }
         }
 
         function openModal(id) { document.getElementById(id)?.classList.remove('hidden'); }
         function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
-        function getApiKey() { return localStorage.getItem('suarateks_gemini_key') || localStorage.getItem('gemini_api_key') || ''; }
-        function loadSavedApiKey() {
-            var key = getApiKey();
-            var input = document.getElementById('apiKeyInput');
-            if (key && input) input.value = key;
-        }
+        function getApiKey() { return localStorage.getItem('suarateks_gemini_key') || ''; }
         function saveApiKeyFromModal() {
             var val = document.getElementById('apiKeyInput')?.value.trim() || '';
-            if (val) {
-                localStorage.setItem('suarateks_gemini_key', val);
-                showToast('API Key を保存しました！', 'info');
-            } else {
-                localStorage.removeItem('suarateks_gemini_key');
-                showToast('API Key をクリアしました', 'info');
-            }
+            if (val) localStorage.setItem('suarateks_gemini_key', val);
             closeModal('apiKeyModal');
         }
-
-        function showToast(message, type) {
-            if (type === undefined) type = 'info';
-            var container = document.getElementById('toastContainer');
-            if (!container) return;
-            var toast = document.createElement('div');
-            var bgColor = type === 'error' ? 'bg-rose-600' : 'bg-slate-800';
-            var icon = type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check';
-
-            toast.className = bgColor + ' text-white px-3 py-2 rounded-xl shadow-xl text-xs font-bold flex items-center gap-2 transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto border border-white/10';
-            toast.innerHTML = '<i class="fa-solid ' + icon + ' text-amber-400 text-sm"></i> <span>' + escapeHtml(message) + '</span>';
-
-            container.appendChild(toast);
-            setTimeout(function() { toast.classList.remove('translate-y-2', 'opacity-0'); }, 10);
-            setTimeout(function() {
-                toast.classList.add('opacity-0', 'translate-y-[-8px]');
-                setTimeout(function() { toast.remove(); }, 300);
-            }, 3500);
-        }
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
+        function showToast(msg) { alert(msg); }
+        function escapeHtml(str) { return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
         document.addEventListener('DOMContentLoaded', function() {
-            loadSavedApiKey();
             loadHistoryFromStorage();
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.getVoices();
+            }
         });
     </script>
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 h-[100dvh] flex flex-col font-sans overflow-hidden">
 
-    <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
-
-    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-2.5 flex items-center justify-between shrink-0">
-        <div class="flex items-center gap-2">
-            <h1 class="font-extrabold text-sm tracking-tight">SuaraTeks<span class="text-red-600">ID</span> <span class="text-[10px] bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400 px-1.5 py-0.5 rounded font-bold">Pro 2Pass</span></h1>
-        </div>
-        <div class="flex items-center gap-2">
-            <button onclick="openModal('apiKeyModal')" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 dark:bg-amber-950 dark:hover:bg-amber-900 text-amber-800 dark:text-amber-200 rounded-lg text-xs font-bold transition flex items-center gap-1">
-                <i class="fa-solid fa-key text-[10px]"></i> API Key
-            </button>
-        </div>
+    <!-- ヘッダー -->
+    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center justify-between shrink-0">
+        <h1 class="font-extrabold text-sm">SuaraTeks<span class="text-red-600">ID</span> Pro</h1>
+        <button onclick="openModal('apiKeyModal')" class="px-2.5 py-1 bg-amber-100 text-amber-900 rounded-lg text-xs font-bold">API Key</button>
     </header>
 
-    <!-- モバイル用タブ切替ナビ -->
-    <div class="md:hidden bg-slate-200 dark:bg-slate-800 p-1 flex items-center gap-1 shrink-0 border-b border-slate-300 dark:border-slate-700">
-        <button id="tabSetupBtn" onclick="switchMobileTab('setup')" class="flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-md flex items-center justify-center gap-1">
-            <i class="fa-solid fa-sliders"></i> 設定・音源
-        </button>
-        <button id="tabTranscriptBtn" onclick="switchMobileTab('transcript')" class="flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all text-slate-600 dark:text-slate-400 flex items-center justify-center gap-1">
-            <i class="fa-solid fa-file-lines"></i> 本文・解剖
-        </button>
-        <button id="tabVocabBtn" onclick="switchMobileTab('vocab')" class="flex-1 py-1.5 text-xs font-extrabold rounded-lg transition-all text-slate-600 dark:text-slate-400 flex items-center justify-center gap-1">
-            <i class="fa-solid fa-book-open"></i> 単語帳
-        </button>
+    <!-- モバイル切替バー -->
+    <div class="md:hidden bg-slate-200 dark:bg-slate-800 p-1 flex items-center gap-1 shrink-0 border-b border-slate-300 dark:border-slate-700 text-xs font-bold">
+        <button onclick="switchMobileTab('setup')" class="flex-1 py-1.5 text-center bg-white dark:bg-slate-700 rounded shadow-sm">設定・音源</button>
+        <button onclick="switchMobileTab('transcript')" class="flex-1 py-1.5 text-center">本文</button>
+        <button onclick="switchMobileTab('vocab')" class="flex-1 py-1.5 text-center">単語帳</button>
     </div>
 
-    <!-- メインフレーム -->
-    <div class="flex-1 flex overflow-hidden p-2 sm:p-4 gap-4 max-w-7xl mx-auto w-full">
+    <!-- メイン領域 -->
+    <div class="flex-1 flex overflow-hidden p-2 sm:p-3 gap-3 max-w-7xl mx-auto w-full">
 
-        <!-- 左パネル：設定・コントロール -->
-        <div id="panelSetup" class="w-full md:w-80 flex flex-col gap-3 shrink-0 overflow-y-auto">
-            
-            <div id="playerCard" class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
-                <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-                    <i class="fa-solid fa-file-audio text-red-600"></i> 音源選択・コントロール
-                </h3>
-                
-                <input type="file" id="audioFileInput" accept="audio/*" onchange="window.handleFileChange(event)" class="text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 w-full cursor-pointer">
-                
-                <div class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <p id="loadedFileName" class="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">音源が未選択です</p>
-                </div>
-
+        <!-- 左パネル：音源・履歴 -->
+        <div id="panelSetup" class="w-full md:w-72 flex flex-col gap-3 shrink-0 overflow-y-auto">
+            <div id="playerCard" class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2.5">
+                <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200"><i class="fa-solid fa-file-audio text-red-600"></i> 音源選択</h3>
+                <input type="file" id="audioFileInput" accept="audio/*" onchange="window.handleFileChange(event)" class="text-xs w-full">
+                <p id="loadedFileName" class="text-xs font-bold text-slate-500 truncate">音源未選択</p>
                 <audio id="audioPlayer" controls class="w-full h-8 rounded"></audio>
-
-                <button id="startTranscribeBtn" onclick="window.processAudioWithGemini()" class="w-full py-2.5 bg-red-600 hover:bg-red-700 active:scale-98 text-white rounded-xl text-xs font-extrabold shadow-md transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> <span id="transcribeBtnText">高精度解析を開始</span>
+                <button id="startTranscribeBtn" onclick="window.processAudioWithGemini()" class="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition">
+                    <span id="transcribeBtnText">高精度解析を開始</span>
                 </button>
             </div>
 
-            <!-- 進捗表示プログレスバー -->
             <div id="chunkProgressContainer" class="hidden bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">
-                <div class="flex justify-between items-center text-xs font-bold">
-                    <span id="chunkProgressLabel" class="text-slate-600 dark:text-slate-300 flex items-center gap-1">AI解析中...</span>
+                <div class="flex justify-between text-xs font-bold">
+                    <span id="chunkProgressLabel">AI解析中...</span>
                     <span id="chunkProgressPercent" class="text-red-600">0%</span>
                 </div>
                 <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
-                    <div id="chunkProgressBar" class="bg-red-600 h-2 rounded-full transition-all duration-300 w-0"></div>
+                    <div id="chunkProgressBar" class="bg-red-600 h-2 rounded-full w-0 transition-all"></div>
                 </div>
             </div>
 
-            <!-- 解析履歴 -->
-            <div class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[160px]">
-                <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700 mb-2">
-                    <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-                        <i class="fa-solid fa-clock-rotate-left text-amber-500"></i> 解析履歴 (最大5件)
-                    </h4>
-                </div>
-                <div id="historyList" class="space-y-1.5 flex-1 overflow-y-auto">
-                    <p class="text-xs text-slate-400 py-2 text-center">履歴はありません (0/5)</p>
-                </div>
+            <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[140px]">
+                <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 mb-2 pb-1 border-b"><i class="fa-solid fa-clock-rotate-left text-amber-500"></i> 解析履歴</h4>
+                <div id="historyList" class="space-y-1 flex-1 overflow-y-auto"></div>
             </div>
-
         </div>
 
-        <!-- 右パネル：メインコンテンツ -->
-        <div id="panelTranscript" class="hidden md:flex flex-1 flex-col bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+        <!-- 右パネル：本文・解説・単語帳 -->
+        <div id="panelTranscript" class="hidden md:flex flex-1 flex-col bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             
-            <!-- サブビュー切り替えヘッダー -->
-            <div class="bg-white dark:bg-slate-800 px-3 py-2 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between shrink-0">
+            <!-- サブヘッダー（コントロール＋文字サイズスライダー 20pt〜30pt） -->
+            <div class="bg-white dark:bg-slate-800 px-3 py-2 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2 shrink-0">
                 <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg text-xs font-bold">
-                    <button id="viewTranscriptBtn" onclick="setStudioSubView('transcript')" class="px-2.5 py-1 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm transition flex items-center gap-1">
-                        <i class="fa-solid fa-align-left text-red-500"></i> 本文・対訳
-                    </button>
-                    <button id="viewGrammarBtn" onclick="setStudioSubView('grammar')" class="px-2.5 py-1 rounded text-slate-600 dark:text-slate-400 hover:text-slate-800 transition flex items-center gap-1">
-                        <i class="fa-solid fa-diagram-project text-blue-500"></i> 文法解剖
-                    </button>
-                    <button id="viewVocabBtn" onclick="setStudioSubView('vocab')" class="px-2.5 py-1 rounded text-slate-600 dark:text-slate-400 hover:text-slate-800 transition flex items-center gap-1">
-                        <i class="fa-solid fa-book-open text-emerald-500"></i> 単語帳 (<span id="vocabCountBadge">0</span>)
-                    </button>
+                    <button onclick="setStudioSubView('transcript')" class="px-2.5 py-1 rounded bg-white dark:bg-slate-700 shadow-sm">本文・対訳</button>
+                    <button onclick="setStudioSubView('grammar')" class="px-2.5 py-1 rounded">文法解剖</button>
+                    <button onclick="setStudioSubView('vocab')" class="px-2.5 py-1 rounded">単語帳</button>
                 </div>
 
-                <div class="flex items-center gap-2 text-xs text-slate-500">
-                    <span>文節: <strong id="statBlocks" class="text-slate-800 dark:text-slate-200">0</strong></span>
-                    <span>文字: <strong id="statChars" class="text-slate-800 dark:text-slate-200">0</strong></span>
+                <!-- 文字大きさ変更 (20pt ~ 30pt) -->
+                <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <span class="text-[11px] font-extrabold text-slate-500 flex items-center gap-1">
+                        <i class="fa-solid fa-[#]"></i> 文字サイズ
+                    </span>
+                    <button onclick="adjustFontSize(-1)" class="w-5 h-5 flex items-center justify-center rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-200 shadow-xs text-xs">-</button>
+                    <input type="range" id="fontSizeSlider" min="20" max="30" value="20" oninput="setFontSize(this.value)" class="w-16 accent-red-600 cursor-pointer">
+                    <button onclick="adjustFontSize(1)" class="w-5 h-5 flex items-center justify-center rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-200 shadow-xs text-xs">+</button>
+                    <span id="fontSizeDisplayPt" class="text-[11px] font-black text-red-600 w-9 text-right">20 pt</span>
                 </div>
             </div>
 
             <!-- View 1: 本文・対訳 -->
-            <div id="transcriptView" class="flex-1 p-3 sm:p-4 overflow-y-auto space-y-3">
-                <div id="emptyState" class="h-full flex flex-col items-center justify-center text-center p-8 space-y-3">
-                    <div class="w-12 h-12 rounded-full bg-red-50 dark:bg-red-950/50 flex items-center justify-center text-red-500 text-xl">
-                        <i class="fa-solid fa-headphones"></i>
-                    </div>
-                    <p class="text-xs font-bold text-slate-400">音源を選択し「高精度解析を開始」を押してください</p>
-                </div>
+            <div id="transcriptView" class="flex-1 p-3 overflow-y-auto space-y-3">
+                <div id="emptyState" class="h-full flex items-center justify-center text-xs text-slate-400 font-bold">音源を選択して「高精度解析を開始」を押してください</div>
                 <div id="transcriptContainer" class="space-y-3"></div>
             </div>
 
             <!-- View 2: 文法解剖 -->
-            <div id="grammarView" class="hidden flex-1 p-3 sm:p-4 overflow-y-auto space-y-3">
-                <div id="grammarEmptyState" class="h-full flex flex-col items-center justify-center text-center p-8 space-y-3">
-                    <p class="text-xs font-bold text-slate-400">文法解剖データがありません</p>
-                </div>
+            <div id="grammarView" class="hidden flex-1 p-3 overflow-y-auto space-y-3">
+                <div id="grammarEmptyState" class="h-full flex items-center justify-center text-xs text-slate-400 font-bold">文法解剖データがありません</div>
                 <div id="grammarContainer" class="space-y-3"></div>
             </div>
 
             <!-- View 3: 単語帳 -->
-            <div id="vocabView" class="hidden flex-1 flex-col overflow-hidden p-3 sm:p-4 space-y-3">
-                <!-- 検索・フィルターコントロール -->
-                <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 shrink-0">
-                    <div class="flex items-center gap-2 relative">
-                        <div class="relative flex-1">
-                            <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-xs text-slate-400"></i>
-                            <input type="text" id="vocabSearchInput" oninput="onVocabSearchInput(this.value)" placeholder="インドネシア語・日本語・品詞で検索..." class="w-full pl-8 pr-7 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold">
-                            <button id="vocabSearchClearBtn" onclick="clearVocabSearch()" class="hidden absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs">
-                                <i class="fa-solid fa-xmark"></i>
-                            </button>
-                        </div>
-                        <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg shrink-0">
-                            <button id="vocabModeCardBtn" onclick="setVocabMode('card')" class="px-2.5 py-1 text-xs font-extrabold rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm flex items-center gap-1">
-                                <i class="fa-solid fa-clone text-emerald-500"></i> カード
-                            </button>
-                            <button id="vocabModeListBtn" onclick="setVocabMode('list')" class="px-2.5 py-1 text-xs font-extrabold rounded text-slate-500 dark:text-slate-400 hover:text-slate-800 flex items-center gap-1">
-                                <i class="fa-solid fa-list text-slate-400"></i> 一覧
-                            </button>
-                        </div>
-                    </div>
-                    <!-- サジェスト -->
-                    <div id="searchSuggestionsContainer" class="hidden bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg overflow-hidden max-h-40 overflow-y-auto"></div>
-                </div>
-
-                <div id="vocabEmptyState" class="h-full flex flex-col items-center justify-center text-center p-8 space-y-3">
-                    <p class="text-xs font-bold text-slate-400">抽出された単語データがありません</p>
-                </div>
-
-                <!-- 単語一覧表示 -->
+            <div id="vocabView" class="hidden flex-1 flex-col overflow-hidden p-3 space-y-3">
+                <div id="vocabEmptyState" class="h-full flex items-center justify-center text-xs text-slate-400 font-bold">単語データがありません</div>
                 <div id="vocabListContainer" class="hidden flex-1 overflow-y-auto space-y-2"></div>
-
-                <!-- 単語カード表示 (Flashcard) -->
                 <div id="vocabCardContainer" class="hidden flex-1 flex-col items-center justify-center p-2">
-                    <div class="w-full max-w-sm flex items-center justify-between text-xs font-bold text-slate-500 mb-2 px-1">
-                        <span id="flashcardProgressLabel">1 / 1</span>
-                        <div class="flex items-center gap-2">
-                            <button id="shuffleCardsBtn" onclick="toggleShuffleCards()" class="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 hover:bg-amber-100 text-slate-600 dark:text-slate-300 transition flex items-center gap-1 text-[11px]">
-                                <i class="fa-solid fa-shuffle"></i> <span id="shuffleBtnLabel">シャッフル</span>
-                            </button>
-                            <span id="flashcardMasteredLabel" class="text-emerald-600">習得: 0</span>
+                    <div onclick="flipFlashcard()" class="w-full max-w-sm h-48 perspective-1000 cursor-pointer">
+                        <div id="flashcardInner" class="relative w-full h-full duration-500 transform-style-3d shadow rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 flex flex-col items-center justify-center">
+                            <h2 id="cardIndoText" class="text-2xl font-black text-slate-800 dark:text-slate-100">---</h2>
+                            <h3 id="cardJapText" class="text-lg font-bold text-emerald-600 mt-2">---</h3>
                         </div>
                     </div>
-
-                    <div onclick="flipFlashcard()" class="w-full max-w-sm h-56 perspective-1000 cursor-pointer">
-                        <div id="flashcardInner" class="relative w-full h-full duration-500 transform-style-3d shadow-md rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-                            <!-- 表面 -->
-                            <div class="absolute inset-0 w-full h-full backface-hidden p-5 flex flex-col justify-between rounded-2xl">
-                                <span id="cardBadgeFront" class="self-start text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">品詞</span>
-                                <div class="text-center space-y-1">
-                                    <h2 id="cardIndoText" class="text-2xl font-black text-slate-800 dark:text-slate-100">---</h2>
-                                    <p class="text-xs text-slate-400">タップして日本語訳を表示</p>
-                                </div>
-                                <div class="text-right">
-                                    <button onclick="event.stopPropagation(); speakIndonesian(document.getElementById('cardIndoText').textContent)" class="p-2 text-slate-400 hover:text-emerald-500 transition">
-                                        <i class="fa-solid fa-volume-high text-sm"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <!-- 裏面 -->
-                            <div class="absolute inset-0 w-full h-full backface-hidden rotate-y-180 p-5 flex flex-col justify-between rounded-2xl bg-emerald-50/40 dark:bg-slate-900 border-2 border-emerald-400">
-                                <span id="cardPosLabel" class="self-start text-[10px] font-bold text-emerald-700 dark:text-emerald-400">品詞詳細</span>
-                                <div class="text-center space-y-2">
-                                    <h3 id="cardJapText" class="text-xl font-extrabold text-emerald-800 dark:text-emerald-300">---</h3>
-                                    <p id="cardContextFull" class="text-xs text-slate-600 dark:text-slate-400 italic">---</p>
-                                </div>
-                                <div class="flex justify-end">
-                                    <button onclick="event.stopPropagation(); speakIndonesian(document.getElementById('cardIndoText').textContent)" class="p-2 text-slate-400 hover:text-emerald-500 transition">
-                                        <i class="fa-solid fa-volume-high text-sm"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- カード操作ボタン -->
-                    <div class="flex items-center gap-3 mt-4 w-full max-w-sm">
-                        <button onclick="reviewFlashcard()" class="flex-1 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1">
-                            <i class="fa-solid fa-rotate-left"></i> 要復習
-                        </button>
-                        <button onclick="nextFlashcard(true)" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 shadow">
-                            <i class="fa-solid fa-check"></i> 習得済み
-                        </button>
-                    </div>
+                    <button onclick="nextFlashcard()" class="mt-4 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg shadow">次の単語</button>
                 </div>
-
             </div>
 
         </div>
 
     </div>
 
-    <!-- API Key 設定モーダル -->
+    <!-- モーダル -->
     <div id="apiKeyModal" class="fixed inset-0 bg-slate-900/60 hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-2xl border border-slate-200 dark:border-slate-700">
-            <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                <i class="fa-solid fa-key text-amber-500"></i> Gemini API Key 設定
-            </h3>
-            <p class="text-xs text-slate-500">Google AI Studio で取得した API キーを入力してください。キーはブラウザ内だけに安全に保存されます。</p>
-            <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full px-3 py-2 rounded-lg border text-xs dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 font-mono focus:ring-2 focus:ring-red-500 outline-none">
-            <div class="flex justify-end gap-2 pt-2">
-                <button onclick="closeModal('apiKeyModal')" class="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 font-bold">キャンセル</button>
-                <button onclick="saveApiKeyFromModal()" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition">保存</button>
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-4 max-w-sm w-full space-y-3 shadow-xl">
+            <h3 class="font-bold text-sm">Gemini API Key 設定</h3>
+            <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full px-3 py-2 rounded border text-xs dark:bg-slate-900">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('apiKeyModal')" class="px-3 py-1 text-xs">キャンセル</button>
+                <button onclick="saveApiKeyFromModal()" class="px-3 py-1 bg-red-600 text-white rounded text-xs font-bold">保存</button>
             </div>
         </div>
     </div>
