@@ -172,22 +172,21 @@
             }, false);
         }
 
-        // 絶対URLの構築とAPIキーサニタイズ処理
+        // 安全な絶対URL構築とAPI Keyサニタイズ処理
         async function fetchGeminiApi(apiKey, payload) {
             var rawKey = apiKey || getApiKey();
-            var cleanKey = String(rawKey).replace(/[^a-zA-Z0-9_\-]/g, '');
+            var cleanKey = String(rawKey).trim().replace(/[^a-zA-Z0-9_\-]/g, '');
 
             if (!cleanKey || cleanKey.length < 20) {
-                throw new Error('API Keyの形式が正しくありません。設定画面から再入力してください。');
+                throw new Error('API Keyが正しく設定されていません。右上の「API Key」ボタンから再入力してください。');
             }
 
-            var urlObj = new URL('[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent)');
-            urlObj.searchParams.set('key', cleanKey);
+            var endpoint = '[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=)' + cleanKey;
 
             if (!payload.generationConfig) payload.generationConfig = {};
             payload.generationConfig.temperature = 0.1;
 
-            var response = await fetch(urlObj.toString(), {
+            var response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
