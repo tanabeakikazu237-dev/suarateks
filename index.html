@@ -173,11 +173,14 @@
         }
 
         async function fetchGeminiApi(apiKey, payload) {
-            var modelName = 'gemini-3.6-flash';
+            // 実在する正確なモデル名と絶対パスURLを指定
+            var modelName = 'gemini-1.5-flash';
+            var apiUrl = '[https://generativelanguage.googleapis.com/v1beta/models/](https://generativelanguage.googleapis.com/v1beta/models/)' + modelName + ':generateContent?key=' + encodeURIComponent(apiKey);
+
             if (!payload.generationConfig) payload.generationConfig = {};
             payload.generationConfig.temperature = 0.1;
 
-            var response = await fetch('[https://generativelanguage.googleapis.com/v1beta/models/](https://generativelanguage.googleapis.com/v1beta/models/)' + modelName + ':generateContent?key=' + apiKey, {
+            var response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -238,7 +241,6 @@
             setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
         };
 
-        // 1件ずつの安全な『3Pass分割解析処理』
         async function processSingleFileInQueue(queueItem, apiKey, currentIdx, totalIdx) {
             var file = queueItem.file;
             window.currentLoadedFile = file;
@@ -327,11 +329,10 @@ Return ONLY a valid JSON array:
             saveCurrentToHistory(cleanFileName, false);
         }
 
-        // Pass 3: 3文節バッチでプロレベルの超詳細文法解剖を生成
         async function generateHighResGrammarInBatches(apiKey, currentIdx, totalIdx) {
             if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
 
-            var batchSize = 3; // 3文節ごとに超高品質解説を生成
+            var batchSize = 3;
             var totalBlocks = window.transcriptBlocks.length;
 
             for (var i = 0; i < totalBlocks; i += batchSize) {
@@ -570,7 +571,6 @@ Text slice: ${chunkText}`;
             }).join(' ');
         }
 
-        // 本文コンテナ（【文節 #1】ヘッダーナンバーの明確な表示）
         function renderTranscriptContainer() {
             var emptyState = document.getElementById('emptyState');
             var container = document.getElementById('transcriptContainer');
@@ -602,7 +602,6 @@ Text slice: ${chunkText}`;
             if (container) container.innerHTML = html;
         }
 
-        // 文法解剖コンテナ（該当文節ナンバー＋完全一致引用）
         function renderGrammarContainer() {
             var emptyState = document.getElementById('grammarEmptyState');
             var container = document.getElementById('grammarContainer');
