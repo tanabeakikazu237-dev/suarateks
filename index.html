@@ -172,7 +172,7 @@
             }, false);
         }
 
-        // 徹底的なAPI Keyサニタイズ＆確実な外部fetch処理
+        // 絶対URLの構築とAPIキーサニタイズ処理
         async function fetchGeminiApi(apiKey, payload) {
             var rawKey = apiKey || getApiKey();
             var cleanKey = String(rawKey).replace(/[^a-zA-Z0-9_\-]/g, '');
@@ -181,12 +181,13 @@
                 throw new Error('API Keyの形式が正しくありません。設定画面から再入力してください。');
             }
 
-            var endpoint = '[https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=)' + cleanKey;
+            var urlObj = new URL('[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent)');
+            urlObj.searchParams.set('key', cleanKey);
 
             if (!payload.generationConfig) payload.generationConfig = {};
             payload.generationConfig.temperature = 0.1;
 
-            var response = await fetch(endpoint, {
+            var response = await fetch(urlObj.toString(), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -197,7 +198,7 @@
             try {
                 data = JSON.parse(responseText);
             } catch (err) {
-                throw new Error('サーバー応答エラー (HTMLが返されました): ' + responseText.substring(0, 80));
+                throw new Error('サーバー応答エラー: ' + responseText.substring(0, 80));
             }
 
             if (!response.ok || data.error) throw new Error(data.error?.message || ('HTTPエラー ' + response.status));
