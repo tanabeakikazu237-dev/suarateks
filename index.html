@@ -48,7 +48,7 @@
             }
         };
 
-        window.fileQueue = []; // 10件キュー
+        window.fileQueue = [];
         window.isQueueProcessing = false;
         window.currentLoadedFile = null;
         window.currentAudioBase64 = null;
@@ -67,6 +67,28 @@
 
         window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
 
+        // 途中で切れた不完全なJSON文字列を安全にパース・修復する関数
+        function safeParseTruncatedJson(jsonString) {
+            var str = jsonString.trim().replace(/^```json/g, '').replace(/^```/g, '').replace(/```$/g, '').trim();
+            try {
+                return JSON.parse(str);
+            } catch (e) {
+                console.warn("JSON truncation detected. Attempting repair...", e);
+                var lastObjectIndex = str.lastIndexOf('}');
+                if (lastObjectIndex !== -1) {
+                    var repairedStr = str.substring(0, lastObjectIndex + 1);
+                    if (!repairedStr.endsWith(']')) repairedStr += ']';
+                    try {
+                        return JSON.parse(repairedStr);
+                    } catch (err2) {
+                        console.error("Repair failed:", err2);
+                        throw e;
+                    }
+                }
+                throw e;
+            }
+        }
+
         window.handleFileChange = function(event) {
             var input = (event && event.target) ? event.target : document.getElementById('audioFileInput');
             var files = input ? input.files : null;
@@ -84,7 +106,7 @@
             window.fileQueue = validFiles.map((f, idx) => ({
                 id: 'queue-' + Date.now() + '-' + idx,
                 file: f,
-                status: 'waiting', // waiting, processing, completed, error
+                status: 'waiting',
                 progress: 0
             }));
 
@@ -156,7 +178,7 @@
             if (!payload.generationConfig) payload.generationConfig = {};
             payload.generationConfig.temperature = 0.1;
 
-            var response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent?key=' + apiKey, {
+            var response = await fetch('[https://generativelanguage.googleapis.com/v1beta/models/](https://generativelanguage.googleapis.com/v1beta/models/)' + modelName + ':generateContent?key=' + apiKey, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -167,7 +189,6 @@
             return data;
         }
 
-        // 順次シリアル実行メインループ
         window.processAudioWithGemini = async function() {
             if (!window.fileQueue || window.fileQueue.length === 0) {
                 showToast('音源ファイルがキューに追加されていません', 'error');
@@ -218,12 +239,10 @@
             setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
         };
 
-        // 1件ずつの安全処理
         async function processSingleFileInQueue(queueItem, apiKey, currentIdx, totalIdx) {
             var file = queueItem.file;
             window.currentLoadedFile = file;
 
-            // Base64化
             var base64Data = await new Promise((resolve, reject) => {
                 var reader = new FileReader();
                 reader.onload = e => resolve(e.target.result.split(',')[1]);
@@ -242,25 +261,25 @@
             if (progressBar) progressBar.style.width = '25%';
             if (progressPercent) progressPercent.textContent = '25%';
 
-            var transcribePrompt = `You are an elite Indonesian verbatim transcription specialist and senior university linguist.
-Transcribe the entire audio file from absolute start to finish with ZERO omissions.
+            // 出力文字数を極限まで無駄遣いさせないプロンプト最適化
+            var transcribePrompt = `You are a professional Indonesian verbatim transcription specialist.
+Transcribe the audio from absolute start to finish without omission.
 
-For each phrase block, generate:
-1. "speaker": Identification (Pembicara 1, Pembicara 2, etc.)
-2. "indonesian": Verbatim spoken Indonesian text
-3. "japanese": Natural Japanese translation
-4. "grammarExplanation": Professional linguistic breakdown in Japanese formatted strictly as:
-   - 【文法構造】 Analysis of sentence mechanics, affixation (me-, di-, ter-, -kan, -an), and syntax.
-   - 【応用例文】 A NEW, practical sentence utilizing the SAME grammar pattern or key affix from this block:
-     "Indonesian example sentence" (Japanese translation)
+For each phrase block, output JSON with concise fields:
+1. "speaker": Speaker ID (Pembicara 1, Pembicara 2)
+2. "indonesian": Spoken text
+3. "japanese": Japanese translation
+4. "grammarExplanation": Concise breakdown in Japanese:
+   【構造】 Syntax/Affix breakdown
+   【例文】 "Indonesian example" (Japanese translation)
 
 Return ONLY a valid JSON array matching this schema:
 [
   {
     "speaker": "Pembicara 1",
-    "indonesian": "exact spoken Indonesian",
-    "japanese": "Japanese translation",
-    "grammarExplanation": "【文法構造】...\n\n【応用例文】\n\"Example in Indonesian\" (日本語の訳)"
+    "indonesian": "exact text",
+    "japanese": "translation",
+    "grammarExplanation": "【構造】...\n【例文】\"Example\" (訳)"
   }
 ]`;
 
@@ -271,8 +290,9 @@ Return ONLY a valid JSON array matching this schema:
 
             var transcribeData = await fetchGeminiApi(apiKey, transcribePayload);
             var transcriptRaw = transcribeData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            transcriptRaw = transcriptRaw.trim().replace(/^```json/g, '').replace(/^```/g, '').replace(/```$/g, '').trim();
-            var parsedTranscript = JSON.parse(transcriptRaw);
+            
+            // 安全修復パース処理
+            var parsedTranscript = safeParseTruncatedJson(transcriptRaw);
             var rawBlocks = Array.isArray(parsedTranscript) ? parsedTranscript : (parsedTranscript.transcript || []);
 
             if (!rawBlocks || rawBlocks.length === 0) throw new Error('音声からテキストが読み取れませんでした');
@@ -284,7 +304,7 @@ Return ONLY a valid JSON array matching this schema:
                     speaker: item.speaker || 'Pembicara 1',
                     indonesian: item.indonesian || '',
                     japanese: item.japanese || '',
-                    grammarExplanation: item.grammarExplanation || '【文法構造】解説なし'
+                    grammarExplanation: item.grammarExplanation || '【構造】解説なし'
                 };
             });
 
@@ -298,7 +318,6 @@ Return ONLY a valid JSON array matching this schema:
             renderGrammarContainer();
             renderVocabContainer();
 
-            // 完成データを個別JSONとして端末に自動ダウンロード保存
             var cleanFileName = file.name.replace(/\.[^/.]+$/, "");
             var singleDataObj = {
                 id: 'hist-' + Date.now(),
@@ -323,19 +342,18 @@ Return ONLY a valid JSON array matching this schema:
                 var chunk = window.transcriptBlocks.slice(i, i + batchSize);
                 var chunkText = chunk.map(function(b) { return b.indonesian; }).join(' ');
 
-                var vocabPrompt = `Perform an exhaustive lexicographical breakdown on this Indonesian text slice.
-Extract EVERY single word (both surface spoken word and its base root form kata dasar).
+                var vocabPrompt = `Extract EVERY unique word (spoken and root kata dasar) from this text slice.
 
 Categories (pos): "noun", "verb", "adjective", "adverb", "other"
 
 Return ONLY a valid JSON array:
 [
   {
-    "indonesian": "exact spoken word",
-    "baseForm": "root kata dasar",
+    "indonesian": "spoken word",
+    "baseForm": "root word",
     "japanese": "Japanese meaning",
     "pos": "noun" | "verb" | "adjective" | "adverb" | "other",
-    "context": "Short context phrase from text"
+    "context": "Short phrase context"
   }
 ]
 Text slice: ${chunkText}`;
@@ -344,8 +362,7 @@ Text slice: ${chunkText}`;
                     var vocabPayload = { contents: [{ parts: [{ text: vocabPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
                     var data = await fetchGeminiApi(apiKey, vocabPayload);
                     var text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                    text = text.trim().replace(/^```json/g, '').replace(/^```/g, '').replace(/```$/g, '').trim();
-                    var parsed = JSON.parse(text);
+                    var parsed = safeParseTruncatedJson(text);
 
                     if (Array.isArray(parsed)) {
                         parsed.forEach(function(v) {
@@ -720,7 +737,6 @@ Text slice: ${chunkText}`;
             updateFlashcardUI();
         }
 
-        // 履歴管理・個別JSON保存エンジン
         function loadHistoryFromStorage() {
             try {
                 var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
