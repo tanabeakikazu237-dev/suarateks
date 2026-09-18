@@ -48,6 +48,8 @@
             }
         };
 
+        window.fileQueue = []; // 10件キュー
+        window.isQueueProcessing = false;
         window.currentLoadedFile = null;
         window.currentAudioBase64 = null;
         window.transcriptBlocks = [];
@@ -69,30 +71,59 @@
             var input = (event && event.target) ? event.target : document.getElementById('audioFileInput');
             var files = input ? input.files : null;
             if (!files || files.length === 0) return;
-            processSelectedFile(files[0]);
+            processSelectedFiles(Array.from(files));
         };
 
-        function processSelectedFile(file) {
-            window.currentLoadedFile = file;
+        function processSelectedFiles(files) {
+            var validFiles = files.filter(f => f.type.startsWith('audio/') || f.name.match(/\.(mp3|wav|m4a|aac|ogg|flac)$/i)).slice(0, 10);
+            if (validFiles.length === 0) {
+                showToast('音声ファイルが選択されていません', 'error');
+                return;
+            }
+
+            window.fileQueue = validFiles.map((f, idx) => ({
+                id: 'queue-' + Date.now() + '-' + idx,
+                file: f,
+                status: 'waiting', // waiting, processing, completed, error
+                progress: 0
+            }));
+
+            renderQueueUI();
+            showToast(window.fileQueue.length + ' 件の音源をキューに追加しました！', 'info');
+        }
+
+        function renderQueueUI() {
             var dropzoneDefault = document.getElementById('dropzoneDefault');
             var dropzoneSelected = document.getElementById('dropzoneSelected');
-            var selectedFileName = document.getElementById('selectedFileName');
-            var selectedFileSize = document.getElementById('selectedFileSize');
+            var queueListContainer = document.getElementById('queueListContainer');
+
+            if (!window.fileQueue || window.fileQueue.length === 0) {
+                if (dropzoneDefault) dropzoneDefault.classList.remove('hidden');
+                if (dropzoneSelected) dropzoneSelected.classList.add('hidden');
+                return;
+            }
 
             if (dropzoneDefault) dropzoneDefault.classList.add('hidden');
             if (dropzoneSelected) dropzoneSelected.classList.remove('hidden');
-            if (selectedFileName) selectedFileName.textContent = file.name;
-            if (selectedFileSize) selectedFileSize.textContent = formatBytes(file.size);
 
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                var dataUrl = e.target.result;
-                window.currentAudioBase64 = dataUrl.split(',')[1];
-                var audioPlayer = document.getElementById('audioPlayer');
-                if (audioPlayer) { audioPlayer.src = dataUrl; audioPlayer.load(); }
-                showToast('「' + file.name + '」を読み込みました！', 'info');
-            };
-            reader.readAsDataURL(file);
+            var html = '';
+            window.fileQueue.forEach(function(q, idx) {
+                var statusBadge = '';
+                if (q.status === 'waiting') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 font-bold">待機中</span>';
+                else if (q.status === 'processing') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500 text-white font-bold"><i class="fa-solid fa-spinner fa-spin"></i> 解析中</span>';
+                else if (q.status === 'completed') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500 text-white font-bold"><i class="fa-solid fa-check"></i> 完了</span>';
+                else if (q.status === 'error') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-rose-500 text-white font-bold">エラー</span>';
+
+                html += '<div class="flex items-center justify-between gap-1 text-xs p-1.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 mb-1">' +
+                    '<div class="min-w-0 flex-1">' +
+                        '<p class="font-bold text-slate-800 dark:text-slate-100 truncate text-[11px]">' + (idx + 1) + '. ' + escapeHtml(q.file.name) + '</p>' +
+                        '<p class="text-[9px] text-slate-400 font-mono">' + formatBytes(q.file.size) + '</p>' +
+                    '</div>' +
+                    '<div class="shrink-0">' + statusBadge + '</div>' +
+                '</div>';
+            });
+
+            if (queueListContainer) queueListContainer.innerHTML = html;
         }
 
         function formatBytes(bytes) {
@@ -115,9 +146,7 @@
                 var dt = e.dataTransfer;
                 var files = dt.files;
                 if (files && files.length > 0) {
-                    var input = document.getElementById('audioFileInput');
-                    if (input) input.files = files;
-                    processSelectedFile(files[0]);
+                    processSelectedFiles(Array.from(files));
                 }
             }, false);
         }
@@ -138,10 +167,10 @@
             return data;
         }
 
-        // 2Pass 高精度全自動解析
+        // 順次シリアル実行メインループ
         window.processAudioWithGemini = async function() {
-            if (!window.currentLoadedFile || !window.currentAudioBase64) {
-                showToast('先に音源ファイルを選択してください。', 'error');
+            if (!window.fileQueue || window.fileQueue.length === 0) {
+                showToast('音源ファイルがキューに追加されていません', 'error');
                 return;
             }
 
@@ -152,27 +181,68 @@
                 return;
             }
 
+            if (window.isQueueProcessing) return;
+            window.isQueueProcessing = true;
+
             var btn = document.getElementById('startTranscribeBtn');
             var btnText = document.getElementById('transcribeBtnText');
             var progressContainer = document.getElementById('chunkProgressContainer');
+            if (btn) btn.disabled = true;
+            if (progressContainer) progressContainer.classList.remove('hidden');
+
+            for (var i = 0; i < window.fileQueue.length; i++) {
+                var item = window.fileQueue[i];
+                if (item.status === 'completed') continue;
+
+                item.status = 'processing';
+                renderQueueUI();
+
+                if (btnText) btnText.textContent = '解析中 (' + (i + 1) + '/' + window.fileQueue.length + ')';
+
+                try {
+                    await processSingleFileInQueue(item, apiKey, i + 1, window.fileQueue.length);
+                    item.status = 'completed';
+                    renderQueueUI();
+                } catch (err) {
+                    console.error('Single File Queue Process Error:', err);
+                    item.status = 'error';
+                    renderQueueUI();
+                    showToast('「' + item.file.name + '」の解析でエラーが発生しました', 'error');
+                }
+            }
+
+            window.isQueueProcessing = false;
+            if (btn) btn.disabled = false;
+            if (btnText) btnText.textContent = "全ファイルの順次解析を開始";
+            showToast('すべてのキューファイルの順次解析が完了しました！', 'info');
+            setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
+        };
+
+        // 1件ずつの安全処理
+        async function processSingleFileInQueue(queueItem, apiKey, currentIdx, totalIdx) {
+            var file = queueItem.file;
+            window.currentLoadedFile = file;
+
+            // Base64化
+            var base64Data = await new Promise((resolve, reject) => {
+                var reader = new FileReader();
+                reader.onload = e => resolve(e.target.result.split(',')[1]);
+                reader.onerror = err => reject(err);
+                reader.readAsDataURL(file);
+            });
+
+            window.currentAudioBase64 = base64Data;
+            var mimeType = file.type || 'audio/mp3';
+
             var progressLabel = document.getElementById('chunkProgressLabel');
             var progressPercent = document.getElementById('chunkProgressPercent');
             var progressBar = document.getElementById('chunkProgressBar');
 
-            if (btn) btn.disabled = true;
-            if (progressContainer) progressContainer.classList.remove('hidden');
+            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 【Pass 1/2】文字起こし＆構文解剖...</span>';
+            if (progressBar) progressBar.style.width = '25%';
+            if (progressPercent) progressPercent.textContent = '25%';
 
-            try {
-                if (btnText) btnText.textContent = "Pass 1: 音声認識・文法解剖中...";
-                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> <span>【Pass 1/2】文字起こし＆応用例文付き文法解剖...</span>';
-                if (progressBar) progressBar.style.width = '30%';
-                if (progressPercent) progressPercent.textContent = '30%';
-
-                var base64Data = window.currentAudioBase64;
-                var mimeType = window.currentLoadedFile.type || 'audio/mp3';
-
-                // Pass 1 プロンプト: 該当文節参照＋応用例文義務化
-                var transcribePrompt = `You are an elite Indonesian verbatim transcription specialist and senior university linguist.
+            var transcribePrompt = `You are an elite Indonesian verbatim transcription specialist and senior university linguist.
 Transcribe the entire audio file from absolute start to finish with ZERO omissions.
 
 For each phrase block, generate:
@@ -194,65 +264,57 @@ Return ONLY a valid JSON array matching this schema:
   }
 ]`;
 
-                var transcribePayload = {
-                    contents: [{ role: 'user', parts: [{ text: transcribePrompt }, { inlineData: { mimeType: mimeType, data: base64Data } }] }],
-                    generationConfig: { responseMimeType: "application/json" }
+            var transcribePayload = {
+                contents: [{ role: 'user', parts: [{ text: transcribePrompt }, { inlineData: { mimeType: mimeType, data: base64Data } }] }],
+                generationConfig: { responseMimeType: "application/json" }
+            };
+
+            var transcribeData = await fetchGeminiApi(apiKey, transcribePayload);
+            var transcriptRaw = transcribeData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            transcriptRaw = transcriptRaw.trim().replace(/^```json/g, '').replace(/^```/g, '').replace(/```$/g, '').trim();
+            var parsedTranscript = JSON.parse(transcriptRaw);
+            var rawBlocks = Array.isArray(parsedTranscript) ? parsedTranscript : (parsedTranscript.transcript || []);
+
+            if (!rawBlocks || rawBlocks.length === 0) throw new Error('音声からテキストが読み取れませんでした');
+
+            window.transcriptBlocks = rawBlocks.map(function(item, index) {
+                return {
+                    id: 'block-' + Date.now() + '-' + index,
+                    blockIndex: index,
+                    speaker: item.speaker || 'Pembicara 1',
+                    indonesian: item.indonesian || '',
+                    japanese: item.japanese || '',
+                    grammarExplanation: item.grammarExplanation || '【文法構造】解説なし'
                 };
+            });
 
-                var transcribeData = await fetchGeminiApi(apiKey, transcribePayload);
-                var transcriptRaw = transcribeData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                transcriptRaw = transcriptRaw.trim().replace(/^```json/g, '').replace(/^```/g, '').replace(/```$/g, '').trim();
-                var parsedTranscript = JSON.parse(transcriptRaw);
-                var rawBlocks = Array.isArray(parsedTranscript) ? parsedTranscript : (parsedTranscript.transcript || []);
+            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-book-open text-emerald-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 【Pass 2/2】100%単語抽出...</span>';
+            if (progressBar) progressBar.style.width = '50%';
+            if (progressPercent) progressPercent.textContent = '50%';
 
-                if (!rawBlocks || rawBlocks.length === 0) throw new Error('音声からテキストが読み取れませんでした');
+            await extractAllVocabInBatches(apiKey, currentIdx, totalIdx);
 
-                window.transcriptBlocks = rawBlocks.map(function(item, index) {
-                    return {
-                        id: 'block-' + Date.now() + '-' + index,
-                        blockIndex: index,
-                        speaker: item.speaker || 'Pembicara 1',
-                        indonesian: item.indonesian || '',
-                        japanese: item.japanese || '',
-                        grammarExplanation: item.grammarExplanation || '【文法構造】解説なし'
-                    };
-                });
+            renderTranscriptContainer();
+            renderGrammarContainer();
+            renderVocabContainer();
 
-                if (btnText) btnText.textContent = "Pass 2: 文節バッチ100%単語抽出中...";
-                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-book-open text-emerald-500"></i> <span>【Pass 2/2】トークン切り捨て防止・全単語100%抽出...</span>';
-                if (progressBar) progressBar.style.width = '60%';
-                if (progressPercent) progressPercent.textContent = '60%';
+            // 完成データを個別JSONとして端末に自動ダウンロード保存
+            var cleanFileName = file.name.replace(/\.[^/.]+$/, "");
+            var singleDataObj = {
+                id: 'hist-' + Date.now(),
+                fileName: cleanFileName,
+                date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                blocks: window.transcriptBlocks,
+                vocab: window.vocabList
+            };
+            exportDataToFile(singleDataObj, cleanFileName + '_suarateks_analysis.json');
+            saveCurrentToHistory(cleanFileName, false);
+        }
 
-                // Pass 2: トークン切り捨てを100%防ぐ「文節バッチ送信アルゴリズム」
-                await extractAllVocabInBatches(apiKey);
-
-                if (progressBar) progressBar.style.width = '100%';
-                if (progressPercent) progressPercent.textContent = '100%';
-
-                renderTranscriptContainer();
-                renderGrammarContainer();
-                renderVocabContainer();
-                
-                // 解析完了時に自動的にLocalStorageへ保存（6件目到達時に自動ファイルダウンロード退避）
-                saveCurrentToHistory(window.currentLoadedFile.name, false);
-                showToast('2Pass全自動精密解析が完了しました！（全単語100%抽出完了）', 'info');
-                if (window.innerWidth < 768) switchMobileTab('transcript');
-
-            } catch (err) {
-                console.error('Gemini API Process Error:', err);
-                showToast('エラー: ' + (err.message || '解析処理に失敗しました'), 'error');
-            } finally {
-                if (btn) btn.disabled = false;
-                if (btnText) btnText.textContent = "高精度解析を開始";
-                setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
-            }
-        };
-
-        // トークン上限による切り捨てをゼロにする文節バッチ型単語抽出エンジン
-        async function extractAllVocabInBatches(apiKey) {
+        async function extractAllVocabInBatches(apiKey, currentIdx, totalIdx) {
             if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
             
-            var batchSize = 5; // 5文節ごとに分割送信して出力トークン溢れを完全防止
+            var batchSize = 5;
             var allExtractedVocabMap = new Map();
             var totalBlocks = window.transcriptBlocks.length;
             var processedCount = 0;
@@ -302,11 +364,11 @@ Text slice: ${chunkText}`;
                         });
                     }
                 } catch (e) {
-                    console.warn('Batch vocab extraction warning at block ' + i, e);
+                    console.warn('Batch vocab extraction warning', e);
                 }
 
                 processedCount += chunk.length;
-                var pct = 60 + Math.floor((processedCount / totalBlocks) * 35);
+                var pct = 50 + Math.floor((processedCount / totalBlocks) * 45);
                 var progressBar = document.getElementById('chunkProgressBar');
                 var progressPercent = document.getElementById('chunkProgressPercent');
                 if (progressBar) progressBar.style.width = pct + '%';
@@ -460,7 +522,6 @@ Text slice: ${chunkText}`;
             if (container) container.innerHTML = html;
         }
 
-        // 文法解剖（該当文節ナンバー＋本文引用＋応用例文強調UI）
         function renderGrammarContainer() {
             var emptyState = document.getElementById('grammarEmptyState');
             var container = document.getElementById('grammarContainer');
@@ -480,7 +541,6 @@ Text slice: ${chunkText}`;
                             '<i class="fa-solid fa-play text-[9px]"></i><span>再生</span>' +
                         '</button>' +
                     '</div>' +
-                    '<!-- 引用表示 -->' +
                     '<div class="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border-l-4 border-blue-500 space-y-1">' +
                         '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + clickableIndo + '</p>' +
                         '<p class="text-xs text-slate-500 dark:text-slate-400 font-medium">' + escapeHtml(block.japanese) + '</p>' +
@@ -660,7 +720,7 @@ Text slice: ${chunkText}`;
             updateFlashcardUI();
         }
 
-        // --- 履歴・個別JSONダウンロード・6件自動退避・選択結合エンジン ---
+        // 履歴管理・個別JSON保存エンジン
         function loadHistoryFromStorage() {
             try {
                 var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
@@ -719,7 +779,6 @@ Text slice: ${chunkText}`;
             updateMergeButtonState();
         }
 
-        // 手動「保存」ボタン: 現在の解析結果を個別JSONファイルとして直接保存
         function manualSaveHistory() {
             if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
                 showToast('保存する解析データがありません', 'error');
@@ -733,14 +792,11 @@ Text slice: ${chunkText}`;
                 blocks: window.transcriptBlocks,
                 vocab: window.vocabList
             };
-            
-            // 個別JSONファイルとしてダウンロード
             exportDataToFile(singleDataObj, name + '_suarateks_analysis.json');
             saveCurrentToHistory(name, false);
             showToast('個別のJSONファイルとして保存しました！', 'info');
         }
 
-        // 履歴保存（6件到達で6件目を自動個別JSONダウンロード退避）
         function saveCurrentToHistory(fileName, showToastNotification) {
             if (showToastNotification === undefined) showToastNotification = true;
             if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
@@ -761,7 +817,6 @@ Text slice: ${chunkText}`;
 
                 history.unshift(item);
 
-                // 条件的保存（6件目到達で個別JSONファイルを出力して安全退避・リセット）
                 if (history.length >= 6) {
                     exportDataToFile(item, targetName + '_6th_auto_backup.json');
                     history = [];
@@ -776,7 +831,6 @@ Text slice: ${chunkText}`;
             } catch (e) { console.warn('LocalStorage Save Error:', e); }
         }
 
-        // 複数履歴の選択結合（1つの統合JSONファイルとして出力・保存）
         function mergeSelectedHistories() {
             if (window.selectedHistoryIds.length < 2) return;
             var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
@@ -835,7 +889,6 @@ Text slice: ${chunkText}`;
                 vocab: window.vocabList
             };
 
-            // 1つの統合JSONファイルとして保存
             exportDataToFile(mergedDataObj, mergedTitle + '_merged.json');
             saveCurrentToHistory(mergedTitle, false);
             window.selectedHistoryIds = [];
@@ -862,16 +915,6 @@ Text slice: ${chunkText}`;
                 renderGrammarContainer();
                 renderVocabContainer();
                 
-                var dropzoneDefault = document.getElementById('dropzoneDefault');
-                var dropzoneSelected = document.getElementById('dropzoneSelected');
-                var selectedFileName = document.getElementById('selectedFileName');
-                var selectedFileSize = document.getElementById('selectedFileSize');
-
-                if (dropzoneDefault) dropzoneDefault.classList.add('hidden');
-                if (dropzoneSelected) dropzoneSelected.classList.remove('hidden');
-                if (selectedFileName) selectedFileName.textContent = found.fileName;
-                if (selectedFileSize) selectedFileSize.textContent = '復元データ';
-
                 showToast('「' + found.fileName + '」を復元読み込みしました', 'info');
                 if (window.innerWidth < 768) switchMobileTab('transcript');
             }
@@ -906,13 +949,7 @@ Text slice: ${chunkText}`;
             reader.onload = function(e) {
                 try {
                     var importedData = JSON.parse(e.target.result);
-                    var singleObj = null;
-
-                    if (Array.isArray(importedData)) {
-                        singleObj = importedData[0];
-                    } else if (importedData.blocks) {
-                        singleObj = importedData;
-                    }
+                    var singleObj = Array.isArray(importedData) ? importedData[0] : importedData;
 
                     if (!singleObj || !singleObj.blocks) {
                         throw new Error('正しい解析JSONファイルではありません');
@@ -926,7 +963,7 @@ Text slice: ${chunkText}`;
                     renderVocabContainer();
 
                     saveCurrentToHistory(singleObj.fileName || file.name, false);
-                    showToast('「' + (singleObj.fileName || file.name) + '」を復元・復元読み込みしました！', 'info');
+                    showToast('「' + (singleObj.fileName || file.name) + '」を復元読み込みしました！', 'info');
                     if (window.innerWidth < 768) switchMobileTab('transcript');
 
                 } catch (err) {
@@ -1054,43 +1091,41 @@ Text slice: ${chunkText}`;
         <!-- 左パネル：音源・履歴コントロール -->
         <div id="panelSetup" class="w-full md:w-72 flex flex-col gap-3 shrink-0 overflow-y-auto">
             <div id="playerCard" class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
-                <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-                    <i class="fa-solid fa-file-audio text-red-600"></i> 音源選択
+                <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音源キュー選択</span>
+                    <span class="text-[10px] text-slate-400">最大10件</span>
                 </h3>
                 
                 <label id="fileDropLabel" for="audioFileInput" class="relative group cursor-pointer block">
-                    <input type="file" id="audioFileInput" accept="audio/*" onchange="window.handleFileChange(event)" class="hidden">
+                    <input type="file" id="audioFileInput" accept="audio/*" multiple onchange="window.handleFileChange(event)" class="hidden">
                     
-                    <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-red-500 dark:hover:border-red-500 rounded-xl p-3.5 text-center bg-slate-50 dark:bg-slate-900 transition-all duration-200 group-hover:bg-red-50/30">
-                        <div id="dropzoneDefault" class="space-y-1.5">
-                            <div class="w-9 h-9 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 flex items-center justify-center text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform">
-                                <i class="fa-solid fa-cloud-arrow-up text-base"></i>
+                    <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-red-500 rounded-xl p-3 text-center bg-slate-50 dark:bg-slate-900 transition-all duration-200 group-hover:bg-red-50/30">
+                        <div id="dropzoneDefault" class="space-y-1">
+                            <div class="w-8 h-8 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-cloud-arrow-up text-sm"></i>
                             </div>
-                            <p class="text-xs font-extrabold text-slate-700 dark:text-slate-200">音源を選択する</p>
-                            <p class="text-[10px] text-slate-400 leading-tight">ドラッグ＆ドロップ、または<br>タップしてファイル指定</p>
+                            <p class="text-xs font-extrabold text-slate-700 dark:text-slate-200">複数音源を選択（最大10件）</p>
+                            <p class="text-[9px] text-slate-400">ドラッグ＆ドロップ対応</p>
                         </div>
 
                         <div id="dropzoneSelected" class="hidden space-y-1 text-left">
-                            <div class="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                                <i class="fa-solid fa-circle-check text-xs"></i>
-                                <span class="text-[10px] font-extrabold uppercase">音源セット完了</span>
+                            <div class="flex items-center justify-between text-emerald-600 mb-1">
+                                <span class="text-[10px] font-extrabold"><i class="fa-solid fa-list-check"></i> キューセット完了</span>
+                                <span class="text-[9px] text-slate-400">タップで再選択</span>
                             </div>
-                            <p id="selectedFileName" class="text-xs font-bold text-slate-800 dark:text-slate-100 truncate"></p>
-                            <p id="selectedFileSize" class="text-[9px] text-slate-400 font-mono"></p>
+                            <div id="queueListContainer" class="max-h-36 overflow-y-auto pr-1"></div>
                         </div>
                     </div>
                 </label>
 
-                <audio id="audioPlayer" controls class="w-full h-8 rounded"></audio>
-
                 <button id="startTranscribeBtn" onclick="window.processAudioWithGemini()" class="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition">
-                    <span id="transcribeBtnText">高精度解析を開始</span>
+                    <span id="transcribeBtnText">順次シリアル解析を開始</span>
                 </button>
             </div>
 
             <div id="chunkProgressContainer" class="hidden bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">
                 <div class="flex justify-between text-xs font-bold">
-                    <span id="chunkProgressLabel">AI解析中...</span>
+                    <span id="chunkProgressLabel">順次解析実行中...</span>
                     <span id="chunkProgressPercent" class="text-red-600">0%</span>
                 </div>
                 <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
@@ -1098,7 +1133,7 @@ Text slice: ${chunkText}`;
                 </div>
             </div>
 
-            <!-- 解析履歴パネル（6件目自動退避・任意保存ファイル化・選択結合統合） -->
+            <!-- 解析履歴パネル -->
             <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[160px]">
                 <div class="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-700 mb-2 gap-1">
                     <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1">
@@ -1152,7 +1187,7 @@ Text slice: ${chunkText}`;
 
             <!-- View 1: 本文・対訳 -->
             <div id="transcriptView" class="flex-1 p-3 overflow-y-auto space-y-3">
-                <div id="emptyState" class="h-full flex items-center justify-center text-xs text-slate-400 font-bold">音源を選択して「高精度解析を開始」を押してください</div>
+                <div id="emptyState" class="h-full flex items-center justify-center text-xs text-slate-400 font-bold">音源キューをセットして「順次シリアル解析を開始」を押してください</div>
                 <div id="transcriptContainer" class="space-y-3"></div>
             </div>
 
