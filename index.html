@@ -12,7 +12,10 @@
     <meta name="apple-mobile-web-app-title" content="SuaraTeks">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2991/2991148.png">
 
-    <!-- Tailwind CSS & FontAwesome -->
+    <!-- ① Tailwind CSS 本体を先に読み込み -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- ② Tailwind の設定を適用 -->
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -24,7 +27,8 @@
             }
         };
     </script>
-    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- FontAwesome & Google Fonts -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
@@ -43,12 +47,10 @@
         .search-highlight { background-color: #fef08a; color: #854d0e; font-weight: bold; padding: 0 2px; border-radius: 2px; }
 
         .dropzone-active { border-color: #e70011 !important; background-color: rgba(231, 0, 17, 0.05) !important; }
-        .no-wrap-tab { white-space: nowrap !important; word-break: keep-all !important; flex-shrink: 0 !important; }
+        .no-wrap-tab { whitespace: nowrap !important; word-break: keep-all !important; flex-shrink: 0 !important; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
-
-
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 h-[100dvh] flex flex-col font-sans overflow-hidden">
 
@@ -246,11 +248,12 @@
 
     </div>
 
-    <!-- モーダル -->
+    <!-- API Key モーダル -->
     <div id="apiKeyModal" class="fixed inset-0 bg-slate-900/60 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white dark:bg-slate-800 rounded-xl p-4 max-w-sm w-full space-y-3 shadow-xl">
             <h3 class="font-bold text-sm">Gemini API Key 設定</h3>
-            <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full px-3 py-2 rounded border text-xs dark:bg-slate-900">
+            <p class="text-[10px] text-slate-400">Google AI Studio で取得した API Key を入力してください</p>
+            <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full px-3 py-2 rounded border text-xs dark:bg-slate-900 font-mono">
             <div class="flex justify-end gap-2">
                 <button onclick="closeModal('apiKeyModal')" class="px-3 py-1 text-xs">キャンセル</button>
                 <button onclick="saveApiKeyFromModal()" class="px-3 py-1 bg-red-600 text-white rounded text-xs font-bold">保存</button>
@@ -258,10 +261,8 @@
         </div>
     </div>
 
-
+    <!-- アプリケーション・ロジック -->
     <script>
-
-
         window.fileQueue = [];
         window.isQueueProcessing = false;
         window.currentLoadedFile = null;
@@ -281,10 +282,6 @@
 
         window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
 
-        // GeminiのJSON応答を安全に取り出す共通関数
-        // responseMimeType=application/json を使っていても、モデル側の都合で
-        // ```json ... ``` が混ざったり、途中で切れたりする可能性があるため、
-        // 可能な範囲で安全に復旧し、復旧できない場合は元のエラーを明確に返します。
         function stripJsonCodeFence(text) {
             return String(text || '')
                 .trim()
@@ -300,53 +297,15 @@
 
             try {
                 return JSON.parse(str);
-            } catch (firstError) {
-                console.warn('[Gemini JSON] 通常パース失敗。修復を試行します。', firstError);
+            } catch (e) {
+                console.warn('[Gemini JSON] 修復試行...', e);
             }
 
-            // 文字列中の } や ] を単純に探す方式では壊れやすいため、
-            // まず完全なトップレベル配列/オブジェクトの終了位置を走査します。
-            var depthObject = 0;
-            var depthArray = 0;
-            var inString = false;
-            var escaped = false;
-            var lastCompleteIndex = -1;
-
-            for (var i = 0; i < str.length; i++) {
-                var ch = str[i];
-
-                if (inString) {
-                    if (escaped) {
-                        escaped = false;
-                    } else if (ch === '\\') {
-                        escaped = true;
-                    } else if (ch === '"') {
-                        inString = false;
-                    }
-                    continue;
-                }
-
-                if (ch === '"') {
-                    inString = true;
-                    continue;
-                }
-
-                if (ch === '{') depthObject++;
-                else if (ch === '}') depthObject = Math.max(0, depthObject - 1);
-                else if (ch === '[') depthArray++;
-                else if (ch === ']') depthArray = Math.max(0, depthArray - 1);
-
-                if (depthObject === 0 && depthArray === 0) {
-                    lastCompleteIndex = i;
-                }
-            }
-
-            // 配列の途中で切れたケースでは、最後に完全に閉じたオブジェクトまでを採用。
             if (str[0] === '[') {
                 var lastObjectEnd = -1;
                 var objectDepth = 0;
-                inString = false;
-                escaped = false;
+                var inString = false;
+                var escaped = false;
 
                 for (var j = 0; j < str.length; j++) {
                     var c = str[j];
@@ -368,22 +327,11 @@
                     var repairedArray = str.substring(0, lastObjectEnd + 1).replace(/,\s*$/, '') + ']';
                     try {
                         return JSON.parse(repairedArray);
-                    } catch (arrayRepairError) {
-                        console.error('[Gemini JSON] 配列修復失敗:', arrayRepairError);
-                    }
+                    } catch (err) {}
                 }
             }
 
-            if (lastCompleteIndex >= 0) {
-                var candidate = str.substring(0, lastCompleteIndex + 1);
-                try {
-                    return JSON.parse(candidate);
-                } catch (candidateError) {
-                    console.error('[Gemini JSON] 最終候補のパース失敗:', candidateError);
-                }
-            }
-
-            throw new Error('GeminiのJSON応答を解析できませんでした。応答先頭: ' + str.substring(0, 500));
+            throw new Error('GeminiのJSON応答を解析できませんでした');
         }
 
         window.handleFileChange = function(event) {
@@ -470,108 +418,46 @@
             }, false);
         }
 
-        // Gemini API共通呼び出し
+        // Gemini API 呼び出し
         async function fetchGeminiApi(apiKey, payload) {
             var modelName = 'gemini-2.5-flash';
 
-            if (!payload || typeof payload !== 'object') {
-                throw new Error('Gemini APIに渡すpayloadが不正です');
-            }
-
             if (!payload.generationConfig) payload.generationConfig = {};
-            if (payload.generationConfig.temperature == null) {
-                payload.generationConfig.temperature = 0.1;
-            }
+            payload.generationConfig.temperature = 0.1;
 
             var cleanKey = String(apiKey || getApiKey() || '').trim();
             if (!cleanKey || cleanKey.length < 20) {
                 throw new Error('API Keyが正しく設定されていません。「API Key」ボタンから再設定してください。');
             }
 
-            // ここはMarkdownリンクではなく、必ず生のURLにする。
-            var endpoint =
-                'https://generativelanguage.googleapis.com/v1beta/models/' +
-                modelName +
-                ':generateContent?key=' +
-                encodeURIComponent(cleanKey);
+            var endpoint = '[https://generativelanguage.googleapis.com/v1beta/models/](https://generativelanguage.googleapis.com/v1beta/models/)' + modelName + ':generateContent?key=' + encodeURIComponent(cleanKey);
 
-            console.log('[Gemini] Request:', {
-                model: modelName,
-                endpoint: endpoint.replace(/key=[^&]+/, 'key=***')
+            var response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
-
-            var response;
-            var lastNetworkError = null;
-            for (var attempt = 1; attempt <= 2; attempt++) {
-                try {
-                    response = await fetch(endpoint, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(payload)
-                    });
-                    if (response.ok || (response.status !== 429 && response.status < 500)) break;
-                    if (attempt < 2) await new Promise(function(resolve) { setTimeout(resolve, 1000); });
-                } catch (networkError) {
-                    lastNetworkError = networkError;
-                    if (attempt < 2) await new Promise(function(resolve) { setTimeout(resolve, 1000); });
-                }
-            }
-
-            if (!response) {
-                throw new Error('Gemini APIへの通信に失敗しました: ' + (lastNetworkError ? lastNetworkError.message : 'Unknown network error'));
-            }
 
             var responseText = await response.text();
             var data;
 
             try {
                 data = JSON.parse(responseText);
-            } catch (parseError) {
-                throw new Error(
-                    'Gemini APIからJSONではない応答が返りました。HTTP ' +
-                    response.status + ': ' + responseText.substring(0, 500)
-                );
+            } catch (err) {
+                throw new Error('Gemini APIからJSONではない応答が返りました (HTTP ' + response.status + ')');
             }
 
             if (!response.ok || data.error) {
-                var apiMessage = data && data.error && data.error.message;
-                throw new Error(apiMessage || ('Gemini API Error HTTP ' + response.status));
-            }
-
-            if (!Array.isArray(data.candidates) || data.candidates.length === 0) {
-                throw new Error(
-                    'Gemini APIの応答にcandidatesがありません: ' +
-                    JSON.stringify(data).substring(0, 1000)
-                );
+                throw new Error(data.error?.message || ('HTTP Error ' + response.status));
             }
 
             return data;
         }
 
         function extractGeminiText(data) {
-            if (!data) throw new Error('Gemini APIの応答が空です');
-            if (data.error) throw new Error(data.error.message || 'Gemini APIエラー');
-
-            var candidates = data.candidates;
-            if (!Array.isArray(candidates) || candidates.length === 0) {
-                throw new Error('Gemini APIから候補テキストが返されませんでした');
-            }
-
-            var parts = candidates[0] && candidates[0].content && candidates[0].content.parts;
-            if (!Array.isArray(parts)) {
-                throw new Error('Geminiレスポンスのpartsがありません: ' + JSON.stringify(data).substring(0, 1000));
-            }
-
-            var text = parts
-                .filter(function(part) { return part && typeof part.text === 'string'; })
-                .map(function(part) { return part.text; })
-                .join('')
-                .trim();
-
-            if (!text) throw new Error('Geminiから解析テキストが返されませんでした');
-            return text;
+            var parts = data.candidates?.[0]?.content?.parts;
+            if (!Array.isArray(parts)) throw new Error('応答にテキストデータが含まれていません');
+            return parts.map(p => p.text || '').join('').trim();
         }
 
         window.processAudioWithGemini = async function() {
@@ -613,7 +499,7 @@
                     console.error('Single File Queue Process Error:', err);
                     item.status = 'error';
                     renderQueueUI();
-                    showToast('「' + item.file.name + '」の解析エラー: ' + err.message, 'error');
+                    showToast('「' + item.file.name + '」のエラー: ' + err.message, 'error');
                 }
             }
 
@@ -628,127 +514,74 @@
             var file = queueItem.file;
             window.currentLoadedFile = file;
 
-            var base64Data = await new Promise(function(resolve, reject) {
+            var base64Data = await new Promise((resolve, reject) => {
                 var reader = new FileReader();
-                reader.onload = function(e) {
-                    try {
-                        var result = String(e.target.result || '');
-                        var commaIndex = result.indexOf(',');
-                        if (commaIndex === -1) throw new Error('音声ファイルの読み込み形式が不正です');
-                        resolve(result.substring(commaIndex + 1));
-                    } catch (err) {
-                        reject(err);
-                    }
-                };
-                reader.onerror = function() { reject(new Error('音声ファイルの読み込みに失敗しました')); };
+                reader.onload = e => resolve(e.target.result.split(',')[1]);
+                reader.onerror = err => reject(err);
                 reader.readAsDataURL(file);
             });
 
             window.currentAudioBase64 = base64Data;
-            var mimeType = file.type || 'audio/mpeg';
+            var mimeType = file.type || 'audio/mp3';
 
             var progressLabel = document.getElementById('chunkProgressLabel');
             var progressPercent = document.getElementById('chunkProgressPercent');
             var progressBar = document.getElementById('chunkProgressBar');
 
-            // ------------------------------
-            // Pass 1: 音声 → 文字起こし＋翻訳
-            // ------------------------------
+            // Pass 1: 文字起こし ＆ 対訳
             if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 【Pass 1/3】文字起こし＆翻訳...</span>';
             if (progressBar) progressBar.style.width = '20%';
             if (progressPercent) progressPercent.textContent = '20%';
 
             var transcribePrompt = `You are a professional Indonesian verbatim transcription specialist.
-Transcribe the audio from absolute start to finish as accurately as possible.
+Transcribe the audio accurately from start to finish.
 
-Split the speech into reasonably short phrase blocks. Do NOT generate grammar explanations in this pass.
-For each phrase block, output:
-1. "speaker": Speaker ID such as "Pembicara 1"
-2. "indonesian": The spoken Indonesian text
-3. "japanese": A natural Japanese translation
-
-Rules:
-- Do not invent speech that is not audible.
-- Preserve Indonesian words as spoken when reasonably clear.
-- Keep each block concise enough for later grammar analysis.
-- Return ONLY a valid JSON array.
-
-Schema:
+Return ONLY a valid JSON array:
 [
   {
     "speaker": "Pembicara 1",
-    "indonesian": "spoken text",
-    "japanese": "Japanese translation"
+    "indonesian": "exact verbatim spoken Indonesian",
+    "japanese": "Natural Japanese translation"
   }
 ]`;
 
             var transcribePayload = {
-                contents: [{
-                    role: 'user',
-                    parts: [
-                        { text: transcribePrompt },
-                        { inlineData: { mimeType: mimeType, data: base64Data } }
-                    ]
-                }],
-                generationConfig: {
-                    responseMimeType: 'application/json',
-                    temperature: 0.1,
-                    maxOutputTokens: 8192
-                }
+                contents: [{ role: 'user', parts: [{ text: transcribePrompt }, { inlineData: { mimeType: mimeType, data: base64Data } }] }],
+                generationConfig: { responseMimeType: "application/json" }
             };
 
             var transcribeData = await fetchGeminiApi(apiKey, transcribePayload);
             var transcriptRaw = extractGeminiText(transcribeData);
-            console.log('[Gemini] Transcript response:', transcriptRaw.substring(0, 2000));
-
             var parsedTranscript = safeParseTruncatedJson(transcriptRaw);
-            var rawBlocks = Array.isArray(parsedTranscript)
-                ? parsedTranscript
-                : (parsedTranscript && Array.isArray(parsedTranscript.transcript) ? parsedTranscript.transcript : []);
+            var rawBlocks = Array.isArray(parsedTranscript) ? parsedTranscript : (parsedTranscript.transcript || []);
 
-            if (!rawBlocks || rawBlocks.length === 0) {
-                throw new Error('音声からテキストが読み取れませんでした');
-            }
+            if (!rawBlocks || rawBlocks.length === 0) throw new Error('音声からテキストが読み取れませんでした');
 
-            window.transcriptBlocks = rawBlocks
-                .map(function(item, index) {
-                    return {
-                        id: 'block-' + Date.now() + '-' + index,
-                        blockIndex: index,
-                        speaker: item && item.speaker ? item.speaker : 'Pembicara 1',
-                        indonesian: item && item.indonesian ? String(item.indonesian).trim() : '',
-                        japanese: item && item.japanese ? String(item.japanese).trim() : '',
-                        grammarExplanation: '【構造】解析中...'
-                    };
-                })
-                .filter(function(block) { return block.indonesian; });
-
-            if (window.transcriptBlocks.length === 0) {
-                throw new Error('文字起こし結果にインドネシア語本文がありませんでした');
-            }
+            window.transcriptBlocks = rawBlocks.map(function(item, index) {
+                return {
+                    id: 'block-' + Date.now() + '-' + index,
+                    blockIndex: index,
+                    speaker: item.speaker || 'Pembicara 1',
+                    indonesian: item.indonesian || '',
+                    japanese: item.japanese || '',
+                    grammarExplanation: '解析中...'
+                };
+            });
 
             renderTranscriptContainer();
 
-            // ------------------------------
-            // Pass 2: 文字起こし済み本文 → 文法解説
-            // 音声データと長い解説を同じリクエストに詰め込まないことで、
-            // JSON途中切れを起こしにくくする。
-            // ------------------------------
-            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-language text-blue-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 【Pass 2/3】文法解説...</span>';
-            if (progressBar) progressBar.style.width = '40%';
-            if (progressPercent) progressPercent.textContent = '40%';
+            // Pass 2: 文法解剖
+            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-language text-blue-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 【Pass 2/3】文法解剖...</span>';
+            if (progressBar) progressBar.style.width = '50%';
+            if (progressPercent) progressPercent.textContent = '50%';
 
             await enrichGrammarInBatches(apiKey, currentIdx, totalIdx);
-
-            renderTranscriptContainer();
             renderGrammarContainer();
 
-            // ------------------------------
             // Pass 3: 語彙抽出
-            // ------------------------------
             if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-book-open text-emerald-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 【Pass 3/3】単語抽出...</span>';
-            if (progressBar) progressBar.style.width = '65%';
-            if (progressPercent) progressPercent.textContent = '65%';
+            if (progressBar) progressBar.style.width = '80%';
+            if (progressPercent) progressPercent.textContent = '80%';
 
             await extractAllVocabInBatches(apiKey, currentIdx, totalIdx);
             renderVocabContainer();
@@ -756,7 +589,7 @@ Schema:
             if (progressBar) progressBar.style.width = '100%';
             if (progressPercent) progressPercent.textContent = '100%';
 
-            var cleanFileName = file.name.replace(/\.[^/.]+$/, '');
+            var cleanFileName = file.name.replace(/\.[^/.]+$/, "");
             var singleDataObj = {
                 id: 'hist-' + Date.now(),
                 fileName: cleanFileName,
@@ -771,64 +604,42 @@ Schema:
         async function enrichGrammarInBatches(apiKey, currentIdx, totalIdx) {
             if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
 
-            var batchSize = 6;
+            var batchSize = 5;
             var totalBlocks = window.transcriptBlocks.length;
-            var processedCount = 0;
 
             for (var i = 0; i < totalBlocks; i += batchSize) {
                 var chunk = window.transcriptBlocks.slice(i, i + batchSize);
-                var inputBlocks = chunk.map(function(block) {
-                    return {
-                        blockIndex: block.blockIndex,
-                        indonesian: block.indonesian
-                    };
-                });
+                var inputBlocks = chunk.map(b => ({ blockIndex: b.blockIndex, indonesian: b.indonesian }));
 
-                var grammarPrompt = `Analyze each Indonesian phrase below for a Japanese learner.
-Return ONLY a valid JSON array. Keep each explanation concise.
+                var grammarPrompt = `Analyze each Indonesian phrase below for a Japanese learner. Return ONLY a valid JSON array.
 
-For every input block, return:
-{
-  "blockIndex": number,
-  "grammarExplanation": "【構造】...\n【例文】\"Indonesian example\" (Japanese translation)"
-}
-
-Do not change the Indonesian source text.
-Do not add any block that is not in the input.
+[
+  {
+    "blockIndex": 0,
+    "grammarExplanation": "【構造】...\n【例文】\"...\" (...)"
+  }
+]
 
 INPUT:
 ${JSON.stringify(inputBlocks)}`;
 
-                var grammarPayload = {
-                    contents: [{ role: 'user', parts: [{ text: grammarPrompt }] }],
-                    generationConfig: {
-                        responseMimeType: 'application/json',
-                        temperature: 0.1,
-                        maxOutputTokens: 4096
-                    }
-                };
+                try {
+                    var payload = { contents: [{ parts: [{ text: grammarPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
+                    var data = await fetchGeminiApi(apiKey, payload);
+                    var text = extractGeminiText(data);
+                    var parsed = safeParseTruncatedJson(text);
 
-                var data = await fetchGeminiApi(apiKey, grammarPayload);
-                var text = extractGeminiText(data);
-                var parsed = safeParseTruncatedJson(text);
-
-                if (Array.isArray(parsed)) {
-                    parsed.forEach(function(item) {
-                        var block = window.transcriptBlocks.find(function(b) {
-                            return b.blockIndex === Number(item.blockIndex);
+                    if (Array.isArray(parsed)) {
+                        parsed.forEach(function(item) {
+                            var block = window.transcriptBlocks.find(b => b.blockIndex === Number(item.blockIndex));
+                            if (block && item.grammarExplanation) {
+                                block.grammarExplanation = String(item.grammarExplanation).trim();
+                            }
                         });
-                        if (block && item.grammarExplanation) {
-                            block.grammarExplanation = String(item.grammarExplanation).trim();
-                        }
-                    });
+                    }
+                } catch (e) {
+                    console.warn('Grammar batch warning', e);
                 }
-
-                processedCount += chunk.length;
-                var pct = 40 + Math.floor((processedCount / totalBlocks) * 25);
-                var progressBar = document.getElementById('chunkProgressBar');
-                var progressPercent = document.getElementById('chunkProgressPercent');
-                if (progressBar) progressBar.style.width = pct + '%';
-                if (progressPercent) progressPercent.textContent = pct + '%';
             }
         }
 
@@ -838,15 +649,12 @@ ${JSON.stringify(inputBlocks)}`;
             var batchSize = 5;
             var allExtractedVocabMap = new Map();
             var totalBlocks = window.transcriptBlocks.length;
-            var processedCount = 0;
 
             for (var i = 0; i < totalBlocks; i += batchSize) {
                 var chunk = window.transcriptBlocks.slice(i, i + batchSize);
-                var chunkText = chunk.map(function(b) { return b.indonesian; }).join(' ');
+                var chunkText = chunk.map(b => b.indonesian).join(' ');
 
-                var vocabPrompt = `Extract the important unique vocabulary items from this text slice. Prefer words useful for an Indonesian learner; include spoken forms and kata dasar when applicable.
-
-Categories (pos): "noun", "verb", "adjective", "adverb", "other"
+                var vocabPrompt = `Extract unique vocabulary from this text slice.
 
 Return ONLY a valid JSON array:
 [
@@ -861,7 +669,7 @@ Return ONLY a valid JSON array:
 Text slice: ${chunkText}`;
 
                 try {
-                    var vocabPayload = { contents: [{ parts: [{ text: vocabPrompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.1, maxOutputTokens: 4096 } };
+                    var vocabPayload = { contents: [{ parts: [{ text: vocabPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
                     var data = await fetchGeminiApi(apiKey, vocabPayload);
                     var text = extractGeminiText(data);
                     var parsed = safeParseTruncatedJson(text);
@@ -885,13 +693,6 @@ Text slice: ${chunkText}`;
                 } catch (e) {
                     console.warn('Batch vocab extraction warning', e);
                 }
-
-                processedCount += chunk.length;
-                var pct = 50 + Math.floor((processedCount / totalBlocks) * 45);
-                var progressBar = document.getElementById('chunkProgressBar');
-                var progressPercent = document.getElementById('chunkProgressPercent');
-                if (progressBar) progressBar.style.width = pct + '%';
-                if (progressPercent) progressPercent.textContent = pct + '%';
             }
 
             window.vocabList = Array.from(allExtractedVocabMap.values());
@@ -1554,12 +1355,13 @@ Text slice: ${chunkText}`;
         function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
         function getApiKey() { 
             var key = localStorage.getItem('suarateks_gemini_key') || '';
-            return String(key).trim().replace(/[^a-zA-Z0-9_\-]/g, '');
+            return String(key).trim();
         }
         function saveApiKeyFromModal() {
-            var val = document.getElementById('apiKeyInput')?.value || '';
-            var clean = String(val).trim().replace(/[^a-zA-Z0-9_\-]/g, '');
-            if (clean) {
+            var input = document.getElementById('apiKeyInput');
+            var val = input ? input.value : '';
+            var clean = String(val).trim();
+            if (clean && clean.length > 10) {
                 localStorage.setItem('suarateks_gemini_key', clean);
                 showToast('API Keyを保存しました！', 'info');
             } else {
@@ -1570,34 +1372,4 @@ Text slice: ${chunkText}`;
 
         function showToast(message, type) {
             if (type === undefined) type = 'info';
-            var container = document.getElementById('toastContainer');
-            if (!container) return;
-            var toast = document.createElement('div');
-            var bgColor = type === 'error' ? 'bg-rose-600' : 'bg-slate-800';
-            var icon = type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check';
-
-            toast.className = bgColor + ' text-white px-3 py-2 rounded-xl shadow-xl text-xs font-bold flex items-center gap-2 transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto border border-white/10';
-            toast.innerHTML = '<i class="fa-solid ' + icon + ' text-amber-400 text-sm"></i> <span>' + escapeHtml(message) + '</span>';
-
-            container.appendChild(toast);
-            setTimeout(function() { toast.classList.remove('translate-y-2', 'opacity-0'); }, 10);
-            setTimeout(function() {
-                toast.classList.add('opacity-0', 'translate-y-[-8px]');
-                setTimeout(function() { toast.remove(); }, 300);
-            }, 3500);
-        }
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            loadHistoryFromStorage();
-            initDropzoneEvents();
-            if ('speechSynthesis' in window) window.speechSynthesis.getVoices();
-        });
-    </script>
-
-</body>
-</html>
+            var
