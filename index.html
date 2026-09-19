@@ -420,7 +420,7 @@
             }, false);
         }
 
-        // Gemini API 呼び出し（レート制限リトライ機能付き）
+        // Gemini API 呼び出し（405エラー対策・完全絶対URL指定）
         async function fetchGeminiApi(apiKey, payload) {
             var modelName = 'gemini-2.5-flash';
 
@@ -432,6 +432,7 @@
                 throw new Error('API Keyが正しく設定されていません。「API Key」ボタンから再設定してください。');
             }
 
+            // 完全な生の絶対URL文字列（Markdown記法の混入を防止）
             var endpoint = '[https://generativelanguage.googleapis.com/v1beta/models/](https://generativelanguage.googleapis.com/v1beta/models/)' + modelName + ':generateContent?key=' + encodeURIComponent(cleanKey);
 
             var response;
@@ -461,7 +462,7 @@
 
             if (!response.ok || data.error) {
                 if (response.status === 429 || data.error?.code === 429) {
-                    throw new Error('Gemini APIの無料枠制限（1分あたりの上限）を超えました。30秒ほど待って再試行してください。');
+                    throw new Error('Gemini APIの制限（1分あたりの上限）を超えました。少し待って再試行してください。');
                 }
                 throw new Error(data.error?.message || ('HTTP Error ' + response.status));
             }
@@ -584,7 +585,7 @@ Return ONLY a valid JSON array:
             });
 
             renderTranscriptContainer();
-            await sleep(1500); // 1.5秒のウェイト
+            await sleep(1000);
 
             // Pass 2: 文法解剖
             if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-language text-blue-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 【Pass 2/3】文法解剖...</span>';
@@ -593,7 +594,7 @@ Return ONLY a valid JSON array:
 
             await enrichGrammarInBatches(apiKey, currentIdx, totalIdx);
             renderGrammarContainer();
-            await sleep(1500); // 1.5秒のウェイト
+            await sleep(1000);
 
             // Pass 3: 語彙抽出
             if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-book-open text-emerald-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 【Pass 3/3】単語抽出...</span>';
@@ -657,7 +658,7 @@ ${JSON.stringify(inputBlocks)}`;
                 } catch (e) {
                     console.warn('Grammar batch warning', e);
                 }
-                await sleep(1500); // バッチごとにウェイトを挟む
+                await sleep(500);
             }
         }
 
@@ -711,7 +712,7 @@ Text slice: ${chunkText}`;
                 } catch (e) {
                     console.warn('Batch vocab extraction warning', e);
                 }
-                await sleep(1500); // バッチごとにウェイトを挟む
+                await sleep(500);
             }
 
             window.vocabList = Array.from(allExtractedVocabMap.values());
