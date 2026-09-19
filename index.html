@@ -282,6 +282,8 @@
 
         window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
 
+        const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
         function stripJsonCodeFence(text) {
             return String(text || '')
                 .trim()
@@ -418,7 +420,7 @@
             }, false);
         }
 
-        // Gemini API 呼び出し
+        // Gemini API 呼び出し（レート制限リトライ機能付き）
         async function fetchGeminiApi(apiKey, payload) {
             var modelName = 'gemini-2.5-flash';
 
@@ -432,11 +434,21 @@
 
             var endpoint = '[https://generativelanguage.googleapis.com/v1beta/models/](https://generativelanguage.googleapis.com/v1beta/models/)' + modelName + ':generateContent?key=' + encodeURIComponent(cleanKey);
 
-            var response = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            var response;
+            for (var attempt = 1; attempt <= 3; attempt++) {
+                response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.status === 429) {
+                    console.warn(`[Gemini API] Rate limit reached. Retrying in ${attempt * 2}s...`);
+                    await sleep(attempt * 2000);
+                    continue;
+                }
+                break;
+            }
 
             var responseText = await response.text();
             var data;
@@ -448,6 +460,9 @@
             }
 
             if (!response.ok || data.error) {
+                if (response.status === 429 || data.error?.code === 429) {
+                    throw new Error('Gemini APIの無料枠制限（1分あたりの上限）を超えました。30秒ほど待って再試行してください。');
+                }
                 throw new Error(data.error?.message || ('HTTP Error ' + response.status));
             }
 
@@ -569,6 +584,7 @@ Return ONLY a valid JSON array:
             });
 
             renderTranscriptContainer();
+            await sleep(1500); // 1.5秒のウェイト
 
             // Pass 2: 文法解剖
             if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-language text-blue-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 【Pass 2/3】文法解剖...</span>';
@@ -577,6 +593,7 @@ Return ONLY a valid JSON array:
 
             await enrichGrammarInBatches(apiKey, currentIdx, totalIdx);
             renderGrammarContainer();
+            await sleep(1500); // 1.5秒のウェイト
 
             // Pass 3: 語彙抽出
             if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-book-open text-emerald-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 【Pass 3/3】単語抽出...</span>';
@@ -640,6 +657,7 @@ ${JSON.stringify(inputBlocks)}`;
                 } catch (e) {
                     console.warn('Grammar batch warning', e);
                 }
+                await sleep(1500); // バッチごとにウェイトを挟む
             }
         }
 
@@ -693,6 +711,7 @@ Text slice: ${chunkText}`;
                 } catch (e) {
                     console.warn('Batch vocab extraction warning', e);
                 }
+                await sleep(1500); // バッチごとにウェイトを挟む
             }
 
             window.vocabList = Array.from(allExtractedVocabMap.values());
@@ -1372,4 +1391,33 @@ Text slice: ${chunkText}`;
 
         function showToast(message, type) {
             if (type === undefined) type = 'info';
-            var
+            var container = document.getElementById('toastContainer');
+            if (!container) return;
+            var toast = document.createElement('div');
+            var bgColor = type === 'error' ? 'bg-rose-600' : 'bg-slate-800';
+            var icon = type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check';
+
+            toast.className = bgColor + ' text-white px-3 py-2 rounded-xl shadow-xl text-xs font-bold flex items-center gap-2 transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto border border-white/10';
+            toast.innerHTML = '<i class="fa-solid ' + icon + ' text-amber-400 text-sm"></i> <span>' + escapeHtml(message) + '</span>';
+
+            container.appendChild(toast);
+            setTimeout(function() { toast.classList.remove('translate-y-2', 'opacity-0'); }, 10);
+            setTimeout(function() {
+                toast.classList.add('opacity-0', 'translate-y-[-8px]');
+                setTimeout(function() { toast.remove(); }, 300);
+            }, 3500);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadHistoryFromStorage();
+            initDropzoneEvents();
+            if ('speechSynthesis' in window) window.speechSynthesis.getVoices();
+        });
+    </script>
+</body>
+</html>
