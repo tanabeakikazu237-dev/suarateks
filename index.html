@@ -248,6 +248,7 @@
 
     </div>
 
+    <!-- API Key Modal -->
     <div id="apiKeyModal" class="fixed inset-0 bg-slate-900/60 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white dark:bg-slate-800 rounded-xl p-4 max-w-sm w-full space-y-3 shadow-xl border border-slate-200 dark:border-slate-700">
             <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
@@ -431,7 +432,6 @@
             if (!payload.generationConfig) payload.generationConfig = {};
             payload.generationConfig.temperature = 0.1;
 
-            // 純粋な Gemini 3.6 Flash 公式エンドポイント
             var targetUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=' + cleanKey;
 
             var response;
@@ -665,7 +665,7 @@ ${JSON.stringify(inputBlocks)}`;
         async function extractAllVocabInBatches(apiKey, currentIdx, totalIdx) {
             if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
             
-            var batchSize = 3; // 抽出漏れを防ぐためチャンクサイズを小分けに最適化
+            var batchSize = 3;
             var allExtractedVocabMap = new Map();
             var totalBlocks = window.transcriptBlocks.length;
 
@@ -673,7 +673,6 @@ ${JSON.stringify(inputBlocks)}`;
                 var chunk = window.transcriptBlocks.slice(i, i + batchSize);
                 var chunkText = chunk.map(function(b) { return b.indonesian; }).join(' ');
 
-                // 漏れのない全単語形態素解析・原形抽出用高精度プロンプト
                 var vocabPrompt = `You are an expert Indonesian linguist and lexicographer.
 Perform a thorough morphological analysis on the given Indonesian text for Japanese language learners.
 
@@ -725,7 +724,6 @@ TEXT TO ANALYZE:
                                         mastered: false
                                     });
                                 } else {
-                                    // 既に登録済みの場合でも、文脈や派生形情報を補強
                                     var existing = allExtractedVocabMap.get(key);
                                     if (!existing.context && v.context) existing.context = v.context;
                                     if (existing.indonesian === existing.baseForm && wordForm !== base) {
@@ -1162,7 +1160,6 @@ TEXT TO ANALYZE:
                 blocks: window.transcriptBlocks,
                 vocab: window.vocabList
             };
-            // 任意保存：個別JSONとして保存ダイアログ呼び出し
             exportDataToFile(singleDataObj, name + '_suarateks_analysis.json');
             saveCurrentToHistory(name, false);
             showToast('個別のJSONファイルとして保存しました！', 'info');
@@ -1188,7 +1185,6 @@ TEXT TO ANALYZE:
 
                 history.unshift(item);
 
-                // 履歴上限6件制限：6件溜まった時に6件目を自動個別JSON保存＆履歴リセット
                 if (history.length >= 6) {
                     exportDataToFile(item, targetName + '_auto_backup_limit6.json');
                     history = [];
@@ -1203,7 +1199,6 @@ TEXT TO ANALYZE:
             } catch (e) { console.warn('LocalStorage Save Error:', e); }
         }
 
-        // ページを閉じる・離脱時に現在の解析データを履歴へ退避保存
         window.addEventListener('beforeunload', function() {
             if (window.transcriptBlocks && window.transcriptBlocks.length > 0) {
                 try {
@@ -1223,7 +1218,6 @@ TEXT TO ANALYZE:
             }
         });
 
-        /* --- API Key, UI Modals & Navigation Helpers --- */
         function getApiKey() { 
             var key = localStorage.getItem('suarateks_gemini_key') || '';
             return String(key).trim();
@@ -1474,6 +1468,12 @@ TEXT TO ANALYZE:
             };
             reader.readAsText(file);
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadHistoryFromStorage();
+            initDropzoneEvents();
+            if ('speechSynthesis' in window) window.speechSynthesis.getVoices();
+        });
     </script>
 </body>
 </html>
