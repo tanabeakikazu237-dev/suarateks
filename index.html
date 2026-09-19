@@ -1,1032 +1,1479 @@
-<script>
-/* =========================================================
-   Gemini API
-   ========================================================= */
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SuaraTeks ID Pro</title>
 
-async function fetchGeminiApi(apiKey, payload) {
-    var cleanKey = String(apiKey || getApiKey() || '').trim();
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SuaraTeks">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2991/2991148.png">
 
-    if (!cleanKey) {
-        throw new Error('API Keyが設定されていません。');
-    }
-
-    /*
-     * Gemini API endpoint
-     *
-     * IMPORTANT:
-     * Markdownリンク形式を絶対に入れない。
-     *
-     * NG:
-     * '[https://...](https://...)'
-     *
-     * OK:
-     * 'https://...'
-     */
-    var targetUrl =
-        'https://generativelanguage.googleapis.com/v1beta/models/' +
-        'gemini-2.5-flash:generateContent';
-
-    /*
-     * payloadが壊れていても落ちにくくする
-     */
-    if (!payload || typeof payload !== 'object') {
-        throw new Error('Gemini APIに送信するデータが不正です。');
-    }
-
-    /*
-     * generationConfig
-     */
-    if (!payload.generationConfig) {
-        payload.generationConfig = {};
-    }
-
-    /*
-     * JSONレスポンスを要求
-     */
-    payload.generationConfig.temperature = 0.1;
-    payload.generationConfig.responseMimeType = 'application/json';
-
-    /*
-     * デバッグ情報
-     *
-     * APIキーそのものは表示しない
-     */
-    console.log('========== Gemini Request ==========');
-    console.log('Method:', 'POST');
-    console.log('URL:', targetUrl);
-    console.log('Payload:', payload);
-    console.log('====================================');
-
-    var response;
-
-    try {
-        response = await fetch(targetUrl, {
-            method: 'POST',
-
-            headers: {
-                'Content-Type': 'application/json',
-                'x-goog-api-key': cleanKey
-            },
-
-            body: JSON.stringify(payload)
-        });
-
-    } catch (error) {
-
-        console.error('Gemini fetch error:', error);
-
-        throw new Error(
-            'Gemini APIへの接続に失敗しました。\n' +
-            'ブラウザのCORSまたはネットワークエラーの可能性があります。\n\n' +
-            '詳細: ' + (error && error.message
-                ? error.message
-                : String(error))
-        );
-    }
-
-    /*
-     * HTTP情報を必ず確認
-     */
-    console.log('========== Gemini Response ==========');
-    console.log('HTTP Status:', response.status);
-    console.log('HTTP Status Text:', response.statusText);
-    console.log('Response URL:', response.url);
-    console.log('=====================================');
-
-    /*
-     * response.text() を先に使う。
-     * JSONでないエラーレスポンスにも対応するため。
-     */
-    var responseText = '';
-
-    try {
-        responseText = await response.text();
-    } catch (error) {
-        throw new Error(
-            'Gemini APIのレスポンスを読み取れませんでした: ' +
-            error.message
-        );
-    }
-
-    console.log('Gemini Raw Response:', responseText);
-
-    /*
-     * JSON解析
-     */
-    var data = null;
-
-    if (responseText) {
-        try {
-            data = JSON.parse(responseText);
-        } catch (error) {
-
-            console.error(
-                'Gemini response is not JSON:',
-                responseText
-            );
-
-            if (!response.ok) {
-                throw new Error(
-                    'Gemini API Error: HTTP ' +
-                    response.status +
-                    ' ' +
-                    response.statusText +
-                    '\n\n' +
-                    responseText.substring(0, 1000)
-                );
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: { indoRed: { 500: '#E70011', 600: '#C8000F', 700: '#A0000C' } }
+                }
             }
-
-            throw new Error(
-                'Gemini APIからJSONではない応答が返りました。\n' +
-                'HTTP ' + response.status
-            );
-        }
-    }
-
-    /*
-     * HTTPエラー
-     */
-    if (!response.ok) {
-
-        console.error('========== Gemini API Error ==========');
-        console.error('Status:', response.status);
-        console.error('Status Text:', response.statusText);
-        console.error('URL:', response.url);
-        console.error('Response:', data);
-        console.error('Raw:', responseText);
-        console.error('======================================');
-
-        var errorMessage = '';
-
-        if (
-            data &&
-            data.error &&
-            data.error.message
-        ) {
-            errorMessage = data.error.message;
-        }
-
-        /*
-         * 405
-         */
-        if (response.status === 405) {
-
-            throw new Error(
-                'HTTP 405 Method Not Allowed\n\n' +
-                'Gemini APIがこのHTTPメソッドを受け付けていません。\n\n' +
-                '確認してください:\n' +
-                '・Request URLが正しいか\n' +
-                '・POSTで送信されているか\n' +
-                '・ブラウザのNetworkタブでOPTIONSが405になっていないか\n\n' +
-                'Request URL:\n' +
-                targetUrl +
-                (errorMessage
-                    ? '\n\nGeminiからのメッセージ:\n' +
-                      errorMessage
-                    : '')
-            );
-        }
-
-        /*
-         * 400
-         */
-        if (response.status === 400) {
-
-            throw new Error(
-                'HTTP 400 Bad Request\n\n' +
-                'Gemini APIへの送信データが不正です。\n\n' +
-                (errorMessage ||
-                    'Payloadの形式、model、contents、generationConfigなどを確認してください。')
-            );
-        }
-
-        /*
-         * 401 / 403
-         */
-        if (
-            response.status === 401 ||
-            response.status === 403
-        ) {
-
-            throw new Error(
-                'HTTP ' + response.status + '\n\n' +
-                'API Keyが無効、期限切れ、またはこのAPIへのアクセス権がありません。\n\n' +
-                (errorMessage || '')
-            );
-        }
-
-        /*
-         * 404
-         */
-        if (response.status === 404) {
-
-            throw new Error(
-                'HTTP 404 Not Found\n\n' +
-                '指定したGeminiモデル/APIエンドポイントが見つかりません。\n\n' +
-                'Model:\n' +
-                'gemini-2.5-flash\n\n' +
-                (errorMessage || '')
-            );
-        }
-
-        /*
-         * 429
-         */
-        if (response.status === 429) {
-
-            throw new Error(
-                'HTTP 429 Too Many Requests\n\n' +
-                'Gemini APIの利用制限またはレート制限に達した可能性があります。\n\n' +
-                (errorMessage || '')
-            );
-        }
-
-        /*
-         * 500系
-         */
-        if (response.status >= 500) {
-
-            throw new Error(
-                'Gemini API Server Error: HTTP ' +
-                response.status +
-                '\n\n' +
-                (errorMessage ||
-                    'Gemini側で一時的なエラーが発生しています。')
-            );
-        }
-
-        /*
-         * その他
-         */
-        throw new Error(
-            'Gemini API Error: HTTP ' +
-            response.status +
-            ' ' +
-            response.statusText +
-            '\n\n' +
-            (errorMessage ||
-                responseText.substring(0, 1000))
-        );
-    }
-
-    /*
-     * 正常なのにdataが空
-     */
-    if (!data) {
-        throw new Error(
-            'Gemini APIから空のレスポンスが返りました。'
-        );
-    }
-
-    /*
-     * Gemini側でブロックされた場合
-     */
-    if (
-        data.promptFeedback &&
-        data.promptFeedback.blockReason
-    ) {
-
-        throw new Error(
-            'Geminiによりリクエストがブロックされました: ' +
-            data.promptFeedback.blockReason
-        );
-    }
-
-    /*
-     * candidatesが存在するか確認
-     */
-    if (
-        !data.candidates ||
-        !Array.isArray(data.candidates) ||
-        data.candidates.length === 0
-    ) {
-
-        console.error(
-            'Gemini response has no candidates:',
-            data
-        );
-
-        throw new Error(
-            'Geminiから候補応答が返ってきませんでした。'
-        );
-    }
-
-    console.log('Gemini parsed response:', data);
-
-    return data;
-}
-
-
-/* =========================================================
-   Geminiレスポンスからテキストを取り出す
-   ========================================================= */
-
-function extractGeminiText(data) {
-
-    if (!data) {
-        throw new Error(
-            'Geminiレスポンスが空です。'
-        );
-    }
-
-    /*
-     * candidates
-     */
-    var candidate =
-        data.candidates &&
-        data.candidates[0];
-
-    if (!candidate) {
-
-        var blockReason =
-            data.promptFeedback &&
-            data.promptFeedback.blockReason;
-
-        if (blockReason) {
-            throw new Error(
-                'Geminiによりブロックされました: ' +
-                blockReason
-            );
-        }
-
-        throw new Error(
-            'Geminiの候補応答がありません。'
-        );
-    }
-
-    /*
-     * finishReason
-     */
-    if (
-        candidate.finishReason &&
-        candidate.finishReason !== 'STOP' &&
-        candidate.finishReason !== 'MAX_TOKENS'
-    ) {
-
-        console.warn(
-            'Gemini finishReason:',
-            candidate.finishReason
-        );
-    }
-
-    /*
-     * parts
-     */
-    var parts =
-        candidate.content &&
-        candidate.content.parts;
-
-    if (
-        !parts ||
-        !Array.isArray(parts)
-    ) {
-
-        console.error(
-            'Invalid Gemini candidate:',
-            candidate
-        );
-
-        throw new Error(
-            'Gemini応答にテキストデータがありません。'
-        );
-    }
-
-    /*
-     * 複数partsを結合
-     */
-    var text = parts
-        .map(function(part) {
-            return part && part.text
-                ? part.text
-                : '';
-        })
-        .join('')
-        .trim();
-
-    if (!text) {
-
-        throw new Error(
-            'Geminiが空の応答を返しました。'
-        );
-    }
-
-    return text;
-}
-
-
-/* =========================================================
-   Gemini JSONレスポンスを安全に解析
-   ========================================================= */
-
-function parseGeminiJson(data) {
-
-    var text = extractGeminiText(data);
-
-    /*
-     * ```json ... ``` を除去
-     */
-    text = text
-        .replace(/^```json\s*/i, '')
-        .replace(/^```\s*/i, '')
-        .replace(/\s*```$/i, '')
-        .trim();
-
-    /*
-     * そのままJSON
-     */
-    try {
-        return JSON.parse(text);
-    } catch (error) {
-        console.warn(
-            '通常のJSON.parseに失敗:',
-            error
-        );
-    }
-
-    /*
-     * JSONの前後に余計な文字がある場合
-     */
-    var firstObject = text.indexOf('{');
-    var lastObject = text.lastIndexOf('}');
-
-    if (
-        firstObject !== -1 &&
-        lastObject !== -1 &&
-        lastObject > firstObject
-    ) {
-
-        var objectText =
-            text.substring(
-                firstObject,
-                lastObject + 1
-            );
-
-        try {
-            return JSON.parse(objectText);
-        } catch (error) {
-            console.warn(
-                'Object JSON parse failed:',
-                error
-            );
-        }
-    }
-
-    /*
-     * 配列
-     */
-    var firstArray = text.indexOf('[');
-    var lastArray = text.lastIndexOf(']');
-
-    if (
-        firstArray !== -1 &&
-        lastArray !== -1 &&
-        lastArray > firstArray
-    ) {
-
-        var arrayText =
-            text.substring(
-                firstArray,
-                lastArray + 1
-            );
-
-        try {
-            return JSON.parse(arrayText);
-        } catch (error) {
-            console.warn(
-                'Array JSON parse failed:',
-                error
-            );
-        }
-    }
-
-    /*
-     * 解析不能
-     */
-    console.error(
-        'Gemini JSON parse failed. Raw text:',
-        text
-    );
-
-    throw new Error(
-        'GeminiのJSONを解析できませんでした。\n\n' +
-        'Geminiの返答:\n' +
-        text.substring(0, 2000)
-    );
-}
-
-
-/* =========================================================
-   API Key
-   ========================================================= */
-
-function getApiKey() {
-
-    try {
-        return (
-            localStorage.getItem(
-                'suarateks_gemini_api_key'
-            ) || ''
-        ).trim();
-
-    } catch (error) {
-
-        console.warn(
-            'API Keyの取得に失敗:',
-            error
-        );
-
-        return '';
-    }
-}
-
-
-function saveApiKey(apiKey) {
-
-    var key =
-        String(apiKey || '').trim();
-
-    if (!key) {
-        throw new Error(
-            'API Keyが空です。'
-        );
-    }
-
-    try {
-
-        localStorage.setItem(
-            'suarateks_gemini_api_key',
-            key
-        );
-
-    } catch (error) {
-
-        throw new Error(
-            'API Keyを保存できませんでした: ' +
-            error.message
-        );
-    }
-}
-
-
-/* =========================================================
-   Audio MIME Type
-   ========================================================= */
-
-function getAudioMimeType(file) {
-
-    if (
-        file &&
-        file.type &&
-        String(file.type).trim()
-    ) {
-        return String(file.type).trim();
-    }
-
-    var name =
-        String(
-            file && file.name
-                ? file.name
-                : ''
-        ).toLowerCase();
-
-    if (name.endsWith('.mp3')) {
-        return 'audio/mpeg';
-    }
-
-    if (name.endsWith('.wav')) {
-        return 'audio/wav';
-    }
-
-    if (name.endsWith('.m4a')) {
-        return 'audio/mp4';
-    }
-
-    if (name.endsWith('.aac')) {
-        return 'audio/aac';
-    }
-
-    if (name.endsWith('.ogg')) {
-        return 'audio/ogg';
-    }
-
-    if (name.endsWith('.flac')) {
-        return 'audio/flac';
-    }
-
-    if (name.endsWith('.webm')) {
-        return 'audio/webm';
-    }
-
-    return 'audio/mpeg';
-}
-
-
-/* =========================================================
-   File → Base64
-   ========================================================= */
-
-function fileToBase64(file) {
-
-    return new Promise(function(resolve, reject) {
-
-        if (!file) {
-            reject(
-                new Error('音声ファイルがありません。')
-            );
-            return;
+        };
+    </script>
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { --transcript-font-size: 20px; }
+        .dynamic-text-indo { font-size: var(--transcript-font-size, 20px); line-height: 1.4; }
+        .dynamic-text-ja { font-size: calc(var(--transcript-font-size, 20px) * 0.75); line-height: 1.4; }
+        
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+        .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+
+        .word-clickable { cursor: pointer; border-bottom: 1.5px dotted #94a3b8; transition: all 0.15s; display: inline-block; }
+        .word-clickable:hover { color: #e70011; border-bottom-color: #e70011; background-color: rgba(231, 0, 17, 0.08); border-radius: 2px; }
+        .search-highlight { background-color: #fef08a; color: #854d0e; font-weight: bold; padding: 0 2px; border-radius: 2px; }
+
+        .dropzone-active { border-color: #e70011 !important; background-color: rgba(231, 0, 17, 0.05) !important; }
+        .no-wrap-tab { whitespace: nowrap !important; word-break: keep-all !important; flex-shrink: 0 !important; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 h-[100dvh] flex flex-col font-sans overflow-hidden">
+
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center justify-between shrink-0">
+        <h1 class="font-extrabold text-sm flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block"></span>
+            SuaraTeks<span class="text-red-600">ID</span> Pro
+        </h1>
+        <button onclick="openModal('apiKeyModal')" class="px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-xs font-bold transition flex items-center gap-1">
+            <i class="fa-solid fa-key text-[10px]"></i> API Key
+        </button>
+    </header>
+
+    <div class="md:hidden bg-slate-200 dark:bg-slate-800 p-1 flex items-center gap-1 shrink-0 border-b border-slate-300 dark:border-slate-700 text-xs font-bold">
+        <button id="btnMobSetup" onclick="switchMobileTab('setup')" class="flex-1 py-1.5 text-center bg-white dark:bg-slate-700 rounded shadow-sm text-slate-800 dark:text-slate-100">設定・音源</button>
+        <button id="btnMobTranscript" onclick="switchMobileTab('transcript')" class="flex-1 py-1.5 text-center text-slate-600 dark:text-slate-400">本文</button>
+        <button id="btnMobVocab" onclick="switchMobileTab('vocab')" class="flex-1 py-1.5 text-center text-slate-600 dark:text-slate-400">単語帳</button>
+    </div>
+
+    <div class="flex-1 flex overflow-hidden p-2 sm:p-3 gap-3 max-w-7xl mx-auto w-full">
+
+        <div id="panelSetup" class="w-full md:w-72 flex flex-col gap-3 shrink-0 overflow-y-auto">
+            <div id="playerCard" class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
+                <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音源キュー選択</span>
+                    <span class="text-[10px] text-slate-400">最大10件</span>
+                </h3>
+                
+                <label id="fileDropLabel" for="audioFileInput" class="relative group cursor-pointer block">
+                    <input type="file" id="audioFileInput" accept="audio/*" multiple onchange="window.handleFileChange(event)" class="hidden">
+                    
+                    <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-red-500 rounded-xl p-3 text-center bg-slate-50 dark:bg-slate-900 transition-all duration-200 group-hover:bg-red-50/30">
+                        <div id="dropzoneDefault" class="space-y-1">
+                            <div class="w-8 h-8 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-cloud-arrow-up text-sm"></i>
+                            </div>
+                            <p class="text-xs font-extrabold text-slate-700 dark:text-slate-200">複数音源を選択（最大10件）</p>
+                            <p class="text-[9px] text-slate-400">ドラッグ＆ドロップ対応</p>
+                        </div>
+
+                        <div id="dropzoneSelected" class="hidden space-y-1 text-left">
+                            <div class="flex items-center justify-between text-emerald-600 mb-1">
+                                <span class="text-[10px] font-extrabold"><i class="fa-solid fa-list-check"></i> キューセット完了</span>
+                                <span class="text-[9px] text-slate-400">タップで再選択</span>
+                            </div>
+                            <div id="queueListContainer" class="max-h-36 overflow-y-auto pr-1"></div>
+                        </div>
+                    </div>
+                </label>
+
+                <button id="startTranscribeBtn" onclick="window.processAudioWithGemini()" class="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span id="transcribeBtnText">順次シリアル解析を開始</span>
+                </button>
+            </div>
+
+            <div id="chunkProgressContainer" class="hidden bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">
+                <div class="flex justify-between text-xs font-bold">
+                    <span id="chunkProgressLabel" class="flex items-center gap-1">順次解析実行中...</span>
+                    <span id="chunkProgressPercent" class="text-red-600">0%</span>
+                </div>
+                <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                    <div id="chunkProgressBar" class="bg-red-600 h-2 rounded-full w-0 transition-all duration-300"></div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[160px]">
+                <div class="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-700 mb-2 gap-1">
+                    <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1">
+                        <i class="fa-solid fa-clock-rotate-left text-amber-500"></i> 解析履歴
+                    </h4>
+                    <div class="flex items-center gap-1">
+                        <button id="btnMergeSelected" disabled onclick="mergeSelectedHistories()" class="px-2 py-0.5 bg-slate-200 text-slate-400 rounded text-[10px] font-bold transition flex items-center gap-1 opacity-60">
+                            <i class="fa-solid fa-code-merge"></i> 選択結合
+                        </button>
+                        <button onclick="manualSaveHistory()" class="px-1.5 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded text-[10px] font-bold transition" title="現在の解析結果を個別JSONとして保存">保存</button>
+                        <button onclick="clearHistory()" class="px-1.5 py-0.5 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded text-[10px] font-bold transition">消去</button>
+                    </div>
+                </div>
+
+                <div id="historyList" class="space-y-1 flex-1 overflow-y-auto"></div>
+
+                <div class="pt-2 border-t border-slate-100 dark:border-slate-700 mt-1">
+                    <label class="w-full py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition">
+                        <i class="fa-solid fa-file-import"></i> JSONバックアップから復元
+                        <input type="file" accept=".json" onchange="importHistoryBackup(event)" class="hidden">
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div id="panelTranscript" class="hidden md:flex flex-1 flex-col bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+            
+            <div class="bg-white dark:bg-slate-800 px-2 sm:px-3 py-2 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 shrink-0 overflow-x-auto hide-scrollbar">
+                <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl shrink-0 overflow-x-auto hide-scrollbar max-w-full">
+                    <button id="navTabTranscript" onclick="setStudioSubView('transcript')" class="no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0">
+                        <i class="fa-solid fa-align-left text-[11px]"></i> 本文
+                    </button>
+                    <button id="navTabGrammar" onclick="setStudioSubView('grammar')" class="no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
+                        <i class="fa-solid fa-diagram-project text-[11px]"></i> 文法解剖
+                    </button>
+                    <button id="navTabVocab" onclick="setStudioSubView('vocab')" class="no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
+                        <i class="fa-solid fa-book-open text-[11px]"></i> 単語帳 (<span id="vocabCountBadge">0</span>)
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
+                    <span class="text-[10px] font-extrabold text-slate-500 shrink-0">文字</span>
+                    <button onclick="adjustFontSize(-1)" class="w-4 h-4 flex items-center justify-center rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-200 text-xs shrink-0">-</button>
+                    <input type="range" id="fontSizeSlider" min="16" max="32" value="20" oninput="setFontSize(this.value)" class="w-12 accent-red-600 cursor-pointer shrink-0">
+                    <button onclick="adjustFontSize(1)" class="w-4 h-4 flex items-center justify-center rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-200 text-xs shrink-0">+</button>
+                    <span id="fontSizeDisplayPt" class="text-[10px] font-black text-red-600 w-7 text-right shrink-0">20pt</span>
+                </div>
+            </div>
+
+            <div id="transcriptView" class="flex-1 p-3 overflow-y-auto space-y-3">
+                <div id="emptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
+                    <i class="fa-solid fa-file-audio text-3xl text-slate-300 dark:text-slate-700"></i>
+                    <span>音源キューをセットして「順次シリアル解析を開始」を押してください</span>
+                </div>
+                <div id="transcriptContainer" class="space-y-3"></div>
+            </div>
+
+            <div id="grammarView" class="hidden flex-1 p-3 overflow-y-auto space-y-3">
+                <div id="grammarEmptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
+                    <i class="fa-solid fa-diagram-project text-3xl text-slate-300 dark:text-slate-700"></i>
+                    <span>文法解剖データがありません</span>
+                </div>
+                <div id="grammarContainer" class="space-y-3"></div>
+            </div>
+
+            <div id="vocabView" class="hidden flex-1 flex-col overflow-hidden p-3 space-y-3">
+                <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 shrink-0">
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="vocabSearchInput" oninput="window.activeVocabSearchQuery=this.value; renderVocabContainer();" placeholder="検索..." class="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold focus:outline-none focus:border-red-500">
+                        <button id="btnModeCard" onclick="setVocabMode('card')" class="px-3 py-1.5 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition">カード</button>
+                        <button id="btnModeList" onclick="setVocabMode('list')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">一覧</button>
+                    </div>
+                    <div class="flex items-center gap-1 flex-wrap text-[10px] font-bold">
+                        <button data-pos="all" onclick="setVocabPosFilter('all')" class="btn-pos-filter px-2.5 py-1 rounded-lg bg-red-600 text-white">すべて</button>
+                        <button data-pos="noun" onclick="setVocabPosFilter('noun')" class="btn-pos-filter px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">名詞</button>
+                        <button data-pos="verb" onclick="setVocabPosFilter('verb')" class="btn-pos-filter px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">動詞</button>
+                        <button data-pos="adjective" onclick="setVocabPosFilter('adjective')" class="btn-pos-filter px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">形容詞</button>
+                        <button data-pos="adverb" onclick="setVocabPosFilter('adverb')" class="btn-pos-filter px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">副詞</button>
+                    </div>
+                </div>
+
+                <div id="vocabEmptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
+                    <i class="fa-solid fa-book-bookmark text-3xl text-slate-300 dark:text-slate-700"></i>
+                    <span>単語データがありません</span>
+                </div>
+                <div id="vocabListContainer" class="hidden flex-1 overflow-y-auto space-y-2"></div>
+                
+                <div id="vocabCardContainer" class="hidden flex-1 flex-col items-center justify-center p-2">
+                    <div class="w-full max-w-sm flex justify-between text-xs font-bold text-slate-500 mb-2">
+                        <span id="flashcardProgressLabel">1 / 1</span>
+                        <button onclick="toggleShuffleCards()" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] hover:bg-slate-200"><i class="fa-solid fa-shuffle"></i> シャッフル</button>
+                    </div>
+
+                    <div onclick="flipFlashcard()" class="w-full max-w-sm h-60 perspective-1000 cursor-pointer">
+                        <div id="flashcardInner" class="relative w-full h-full transform-style-3d shadow-lg rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                            <div class="absolute inset-0 w-full h-full backface-hidden p-5 flex flex-col justify-between rounded-2xl bg-white dark:bg-slate-800">
+                                <span id="cardBadgeFront" class="self-start text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300">品詞</span>
+                                <div class="text-center space-y-2">
+                                    <h2 id="cardIndoText" class="text-2xl font-black text-slate-800 dark:text-slate-100">---</h2>
+                                    <p class="text-xs text-slate-400">タップして裏面を表示</p>
+                                </div>
+                                <div class="text-right">
+                                    <button onclick="event.stopPropagation(); speakIndonesian(document.getElementById('cardIndoText').innerText)" class="p-2 text-slate-400 hover:text-emerald-500">
+                                        <i class="fa-solid fa-volume-high text-base"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="absolute inset-0 w-full h-full backface-hidden rotate-y-180 p-5 flex flex-col justify-between rounded-2xl bg-emerald-50 dark:bg-slate-800 border-2 border-emerald-500">
+                                <span id="cardPosBack" class="self-start text-[10px] font-bold text-emerald-800 dark:text-emerald-300">品詞詳細</span>
+                                <div class="text-center space-y-2">
+                                    <h3 id="cardJapText" class="text-xl font-extrabold text-emerald-800 dark:text-emerald-300">---</h3>
+                                    <p id="cardContextFull" class="text-xs text-slate-600 dark:text-slate-400 italic">---</p>
+                                </div>
+                                <div class="text-right">
+                                    <button onclick="event.stopPropagation(); speakIndonesian(document.getElementById('cardIndoText').innerText)" class="p-2 text-slate-400 hover:text-emerald-500">
+                                        <i class="fa-solid fa-volume-high text-base"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 mt-4 w-full max-w-sm">
+                        <button onclick="nextFlashcard(false)" class="flex-1 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold hover:bg-slate-300">要復習</button>
+                        <button onclick="nextFlashcard(true)" class="flex-1 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow hover:bg-emerald-700">習得済み</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div id="apiKeyModal" class="fixed inset-0 bg-slate-900/60 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-4 max-w-sm w-full space-y-3 shadow-xl border border-slate-200 dark:border-slate-700">
+            <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                <i class="fa-solid fa-key text-amber-500"></i> Gemini API Key 設定
+            </h3>
+            <p class="text-[10px] text-slate-400">Google AI Studio (gemini-3.6-flash) で取得した API Key を入力してください</p>
+            <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 text-xs dark:bg-slate-900 font-mono text-slate-800 dark:text-slate-100 focus:outline-none focus:border-red-500">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('apiKeyModal')" class="px-3 py-1 text-xs text-slate-500 hover:text-slate-700">キャンセル</button>
+                <button onclick="saveApiKeyFromModal()" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.fileQueue = [];
+        window.isQueueProcessing = false;
+        window.currentLoadedFile = null;
+        window.currentAudioBase64 = null;
+        window.transcriptBlocks = [];
+        window.vocabList = [];
+        window.activeMobileTab = 'setup';
+        window.activeStudioSubView = 'transcript';
+        window.activeVocabMode = 'card';
+        window.activeVocabPosFilter = 'all';
+        window.activeVocabSearchQuery = '';
+        window.currentCardIndex = 0;
+        window.isCardFlipped = false;
+        window.isShuffled = false;
+        window.shuffledVocabList = [];
+        window.selectedHistoryIds = [];
+
+        window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
+
+        var sleep = function(ms) { return new Promise(function(resolve) { setTimeout(resolve, ms); }); };
+
+        function stripJsonCodeFence(text) {
+            return String(text || '')
+                .trim()
+                .replace(/^```json\s*/i, '')
+                .replace(/^```\s*/i, '')
+                .replace(/\s*```$/i, '')
+                .trim();
         }
 
-        var reader =
-            new FileReader();
-
-        reader.onload = function() {
+        function safeParseTruncatedJson(jsonString) {
+            var str = stripJsonCodeFence(jsonString);
+            if (!str) throw new Error('GeminiからJSONが返されませんでした');
 
             try {
+                return JSON.parse(str);
+            } catch (e) {
+                console.warn('[Gemini JSON] 修復試行...', e);
+            }
 
-                var result =
-                    String(reader.result || '');
+            if (str[0] === '[') {
+                var lastObjectEnd = -1;
+                var objectDepth = 0;
+                var inString = false;
+                var escaped = false;
 
-                var comma =
-                    result.indexOf(',');
-
-                if (comma === -1) {
-                    reject(
-                        new Error(
-                            '音声ファイルのBase64変換に失敗しました。'
-                        )
-                    );
-                    return;
+                for (var j = 0; j < str.length; j++) {
+                    var c = str[j];
+                    if (inString) {
+                        if (escaped) escaped = false;
+                        else if (c === '\\') escaped = true;
+                        else if (c === '"') inString = false;
+                        continue;
+                    }
+                    if (c === '"') { inString = true; continue; }
+                    if (c === '{') objectDepth++;
+                    else if (c === '}') {
+                        objectDepth = Math.max(0, objectDepth - 1);
+                        if (objectDepth === 0) lastObjectEnd = j;
+                    }
                 }
 
-                resolve(
-                    result.substring(
-                        comma + 1
-                    )
-                );
-
-            } catch (error) {
-
-                reject(error);
+                if (lastObjectEnd !== -1) {
+                    var repairedArray = str.substring(0, lastObjectEnd + 1).replace(/,\s*$/, '') + ']';
+                    try {
+                        return JSON.parse(repairedArray);
+                    } catch (err) {}
+                }
             }
+
+            throw new Error('GeminiのJSON応答を解析できませんでした');
+        }
+
+        window.handleFileChange = function(event) {
+            var input = (event && event.target) ? event.target : document.getElementById('audioFileInput');
+            var files = input ? input.files : null;
+            if (!files || files.length === 0) return;
+            processSelectedFiles(Array.from(files));
         };
 
-        reader.onerror = function() {
+        function processSelectedFiles(files) {
+            var validFiles = files.filter(function(f) { return f.type.startsWith('audio/') || f.name.match(/\.(mp3|wav|m4a|aac|ogg|flac)$/i); }).slice(0, 10);
+            if (validFiles.length === 0) {
+                showToast('音声ファイルが選択されていません', 'error');
+                return;
+            }
 
-            reject(
-                new Error(
-                    'ファイル読み込みに失敗しました。'
-                )
-            );
+            window.fileQueue = validFiles.map(function(f, idx) {
+                return {
+                    id: 'queue-' + Date.now() + '-' + idx,
+                    file: f,
+                    status: 'waiting',
+                    progress: 0
+                };
+            });
+
+            renderQueueUI();
+            showToast(window.fileQueue.length + ' 件の音源をキューに追加しました！', 'info');
+        }
+
+        function renderQueueUI() {
+            var dropzoneDefault = document.getElementById('dropzoneDefault');
+            var dropzoneSelected = document.getElementById('dropzoneSelected');
+            var queueListContainer = document.getElementById('queueListContainer');
+
+            if (!window.fileQueue || window.fileQueue.length === 0) {
+                if (dropzoneDefault) dropzoneDefault.classList.remove('hidden');
+                if (dropzoneSelected) dropzoneSelected.classList.add('hidden');
+                return;
+            }
+
+            if (dropzoneDefault) dropzoneDefault.classList.add('hidden');
+            if (dropzoneSelected) dropzoneSelected.classList.remove('hidden');
+
+            var html = '';
+            window.fileQueue.forEach(function(q, idx) {
+                var statusBadge = '';
+                if (q.status === 'waiting') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 font-bold">待機中</span>';
+                else if (q.status === 'processing') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500 text-white font-bold"><i class="fa-solid fa-spinner fa-spin"></i> 解析中</span>';
+                else if (q.status === 'completed') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500 text-white font-bold"><i class="fa-solid fa-check"></i> 完了</span>';
+                else if (q.status === 'error') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-rose-500 text-white font-bold">エラー</span>';
+
+                html += '<div class="flex items-center justify-between gap-1 text-xs p-1.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 mb-1">' +
+                    '<div class="min-w-0 flex-1">' +
+                        '<p class="font-bold text-slate-800 dark:text-slate-100 truncate text-[11px]">' + (idx + 1) + '. ' + escapeHtml(q.file.name) + '</p>' +
+                        '<p class="text-[9px] text-slate-400 font-mono">' + formatBytes(q.file.size) + '</p>' +
+                    '</div>' +
+                    '<div class="shrink-0">' + statusBadge + '</div>' +
+                '</div>';
+            });
+
+            if (queueListContainer) queueListContainer.innerHTML = html;
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            var k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            var i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        function initDropzoneEvents() {
+            var label = document.getElementById('fileDropLabel');
+            if (!label) return;
+            ['dragenter', 'dragover'].forEach(function(eventName) {
+                label.addEventListener(eventName, function(e) { e.preventDefault(); e.stopPropagation(); label.classList.add('dropzone-active'); }, false);
+            });
+            ['dragleave', 'drop'].forEach(function(eventName) {
+                label.addEventListener(eventName, function(e) { e.preventDefault(); e.stopPropagation(); label.classList.remove('dropzone-active'); }, false);
+            });
+            label.addEventListener('drop', function(e) {
+                var dt = e.dataTransfer;
+                var files = dt.files;
+                if (files && files.length > 0) {
+                    processSelectedFiles(Array.from(files));
+                }
+            }, false);
+        }
+
+        async function fetchGeminiApi(apiKey, payload) {
+            var cleanKey = String(apiKey || getApiKey() || '').trim();
+            if (!cleanKey || cleanKey.length < 10) {
+                throw new Error('API Keyが正しく設定されていません。「API Key」ボタンから設定してください。');
+            }
+
+            if (!payload.generationConfig) payload.generationConfig = {};
+            payload.generationConfig.temperature = 0.1;
+
+            // 純粋な Gemini 3.6 Flash 公式エンドポイント
+            var targetUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=' + cleanKey;
+
+            var response;
+            for (var attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    response = await fetch(targetUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.status === 429) {
+                        await sleep(attempt * 2000);
+                        continue;
+                    }
+                    break;
+                } catch (netErr) {
+                    if (attempt === 3) throw new Error('ネットワーク通信エラーが発生しました: ' + netErr.message);
+                    await sleep(1500);
+                }
+            }
+
+            if (!response) throw new Error('Gemini APIへの通信に失敗しました');
+
+            var responseText = await response.text();
+            var data;
+
+            try {
+                data = JSON.parse(responseText);
+            } catch (err) {
+                throw new Error('Gemini APIから無効な応答形式を受信しました (HTTP ' + response.status + ')');
+            }
+
+            if (!response.ok || data.error) {
+                throw new Error(data.error?.message || ('HTTP Error ' + response.status));
+            }
+
+            return data;
+        }
+
+        function extractGeminiText(data) {
+            var parts = data.candidates?.[0]?.content?.parts;
+            if (!Array.isArray(parts)) throw new Error('応答にテキストデータが含まれていません');
+            return parts.map(function(p) { return p.text || ''; }).join('').trim();
+        }
+
+        window.processAudioWithGemini = async function() {
+            if (!window.fileQueue || window.fileQueue.length === 0) {
+                showToast('音源ファイルがキューに追加されていません', 'error');
+                return;
+            }
+
+            var apiKey = getApiKey();
+            if (!apiKey) {
+                showToast('Gemini API Key が設定されていません。', 'error');
+                openModal('apiKeyModal');
+                return;
+            }
+
+            if (window.isQueueProcessing) return;
+            window.isQueueProcessing = true;
+
+            var btn = document.getElementById('startTranscribeBtn');
+            var btnText = document.getElementById('transcribeBtnText');
+            var progressContainer = document.getElementById('chunkProgressContainer');
+            if (btn) btn.disabled = true;
+            if (progressContainer) progressContainer.classList.remove('hidden');
+
+            for (var i = 0; i < window.fileQueue.length; i++) {
+                var item = window.fileQueue[i];
+                if (item.status === 'completed') continue;
+
+                item.status = 'processing';
+                renderQueueUI();
+
+                if (btnText) btnText.textContent = '解析中 (' + (i + 1) + '/' + window.fileQueue.length + ')';
+
+                try {
+                    await processSingleFileInQueue(item, apiKey, i + 1, window.fileQueue.length);
+                    item.status = 'completed';
+                    renderQueueUI();
+                } catch (err) {
+                    console.error('Single File Queue Process Error:', err);
+                    item.status = 'error';
+                    renderQueueUI();
+                    showToast('「' + item.file.name + '」のエラー: ' + err.message, 'error');
+                }
+            }
+
+            window.isQueueProcessing = false;
+            if (btn) btn.disabled = false;
+            if (btnText) btnText.textContent = "順次シリアル解析を開始";
+            showToast('すべてのキューファイルの順次解析が完了しました！', 'info');
+            setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
         };
 
-        reader.readAsDataURL(file);
-    });
-}
+        async function processSingleFileInQueue(queueItem, apiKey, currentIdx, totalIdx) {
+            var file = queueItem.file;
+            window.currentLoadedFile = file;
 
+            var base64Data = await new Promise(function(resolve, reject) {
+                var reader = new FileReader();
+                reader.onload = function(e) { resolve(e.target.result.split(',')[1]); };
+                reader.onerror = function(err) { reject(err); };
+                reader.readAsDataURL(file);
+            });
 
-/* =========================================================
-   HTML Escape
-   ========================================================= */
+            window.currentAudioBase64 = base64Data;
+            var mimeType = file.type || 'audio/mp3';
 
-function escapeHtml(value) {
+            var progressLabel = document.getElementById('chunkProgressLabel');
+            var progressPercent = document.getElementById('chunkProgressPercent');
+            var progressBar = document.getElementById('chunkProgressBar');
 
-    return String(value == null ? '' : value)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
+            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 【Pass 1/3】文字起こし＆翻訳...</span>';
+            if (progressBar) progressBar.style.width = '20%';
+            if (progressPercent) progressPercent.textContent = '20%';
 
+            var transcribePrompt = `You are a professional Indonesian verbatim transcription specialist.
+Transcribe the audio accurately from start to finish.
 
-/* =========================================================
-   JavaScript String Escape
-   ========================================================= */
+Return ONLY a valid JSON array:
+[
+  {
+    "speaker": "Pembicara 1",
+    "indonesian": "exact verbatim spoken Indonesian",
+    "japanese": "Natural Japanese translation"
+  }
+]`;
 
-function escapeJsString(value) {
+            var transcribePayload = {
+                contents: [{ role: 'user', parts: [{ text: transcribePrompt }, { inlineData: { mimeType: mimeType, data: base64Data } }] }],
+                generationConfig: { responseMimeType: "application/json" }
+            };
 
-    return String(value == null ? '' : value)
-        .replace(/\\/g, '\\\\')
-        .replace(/'/g, "\\'")
-        .replace(/"/g, '\\"')
-        .replace(/\r/g, '\\r')
-        .replace(/\n/g, '\\n')
-        .replace(/<\/script/gi, '<\\/script');
-}
+            var transcribeData = await fetchGeminiApi(apiKey, transcribePayload);
+            var transcriptRaw = extractGeminiText(transcribeData);
+            var parsedTranscript = safeParseTruncatedJson(transcriptRaw);
+            var rawBlocks = Array.isArray(parsedTranscript) ? parsedTranscript : (parsedTranscript.transcript || []);
 
+            if (!rawBlocks || rawBlocks.length === 0) throw new Error('音声からテキストが読み取れませんでした');
 
-/* =========================================================
-   File Size
-   ========================================================= */
+            window.transcriptBlocks = rawBlocks.map(function(item, index) {
+                return {
+                    id: 'block-' + Date.now() + '-' + index,
+                    blockIndex: index,
+                    speaker: item.speaker || 'Pembicara 1',
+                    indonesian: item.indonesian || '',
+                    japanese: item.japanese || '',
+                    grammarExplanation: '解析中...'
+                };
+            });
 
-function formatBytes(bytes) {
+            renderTranscriptContainer();
+            if (window.innerWidth < 768) switchMobileTab('transcript');
+            await sleep(800);
 
-    bytes = Number(bytes) || 0;
+            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-language text-blue-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 【Pass 2/3】文法解剖...</span>';
+            if (progressBar) progressBar.style.width = '50%';
+            if (progressPercent) progressPercent.textContent = '50%';
 
-    if (bytes === 0) {
-        return '0 Bytes';
-    }
+            await enrichGrammarInBatches(apiKey, currentIdx, totalIdx);
+            renderGrammarContainer();
+            await sleep(800);
 
-    var k = 1024;
+            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-book-open text-emerald-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 【Pass 3/3】単語抽出...</span>';
+            if (progressBar) progressBar.style.width = '80%';
+            if (progressPercent) progressPercent.textContent = '80%';
 
-    var sizes = [
-        'Bytes',
-        'KB',
-        'MB',
-        'GB',
-        'TB'
-    ];
+            await extractAllVocabInBatches(apiKey, currentIdx, totalIdx);
+            renderVocabContainer();
 
-    var i =
-        Math.floor(
-            Math.log(bytes) /
-            Math.log(k)
-        );
+            if (progressBar) progressBar.style.width = '100%';
+            if (progressPercent) progressPercent.textContent = '100%';
 
-    i =
-        Math.max(
-            0,
-            Math.min(
-                i,
-                sizes.length - 1
-            )
-        );
+            var cleanFileName = file.name.replace(/\.[^/.]+$/, "");
+            var singleDataObj = {
+                id: 'hist-' + Date.now(),
+                fileName: cleanFileName,
+                date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                blocks: window.transcriptBlocks,
+                vocab: window.vocabList
+            };
+            exportDataToFile(singleDataObj, cleanFileName + '_suarateks_analysis.json');
+            saveCurrentToHistory(cleanFileName, false);
+        }
 
-    return (
-        parseFloat(
-            (
-                bytes /
-                Math.pow(k, i)
-            ).toFixed(1)
-        ) +
-        ' ' +
-        sizes[i]
-    );
-}
+        async function enrichGrammarInBatches(apiKey, currentIdx, totalIdx) {
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
 
+            var batchSize = 5;
+            var totalBlocks = window.transcriptBlocks.length;
 
-/* =========================================================
-   Gemini APIを使う例
-   ========================================================= */
+            for (var i = 0; i < totalBlocks; i += batchSize) {
+                var chunk = window.transcriptBlocks.slice(i, i + batchSize);
+                var inputBlocks = chunk.map(function(b) { return { blockIndex: b.blockIndex, indonesian: b.indonesian }; });
 
-async function transcribeAudioWithGemini(
-    file,
-    apiKey
-) {
+                var grammarPrompt = `Analyze each Indonesian phrase below for a Japanese learner. Return ONLY a valid JSON array.
 
-    if (!file) {
-        throw new Error(
-            '音声ファイルが選択されていません。'
-        );
-    }
+[
+  {
+    "blockIndex": 0,
+    "grammarExplanation": "【構造】...\n【例文】\"...\" (...)"
+  }
+]
 
-    var mimeType =
-        getAudioMimeType(file);
+INPUT:
+${JSON.stringify(inputBlocks)}`;
 
-    var base64 =
-        await fileToBase64(file);
+                try {
+                    var payload = { contents: [{ parts: [{ text: grammarPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
+                    var data = await fetchGeminiApi(apiKey, payload);
+                    var text = extractGeminiText(data);
+                    var parsed = safeParseTruncatedJson(text);
 
-    var payload = {
+                    if (Array.isArray(parsed)) {
+                        parsed.forEach(function(item) {
+                            var block = window.transcriptBlocks.find(function(b) { return b.blockIndex === Number(item.blockIndex); });
+                            if (block && item.grammarExplanation) {
+                                block.grammarExplanation = String(item.grammarExplanation).trim();
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.warn('Grammar batch warning', e);
+                }
+                await sleep(400);
+            }
+        }
 
-        contents: [
-            {
-                role: 'user',
+        async function extractAllVocabInBatches(apiKey, currentIdx, totalIdx) {
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
+            
+            var batchSize = 3; // 抽出漏れを防ぐためチャンクサイズを小分けに最適化
+            var allExtractedVocabMap = new Map();
+            var totalBlocks = window.transcriptBlocks.length;
 
-                parts: [
+            for (var i = 0; i < totalBlocks; i += batchSize) {
+                var chunk = window.transcriptBlocks.slice(i, i + batchSize);
+                var chunkText = chunk.map(function(b) { return b.indonesian; }).join(' ');
 
-                    {
-                        text:
-                            'この音声を正確に文字起こししてください。' +
-                            '聞き取れない部分は推測せず、可能な範囲で正確に記録してください。' +
-                            'JSONのみを返してください。'
-                    },
+                // 漏れのない全単語形態素解析・原形抽出用高精度プロンプト
+                var vocabPrompt = `You are an expert Indonesian linguist and lexicographer.
+Perform a thorough morphological analysis on the given Indonesian text for Japanese language learners.
 
-                    {
-                        inlineData: {
-                            mimeType: mimeType,
-                            data: base64
+INSTRUCTIONS:
+1. Extract ALL meaningful content words and key vocabulary (Nouns, Verbs, Adjectives, Adverbs, Prepositions). Do NOT skip words, even if they seem common or basic.
+2. For each word, identify its true Root Word (Kata Dasar) - removing affixes like me-, ber-, di-, pe-, -kan, -i, -an, memper-etc.
+3. Provide an accurate Japanese translation suited for the context in the text.
+4. Categorize POS into "noun", "verb", "adjective", "adverb", or "other".
+5. Extract a short natural Indonesian context sentence/phrase where the word appears.
+
+Return ONLY a JSON array with this structure:
+[
+  {
+    "indonesian": "spoken word or form in text (e.g., membuang)",
+    "baseForm": "root word / kata dasar (e.g., buang)",
+    "japanese": "Japanese meaning in context (e.g., 捨てる)",
+    "pos": "verb",
+    "context": "Indonesian short context phrase"
+  }
+]
+
+TEXT TO ANALYZE:
+"${chunkText}"`;
+
+                try {
+                    var vocabPayload = { 
+                        contents: [{ parts: [{ text: vocabPrompt }] }], 
+                        generationConfig: { responseMimeType: "application/json" } 
+                    };
+                    var data = await fetchGeminiApi(apiKey, vocabPayload);
+                    var text = extractGeminiText(data);
+                    var parsed = safeParseTruncatedJson(text);
+
+                    if (Array.isArray(parsed)) {
+                        parsed.forEach(function(v) {
+                            var wordForm = (v.indonesian || '').trim();
+                            var base = (v.baseForm || wordForm).trim();
+                            var key = base.toLowerCase();
+
+                            if (wordForm && key) {
+                                if (!allExtractedVocabMap.has(key)) {
+                                    allExtractedVocabMap.set(key, {
+                                        id: 'vocab-' + Date.now() + '-' + allExtractedVocabMap.size,
+                                        indonesian: wordForm,
+                                        baseForm: base,
+                                        japanese: v.japanese || '',
+                                        pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(v.pos) ? v.pos : 'other',
+                                        context: v.context || '',
+                                        mastered: false
+                                    });
+                                } else {
+                                    // 既に登録済みの場合でも、文脈や派生形情報を補強
+                                    var existing = allExtractedVocabMap.get(key);
+                                    if (!existing.context && v.context) existing.context = v.context;
+                                    if (existing.indonesian === existing.baseForm && wordForm !== base) {
+                                        existing.indonesian = wordForm;
+                                    }
+                                }
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.warn('Batch vocab extraction warning', e);
+                }
+                await sleep(400);
+            }
+
+            window.vocabList = Array.from(allExtractedVocabMap.values());
+        }
+
+        function adjustFontSize(delta) {
+            var slider = document.getElementById('fontSizeSlider');
+            if (slider) {
+                var val = parseInt(slider.value) + delta;
+                val = Math.max(16, Math.min(32, val));
+                slider.value = val;
+                setFontSize(val);
+            }
+        }
+        function setFontSize(val) {
+            document.documentElement.style.setProperty('--transcript-font-size', val + 'px');
+            var ptDisplay = document.getElementById('fontSizeDisplayPt');
+            if (ptDisplay) ptDisplay.textContent = val + ' pt';
+        }
+
+        function speakIndonesian(text) {
+            if (!('speechSynthesis' in window) || !text) return;
+            window.speechSynthesis.cancel();
+            var utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'id-ID';
+            utterance.rate = 0.85;
+            var voices = window.speechSynthesis.getVoices();
+            var indoVoice = voices.find(function(v) { return v.lang.startsWith('id') || v.lang.includes('ID'); });
+            if (indoVoice) utterance.voice = indoVoice;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function stopAllSpeech() {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            if (window.activeSpeechState.blockId) updateBlockToggleUI(window.activeSpeechState.blockId, 'stopped');
+            window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
+        }
+
+        function speakFromWord(blockId, wordIndex) {
+            var cleanId = blockId.replace(/^[tg]-/, '');
+            var block = window.transcriptBlocks.find(function(b) { return b.id === cleanId; });
+            if (!block || !block.indonesian) return;
+            var words = block.indonesian.split(/\s+/);
+            startSpeechBlock(blockId, words.slice(wordIndex).join(' '));
+        }
+
+        function toggleSpeechBlock(blockId) {
+            if (!('speechSynthesis' in window)) return;
+            if (window.activeSpeechState.blockId === blockId) {
+                if (window.speechSynthesis.paused || window.activeSpeechState.isPaused) {
+                    window.speechSynthesis.resume();
+                    window.activeSpeechState.isPaused = false;
+                    window.activeSpeechState.isPlaying = true;
+                    updateBlockToggleUI(blockId, 'playing');
+                } else if (window.speechSynthesis.speaking) {
+                    window.speechSynthesis.pause();
+                    window.activeSpeechState.isPaused = true;
+                    window.activeSpeechState.isPlaying = false;
+                    updateBlockToggleUI(blockId, 'paused');
+                } else {
+                    startSpeechBlock(blockId);
+                }
+            } else {
+                startSpeechBlock(blockId);
+            }
+        }
+
+        function startSpeechBlock(blockId, customText) {
+            if (!('speechSynthesis' in window)) return;
+            stopAllSpeech();
+            var cleanId = blockId.replace(/^[tg]-/, '');
+            var block = window.transcriptBlocks.find(function(b) { return b.id === cleanId; });
+            if (!block) return;
+
+            var textToSpeak = customText || block.indonesian;
+            var utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = 'id-ID';
+            utterance.rate = 0.85;
+
+            var voices = window.speechSynthesis.getVoices();
+            var indoVoice = voices.find(function(v) { return v.lang.startsWith('id') || v.lang.includes('ID'); });
+            if (indoVoice) utterance.voice = indoVoice;
+
+            utterance.onstart = function() {
+                window.activeSpeechState = { blockId: blockId, utterance: utterance, isPlaying: true, isPaused: false };
+                updateBlockToggleUI(blockId, 'playing');
+            };
+            utterance.onpause = function() {
+                window.activeSpeechState.isPaused = true;
+                window.activeSpeechState.isPlaying = false;
+                updateBlockToggleUI(blockId, 'paused');
+            };
+            utterance.onend = function() {
+                updateBlockToggleUI(blockId, 'stopped');
+                window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
+            };
+            utterance.onerror = function() {
+                updateBlockToggleUI(blockId, 'stopped');
+                window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
+            };
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function updateBlockToggleUI(blockId, state) {
+            var btn = document.getElementById('btn-toggle-' + blockId);
+            if (!btn) return;
+            if (state === 'playing') btn.innerHTML = '<i class="fa-solid fa-pause text-red-500"></i><span>一時停止</span>';
+            else if (state === 'paused') btn.innerHTML = '<i class="fa-solid fa-play text-amber-500"></i><span>再開</span>';
+            else btn.innerHTML = '<i class="fa-solid fa-play"></i><span>再生</span>';
+        }
+
+        function renderClickableIndonesianWords(text, blockId) {
+            if (!text) return '';
+            var words = text.split(/\s+/);
+            return words.map(function(w, idx) {
+                return '<span class="word-clickable" onclick="speakFromWord(\'' + blockId + '\', ' + idx + ')" title="ここから再生">' + escapeHtml(w) + '</span>';
+            }).join(' ');
+        }
+
+        function renderTranscriptContainer() {
+            var emptyState = document.getElementById('emptyState');
+            var container = document.getElementById('transcriptContainer');
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
+                emptyState?.classList.remove('hidden');
+                if (container) container.innerHTML = '';
+                return;
+            }
+            emptyState?.classList.add('hidden');
+            var html = '';
+            window.transcriptBlocks.forEach(function(block, idx) {
+                var clickableIndo = renderClickableIndonesianWords(block.indonesian, 't-' + block.id);
+                var blockNo = idx + 1;
+                html += '<div id="card-t-' + block.id + '" class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">' +
+                    '<div class="flex items-center justify-between text-xs text-slate-500 pb-1 border-b border-slate-100 dark:border-slate-700">' +
+                        '<div class="flex items-center gap-1.5">' +
+                            '<span class="font-extrabold text-white bg-red-600 px-2 py-0.5 rounded-md text-[10px] shadow-xs">#' + blockNo + '</span>' +
+                            '<span class="font-bold text-red-600 bg-red-50 dark:bg-red-950/60 px-2 py-0.5 rounded-full text-[10px]">' + escapeHtml(block.speaker) + '</span>' +
+                        '</div>' +
+                        '<button id="btn-toggle-t-' + block.id + '" onclick="toggleSpeechBlock(\'t-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1 hover:bg-slate-200">' +
+                            '<i class="fa-solid fa-play text-[10px]"></i><span>再生</span>' +
+                        '</button>' +
+                    '</div>' +
+                    '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + clickableIndo + '</p>' +
+                    '<div class="bg-amber-50/70 dark:bg-slate-900/60 p-2.5 rounded-lg border border-amber-200/50 dark:border-amber-900/30">' +
+                        '<p class="dynamic-text-ja font-semibold text-amber-950 dark:text-amber-200">' + escapeHtml(block.japanese) + '</p>' +
+                    '</div>' +
+                '</div>';
+            });
+            if (container) container.innerHTML = html;
+        }
+
+        function renderGrammarContainer() {
+            var emptyState = document.getElementById('grammarEmptyState');
+            var container = document.getElementById('grammarContainer');
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
+                emptyState?.classList.remove('hidden');
+                if (container) container.innerHTML = '';
+                return;
+            }
+            emptyState?.classList.add('hidden');
+            var html = '';
+            window.transcriptBlocks.forEach(function(block, idx) {
+                var clickableIndo = renderClickableIndonesianWords(block.indonesian, 'g-' + block.id);
+                var blockNo = idx + 1;
+                html += '<div id="card-g-' + block.id + '" class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2.5">' +
+                    '<div class="flex items-center justify-between text-xs pb-1 border-b border-slate-100 dark:border-slate-700">' +
+                        '<span class="font-extrabold text-blue-700 bg-blue-100 dark:bg-blue-950/80 px-2.5 py-0.5 rounded-full text-[11px]"><i class="fa-solid fa-bookmark mr-1"></i> 該当文節 #' + blockNo + '</span>' +
+                        '<button id="btn-toggle-g-' + block.id + '" onclick="toggleSpeechBlock(\'g-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-xs font-bold hover:bg-slate-200">' +
+                            '<i class="fa-solid fa-play text-[9px]"></i><span>再生</span>' +
+                        '</button>' +
+                    '</div>' +
+                    '<div class="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border-l-4 border-blue-500 space-y-1">' +
+                        '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + clickableIndo + '</p>' +
+                        '<p class="text-xs text-slate-500 dark:text-slate-400 font-medium">' + escapeHtml(block.japanese) + '</p>' +
+                    '</div>' +
+                    '<div class="bg-blue-50/60 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200/60 dark:border-blue-900/40 text-xs leading-relaxed text-blue-950 dark:text-blue-200 space-y-1.5">' +
+                        '<h5 class="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1 text-[10px] uppercase tracking-wider"><i class="fa-solid fa-diagram-project"></i> 構文解剖・応用例文解説</h5>' +
+                        '<div class="dynamic-text-ja whitespace-pre-line font-medium pt-0.5 leading-relaxed">' + escapeHtml(block.grammarExplanation) + '</div>' +
+                    '</div>' +
+                '</div>';
+            });
+            if (container) container.innerHTML = html;
+        }
+
+        function highlightMatch(str, query) {
+            var safeStr = escapeHtml(str || '');
+            var q = (query || '').trim();
+            if (!q) return safeStr;
+            try {
+                var escQuery = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                var regex = new RegExp('(' + escQuery + ')', 'gi');
+                return safeStr.replace(regex, '<mark class="search-highlight">$1</mark>');
+            } catch (e) { return safeStr; }
+        }
+
+        function getFilteredVocabList() {
+            var filtered = window.isShuffled ? [...window.shuffledVocabList] : (window.vocabList || []);
+            if (window.activeVocabPosFilter !== 'all') {
+                filtered = filtered.filter(function(v) { return v.pos === window.activeVocabPosFilter; });
+            }
+            var query = (window.activeVocabSearchQuery || '').trim().toLowerCase();
+            if (query !== '') {
+                filtered = filtered.filter(function(v) {
+                    return (v.indonesian || '').toLowerCase().includes(query) || (v.japanese || '').toLowerCase().includes(query) || (v.baseForm || '').toLowerCase().includes(query);
+                });
+            }
+            return filtered;
+        }
+
+        function renderVocabContainer() {
+            var emptyState = document.getElementById('vocabEmptyState');
+            var listContainer = document.getElementById('vocabListContainer');
+            var cardContainer = document.getElementById('vocabCardContainer');
+            var vocabBadge = document.getElementById('vocabCountBadge');
+
+            var filtered = getFilteredVocabList();
+            if (vocabBadge) vocabBadge.textContent = (window.vocabList || []).length;
+
+            updatePosFilterUI();
+            updateModeBtnUI();
+
+            if (!filtered || filtered.length === 0) {
+                emptyState?.classList.remove('hidden');
+                if (listContainer) listContainer.innerHTML = '';
+                cardContainer?.classList.add('hidden');
+                return;
+            }
+
+            emptyState?.classList.add('hidden');
+
+            if (window.activeVocabMode === 'list') {
+                cardContainer?.classList.add('hidden');
+                listContainer?.classList.remove('hidden');
+
+                var html = '';
+                var q = window.activeVocabSearchQuery;
+                filtered.forEach(function(v) {
+                    var hIndo = highlightMatch(v.indonesian, q);
+                    var hJap = highlightMatch(v.japanese, q);
+
+                    html += '<div class="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between gap-2">' +
+                        '<div class="space-y-0.5 flex-1 min-w-0">' +
+                            '<div class="flex items-center gap-2">' +
+                                '<span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">' + getPosLabel(v.pos) + '</span>' +
+                                '<h4 class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100 truncate">' + hIndo + '</h4>' +
+                                '<button onclick="speakIndonesian(\'' + escapeHtml(v.indonesian) + '\')" class="text-slate-400 hover:text-emerald-500 p-1">' +
+                                    '<i class="fa-solid fa-volume-high text-xs"></i>' +
+                                '</button>' +
+                            '</div>' +
+                            '<p class="dynamic-text-ja text-emerald-700 dark:text-emerald-400 font-bold">' + hJap + '</p>' +
+                        '</div>' +
+                        '<button onclick="toggleVocabMastered(\'' + v.id + '\')" class="px-2 py-1 rounded ' + (v.mastered ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400') + ' text-[10px] font-bold shrink-0">' +
+                            (v.mastered ? '習得' : '未修') +
+                        '</button>' +
+                    '</div>';
+                });
+                if (listContainer) listContainer.innerHTML = html;
+            } else {
+                listContainer?.classList.add('hidden');
+                cardContainer?.classList.remove('hidden');
+                cardContainer?.classList.add('flex');
+                updateFlashcardUI();
+            }
+        }
+
+        function getPosLabel(pos) {
+            switch(pos) {
+                case 'noun': return '名詞'; case 'verb': return '動詞'; case 'adjective': return '形容詞'; case 'adverb': return '副詞'; default: return 'その他';
+            }
+        }
+
+        function updateModeBtnUI() {
+            var btnCard = document.getElementById('btnModeCard');
+            var btnList = document.getElementById('btnModeList');
+            if (btnCard && btnList) {
+                if (window.activeVocabMode === 'card') {
+                    btnCard.className = "px-3 py-1.5 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition";
+                    btnList.className = "px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
+                } else {
+                    btnList.className = "px-3 py-1.5 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition";
+                    btnCard.className = "px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
+                }
+            }
+        }
+
+        function updatePosFilterUI() {
+            document.querySelectorAll('.btn-pos-filter').forEach(function(btn) {
+                if (btn.dataset.pos === window.activeVocabPosFilter) {
+                    btn.className = "btn-pos-filter px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-red-600 text-white shadow-xs transition";
+                } else {
+                    btn.className = "btn-pos-filter px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
+                }
+            });
+        }
+
+        function setVocabMode(mode) { window.activeVocabMode = mode; renderVocabContainer(); }
+        function setVocabPosFilter(pos) { window.activeVocabPosFilter = pos; window.currentCardIndex = 0; renderVocabContainer(); }
+        function toggleShuffleCards() {
+            window.isShuffled = !window.isShuffled;
+            if (window.isShuffled) window.shuffledVocabList = [...window.vocabList].sort(function() { return Math.random() - 0.5; });
+            window.currentCardIndex = 0;
+            renderVocabContainer();
+        }
+        function toggleVocabMastered(id) {
+            var item = window.vocabList.find(function(v) { return v.id === id; });
+            if (item) { item.mastered = !item.mastered; renderVocabContainer(); }
+        }
+
+        function updateFlashcardUI() {
+            var filtered = getFilteredVocabList();
+            if (!filtered || filtered.length === 0) return;
+            if (window.currentCardIndex >= filtered.length) window.currentCardIndex = 0;
+
+            var item = filtered[window.currentCardIndex];
+            if (!item) return;
+
+            var q = window.activeVocabSearchQuery;
+            var cardIndo = document.getElementById('cardIndoText');
+            var cardJap = document.getElementById('cardJapText');
+            var cardContext = document.getElementById('cardContextFull');
+            var cardPosFront = document.getElementById('cardBadgeFront');
+            var cardPosBack = document.getElementById('cardPosBack');
+            var progressLabel = document.getElementById('flashcardProgressLabel');
+
+            if (cardIndo) cardIndo.innerHTML = highlightMatch(item.indonesian, q);
+            if (cardJap) cardJap.innerHTML = highlightMatch(item.japanese, q);
+            if (cardContext) cardContext.innerHTML = item.context ? ('文脈: "' + highlightMatch(item.context, q) + '"') : '文脈なし';
+            if (cardPosFront) cardPosFront.textContent = getPosLabel(item.pos);
+            if (cardPosBack) cardPosBack.textContent = '品詞: ' + getPosLabel(item.pos) + (item.baseForm ? (' (原形: ' + item.baseForm + ')') : '');
+            if (progressLabel) progressLabel.textContent = (window.currentCardIndex + 1) + ' / ' + filtered.length;
+
+            window.isCardFlipped = false;
+            document.getElementById('flashcardInner')?.classList.remove('rotate-y-180');
+        }
+
+        function flipFlashcard() {
+            window.isCardFlipped = !window.isCardFlipped;
+            var inner = document.getElementById('flashcardInner');
+            if (window.isCardFlipped) inner?.classList.add('rotate-y-180');
+            else inner?.classList.remove('rotate-y-180');
+        }
+
+        function nextFlashcard(mastered) {
+            var filtered = getFilteredVocabList();
+            if (filtered.length === 0) return;
+            if (mastered && filtered[window.currentCardIndex]) filtered[window.currentCardIndex].mastered = true;
+            window.currentCardIndex = (window.currentCardIndex + 1) % filtered.length;
+            updateFlashcardUI();
+        }
+
+        function loadHistoryFromStorage() {
+            try {
+                var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
+                renderHistoryList(history);
+            } catch (e) { renderHistoryList([]); }
+        }
+
+        function toggleHistorySelect(id, event) {
+            event.stopPropagation();
+            var idx = window.selectedHistoryIds.indexOf(id);
+            if (idx > -1) window.selectedHistoryIds.splice(idx, 1);
+            else window.selectedHistoryIds.push(id);
+            updateMergeButtonState();
+        }
+
+        function updateMergeButtonState() {
+            var btn = document.getElementById('btnMergeSelected');
+            if (!btn) return;
+            if (window.selectedHistoryIds.length >= 2) {
+                btn.disabled = false;
+                btn.className = "px-2 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold shadow transition flex items-center gap-1 cursor-pointer";
+                btn.innerHTML = '<i class="fa-solid fa-code-merge"></i> 結合 (' + window.selectedHistoryIds.length + ')';
+            } else {
+                btn.disabled = true;
+                btn.className = "px-2 py-0.5 bg-slate-200 text-slate-400 rounded text-[10px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60";
+                btn.innerHTML = '<i class="fa-solid fa-code-merge"></i> 選択結合';
+            }
+        }
+
+        function renderHistoryList(history) {
+            var container = document.getElementById('historyList');
+            if (!container) return;
+            if (!history || history.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400 py-1.5 text-center">履歴なし (0/6)</p>';
+                window.selectedHistoryIds = [];
+                updateMergeButtonState();
+                return;
+            }
+            var html = '';
+            history.forEach(function(item) {
+                var isChecked = window.selectedHistoryIds.includes(item.id);
+                html += '<div onclick="loadHistoryItem(\'' + item.id + '\')" class="p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer flex justify-between items-center text-xs transition mb-1">' +
+                    '<div class="flex items-center gap-2 min-w-0 flex-1">' +
+                        '<input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onclick="toggleHistorySelect(\'' + item.id + '\', event)" class="rounded text-red-600 focus:ring-0 cursor-pointer shrink-0">' +
+                        '<div class="min-w-0 flex-1">' +
+                            '<p class="font-bold text-slate-800 dark:text-slate-100 truncate leading-tight">' + escapeHtml(item.fileName) + '</p>' +
+                            '<p class="text-[9px] text-slate-400 mt-0.5">' + escapeHtml(item.date) + '</p>' +
+                        '</div>' +
+                    '</div>' +
+                    '<button onclick="deleteHistoryItem(\'' + item.id + '\', event)" class="text-slate-400 hover:text-rose-500 p-1 shrink-0 ml-1" title="削除">' +
+                        '<i class="fa-solid fa-trash-can text-xs"></i>' +
+                    '</button>' +
+                '</div>';
+            });
+            container.innerHTML = html;
+            updateMergeButtonState();
+        }
+
+        function manualSaveHistory() {
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
+                showToast('保存する解析データがありません', 'error');
+                return;
+            }
+            var name = window.currentLoadedFile ? window.currentLoadedFile.name.replace(/\.[^/.]+$/, "") : '解析データ';
+            var singleDataObj = {
+                id: 'hist-' + Date.now(),
+                fileName: name,
+                date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                blocks: window.transcriptBlocks,
+                vocab: window.vocabList
+            };
+            // 任意保存：個別JSONとして保存ダイアログ呼び出し
+            exportDataToFile(singleDataObj, name + '_suarateks_analysis.json');
+            saveCurrentToHistory(name, false);
+            showToast('個別のJSONファイルとして保存しました！', 'info');
+        }
+
+        function saveCurrentToHistory(fileName, showToastNotification) {
+            if (showToastNotification === undefined) showToastNotification = true;
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
+
+            try {
+                var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
+                var targetName = fileName || (window.currentLoadedFile ? window.currentLoadedFile.name : '音源解析データ');
+
+                history = history.filter(function(h) { return h.fileName !== targetName; });
+
+                var item = {
+                    id: 'hist-' + Date.now(),
+                    fileName: targetName,
+                    date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                    blocks: window.transcriptBlocks,
+                    vocab: window.vocabList
+                };
+
+                history.unshift(item);
+
+                // 履歴上限6件制限：6件溜まった時に6件目を自動個別JSON保存＆履歴リセット
+                if (history.length >= 6) {
+                    exportDataToFile(item, targetName + '_auto_backup_limit6.json');
+                    history = [];
+                    localStorage.removeItem('suarateks_history');
+                    renderHistoryList([]);
+                    if (showToastNotification) showToast('履歴が6件に達したため自動バックアップJSONを出力し履歴をリセットしました', 'info');
+                } else {
+                    localStorage.setItem('suarateks_history', JSON.stringify(history));
+                    renderHistoryList(history);
+                    if (showToastNotification) showToast('履歴に保存しました (' + history.length + '/6件)', 'info');
+                }
+            } catch (e) { console.warn('LocalStorage Save Error:', e); }
+        }
+
+        // ページを閉じる・離脱時に現在の解析データを履歴へ退避保存
+        window.addEventListener('beforeunload', function() {
+            if (window.transcriptBlocks && window.transcriptBlocks.length > 0) {
+                try {
+                    var targetName = window.currentLoadedFile ? window.currentLoadedFile.name.replace(/\.[^/.]+$/, "") : '自動一時保存';
+                    var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
+                    history = history.filter(function(h) { return h.fileName !== targetName; });
+                    history.unshift({
+                        id: 'hist-' + Date.now(),
+                        fileName: targetName,
+                        date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                        blocks: window.transcriptBlocks,
+                        vocab: window.vocabList
+                    });
+                    if (history.length > 6) history = history.slice(0, 6);
+                    localStorage.setItem('suarateks_history', JSON.stringify(history));
+                } catch(e) {}
+            }
+        });
+
+        /* --- API Key, UI Modals & Navigation Helpers --- */
+        function getApiKey() { 
+            var key = localStorage.getItem('suarateks_gemini_key') || '';
+            return String(key).trim();
+        }
+
+        function openModal(id) { 
+            var input = document.getElementById('apiKeyInput');
+            if (input) input.value = getApiKey();
+            var modal = document.getElementById(id);
+            if (modal) modal.classList.remove('hidden'); 
+        }
+
+        function closeModal(id) { 
+            var modal = document.getElementById(id);
+            if (modal) modal.classList.add('hidden'); 
+        }
+
+        function saveApiKeyFromModal() {
+            var input = document.getElementById('apiKeyInput');
+            var val = input ? input.value : '';
+            var clean = String(val).trim();
+            if (clean && clean.length > 10) {
+                localStorage.setItem('suarateks_gemini_key', clean);
+                showToast('API Keyを保存しました！', 'info');
+            } else {
+                showToast('有効なAPI Keyを入力してください', 'error');
+            }
+            closeModal('apiKeyModal');
+        }
+
+        function showToast(message, type) {
+            if (type === undefined) type = 'info';
+            var container = document.getElementById('toastContainer');
+            if (!container) return;
+            var toast = document.createElement('div');
+            var bgColor = type === 'error' ? 'bg-rose-600' : 'bg-slate-800';
+            var icon = type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check';
+
+            toast.className = bgColor + ' text-white px-3 py-2 rounded-xl shadow-xl text-xs font-bold flex items-center gap-2 transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto border border-white/10';
+            toast.innerHTML = '<i class="fa-solid ' + icon + ' text-amber-400 text-sm"></i> <span>' + escapeHtml(message) + '</span>';
+
+            container.appendChild(toast);
+            setTimeout(function() { toast.classList.remove('translate-y-2', 'opacity-0'); }, 10);
+            setTimeout(function() {
+                toast.classList.add('opacity-0', 'translate-y-[-8px]');
+                setTimeout(function() { toast.remove(); }, 300);
+            }, 3500);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        function switchMobileTab(tab) {
+            window.activeMobileTab = tab;
+            var panelSetup = document.getElementById('panelSetup');
+            var panelTranscript = document.getElementById('panelTranscript');
+
+            if (window.innerWidth >= 768) {
+                if (panelSetup) panelSetup.style.display = 'flex';
+                if (panelTranscript) panelTranscript.style.display = 'flex';
+                return;
+            }
+
+            if (tab === 'setup') {
+                if (panelSetup) panelSetup.style.display = 'flex';
+                if (panelTranscript) panelTranscript.style.display = 'none';
+            } else {
+                if (panelSetup) panelSetup.style.display = 'none';
+                if (panelTranscript) panelTranscript.style.display = 'flex';
+                setStudioSubView(tab);
+            }
+        }
+
+        function setStudioSubView(subView) {
+            window.activeStudioSubView = subView;
+            var viewTranscript = document.getElementById('transcriptView');
+            var viewGrammar = document.getElementById('grammarView');
+            var viewVocab = document.getElementById('vocabView');
+
+            var btnTranscript = document.getElementById('navTabTranscript');
+            var btnGrammar = document.getElementById('navTabGrammar');
+            var btnVocab = document.getElementById('navTabVocab');
+
+            viewTranscript?.classList.add('hidden');
+            viewGrammar?.classList.add('hidden');
+            viewVocab?.classList.add('hidden');
+            viewVocab?.classList.remove('flex');
+
+            [btnTranscript, btnGrammar, btnVocab].forEach(function(btn) {
+                if (btn) btn.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0";
+            });
+
+            if (subView === 'transcript') {
+                viewTranscript?.classList.remove('hidden');
+                if (btnTranscript) btnTranscript.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
+            } else if (subView === 'grammar') {
+                viewGrammar?.classList.remove('hidden');
+                if (btnGrammar) btnGrammar.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
+                renderGrammarContainer();
+            } else if (subView === 'vocab') {
+                viewVocab?.classList.remove('hidden');
+                viewVocab?.classList.add('flex');
+                if (btnVocab) btnVocab.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
+                renderVocabContainer();
+            }
+        }
+
+        function mergeSelectedHistories() {
+            if (window.selectedHistoryIds.length < 2) return;
+            var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
+            
+            var selectedItems = window.selectedHistoryIds.map(function(id) {
+                return history.find(function(h) { return h.id === id; });
+            }).filter(Boolean);
+
+            if (selectedItems.length < 2) return;
+
+            var mergedBlocks = [];
+            var mergedVocabMap = new Map();
+            var titleParts = [];
+
+            var globalBlockIdx = 0;
+            selectedItems.forEach(function(item) {
+                titleParts.push(item.fileName.replace(/\.[^/.]+$/, ""));
+                
+                if (Array.isArray(item.blocks)) {
+                    item.blocks.forEach(function(b) {
+                        mergedBlocks.push({
+                            id: 'block-merged-' + Date.now() + '-' + globalBlockIdx,
+                            blockIndex: globalBlockIdx,
+                            speaker: b.speaker || 'Pembicara',
+                            indonesian: b.indonesian || '',
+                            japanese: b.japanese || '',
+                            grammarExplanation: b.grammarExplanation || ''
+                        });
+                        globalBlockIdx++;
+                    });
+                }
+
+                if (Array.isArray(item.vocab)) {
+                    item.vocab.forEach(function(v) {
+                        var key = (v.indonesian || '').trim().toLowerCase();
+                        if (key && !mergedVocabMap.has(key)) {
+                            mergedVocabMap.set(key, { ...v, id: 'vocab-merged-' + Date.now() + '-' + mergedVocabMap.size });
                         }
+                    });
+                }
+            });
+
+            var mergedTitle = '結合_' + titleParts.join('_').substring(0, 20);
+            window.transcriptBlocks = mergedBlocks;
+            window.vocabList = Array.from(mergedVocabMap.values());
+
+            renderTranscriptContainer();
+            renderGrammarContainer();
+            renderVocabContainer();
+
+            var mergedDataObj = {
+                id: 'hist-merged-' + Date.now(),
+                fileName: mergedTitle,
+                date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                blocks: window.transcriptBlocks,
+                vocab: window.vocabList
+            };
+
+            exportDataToFile(mergedDataObj, mergedTitle + '_merged.json');
+            saveCurrentToHistory(mergedTitle, false);
+            window.selectedHistoryIds = [];
+            showToast('選択した ' + selectedItems.length + ' 件を1つの統合ファイルに結合・保存しました！', 'info');
+            if (window.innerWidth < 768) switchMobileTab('transcript');
+        }
+
+        function clearHistory() {
+            if (confirm('すべての解析履歴を消去しますか？')) {
+                localStorage.removeItem('suarateks_history');
+                window.selectedHistoryIds = [];
+                renderHistoryList([]);
+                showToast('履歴を全消去しました', 'info');
+            }
+        }
+
+        function loadHistoryItem(id) {
+            var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
+            var found = history.find(function(h) { return h.id === id; });
+            if (found) {
+                window.transcriptBlocks = found.blocks || [];
+                window.vocabList = found.vocab || [];
+                renderTranscriptContainer();
+                renderGrammarContainer();
+                renderVocabContainer();
+                
+                showToast('「' + found.fileName + '」を復元読み込みしました', 'info');
+                if (window.innerWidth < 768) switchMobileTab('transcript');
+            }
+        }
+
+        function deleteHistoryItem(id, event) {
+            if (event) event.stopPropagation();
+            var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
+            history = history.filter(function(h) { return h.id !== id; });
+            window.selectedHistoryIds = window.selectedHistoryIds.filter(function(sid) { return sid !== id; });
+            localStorage.setItem('suarateks_history', JSON.stringify(history));
+            renderHistoryList(history);
+            showToast('削除しました', 'info');
+        }
+
+        function exportDataToFile(dataObj, customFilename) {
+            var dataStr = JSON.stringify(dataObj, null, 2);
+            var blob = new Blob([dataStr], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = customFilename || ('suarateks_backup_' + new Date().toISOString().slice(0,10).replace(/-/g, '') + '.json');
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importHistoryBackup(event) {
+            var file = event.target.files ? event.target.files[0] : null;
+            if (!file) return;
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    var importedData = JSON.parse(e.target.result);
+                    var singleObj = Array.isArray(importedData) ? importedData[0] : importedData;
+
+                    if (!singleObj || !singleObj.blocks) {
+                        throw new Error('正しい解析JSONファイルではありません');
                     }
 
-                ]
-            }
-        ],
+                    window.transcriptBlocks = singleObj.blocks || [];
+                    window.vocabList = singleObj.vocab || [];
 
-        generationConfig: {
+                    renderTranscriptContainer();
+                    renderGrammarContainer();
+                    renderVocabContainer();
 
-            temperature: 0.1,
+                    saveCurrentToHistory(singleObj.fileName || file.name, false);
+                    showToast('「' + (singleObj.fileName || file.name) + '」を復元読み込みしました！', 'info');
+                    if (window.innerWidth < 768) switchMobileTab('transcript');
 
-            responseMimeType:
-                'application/json',
-
-            maxOutputTokens:
-                8192
+                } catch (err) {
+                    showToast('復元失敗: ' + err.message, 'error');
+                } finally { event.target.value = ''; }
+            };
+            reader.readAsText(file);
         }
-    };
-
-    var data =
-        await fetchGeminiApi(
-            apiKey,
-            payload
-        );
-
-    return parseGeminiJson(data);
-}
-
-
-/* =========================================================
-   Gemini API: 文法解析
-   ========================================================= */
-
-async function analyzeGrammarWithGemini(
-    text,
-    apiKey
-) {
-
-    var input =
-        String(text || '').trim();
-
-    if (!input) {
-        throw new Error(
-            '文法解析するテキストがありません。'
-        );
-    }
-
-    var payload = {
-
-        contents: [
-            {
-                role: 'user',
-
-                parts: [
-                    {
-                        text:
-                            '以下のインドネシア語について文法解析してください。\n\n' +
-                            input +
-                            '\n\n' +
-                            'JSON形式のみで回答してください。'
-                    }
-                ]
-            }
-        ],
-
-        generationConfig: {
-
-            temperature: 0.1,
-
-            responseMimeType:
-                'application/json',
-
-            maxOutputTokens:
-                4096
-        }
-    };
-
-    var data =
-        await fetchGeminiApi(
-            apiKey,
-            payload
-        );
-
-    return parseGeminiJson(data);
-}
-
-
-/* =========================================================
-   Gemini API: 語彙解析
-   ========================================================= */
-
-async function analyzeVocabularyWithGemini(
-    text,
-    apiKey
-) {
-
-    var input =
-        String(text || '').trim();
-
-    if (!input) {
-        throw new Error(
-            '語彙解析するテキストがありません。'
-        );
-    }
-
-    var payload = {
-
-        contents: [
-            {
-                role: 'user',
-
-                parts: [
-                    {
-                        text:
-                            '以下のインドネシア語から重要な語彙を抽出してください。\n\n' +
-                            input +
-                            '\n\n' +
-                            'JSON形式のみで回答してください。'
-                    }
-                ]
-            }
-        ],
-
-        generationConfig: {
-
-            temperature: 0.1,
-
-            responseMimeType:
-                'application/json',
-
-            maxOutputTokens:
-                4096
-        }
-    };
-
-    var data =
-        await fetchGeminiApi(
-            apiKey,
-            payload
-        );
-
-    return parseGeminiJson(data);
-}
-
-
-/* =========================================================
-   読み上げ
-   ========================================================= */
-
-function speakIndonesian(text) {
-
-    var value =
-        String(text || '').trim();
-
-    if (!value) {
-        return;
-    }
-
-    if (
-        !('speechSynthesis' in window)
-    ) {
-        alert(
-            'このブラウザは音声読み上げに対応していません。'
-        );
-        return;
-    }
-
-    window.speechSynthesis.cancel();
-
-    var utterance =
-        new SpeechSynthesisUtterance(value);
-
-    utterance.lang = 'id-ID';
-
-    utterance.rate = 0.9;
-
-    utterance.pitch = 1.0;
-
-    window.speechSynthesis.speak(
-        utterance
-    );
-}
-
-
-/* =========================================================
-   Gemini Error表示
-   ========================================================= */
-
-function showGeminiError(error) {
-
-    var message =
-        error && error.message
-            ? error.message
-            : String(error);
-
-    console.error(
-        'Gemini Error:',
-        error
-    );
-
-    /*
-     * 既存のエラー表示要素がある場合
-     */
-    var errorBox =
-        document.getElementById(
-            'errorMessage'
-        );
-
-    if (errorBox) {
-
-        errorBox.textContent =
-            message;
-
-        errorBox.style.display =
-            'block';
-
-        return;
-    }
-
-    /*
-     * なければalert
-     */
-    alert(message);
-}
-</script>
+    </script>
+</body>
+</html>
