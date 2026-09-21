@@ -153,6 +153,9 @@
                     <button id="navTabVocab" onclick="setStudioSubView('vocab')" class="no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
                         <i class="fa-solid fa-book-open text-[11px]"></i> 単語帳 (<span id="vocabCountBadge">0</span>)
                     </button>
+                    <button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-2.5 sm:px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-1" title="保存済みテキストを使って高精度文法・単語再解析を実行">
+                        <i class="fa-solid fa-rotate-right text-[11px]"></i> テキスト再解析
+                    </button>
                 </div>
 
                 <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
@@ -555,6 +558,163 @@
             if (btnText) btnText.textContent = "高精度マルチパス解析開始";
             showToast('すべてのキューファイルの解析処理が終了しました', 'info');
             setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
+        };
+
+        window.reanalyzeCurrentTranscript = async function() {
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
+                showToast('再解析対象のテキストデータ（JSON）が読み込まれていません', 'error');
+                return;
+            }
+
+            var apiKey = getApiKey();
+            if (!apiKey) {
+                showToast('Gemini API Key が設定されていません。', 'error');
+                openModal('apiKeyModal');
+                return;
+            }
+
+            var btn = document.getElementById('btnReanalyzeText');
+            var progressContainer = document.getElementById('chunkProgressContainer');
+            var progressLabel = document.getElementById('chunkProgressLabel');
+            var progressPercent = document.getElementById('chunkProgressPercent');
+            var progressBar = document.getElementById('chunkProgressBar');
+
+            if (btn) btn.disabled = true;
+            if (progressContainer) progressContainer.classList.remove('hidden');
+
+            // 文法解剖の初期化
+            window.transcriptBlocks.forEach(function(b) { b.grammarExplanation = '解析中...'; });
+            window.vocabList = [];
+            renderGrammarContainer();
+            renderVocabContainer();
+
+            var totalBlocks = window.transcriptBlocks.length;
+            var maxAnalysisPasses = 5;
+            var chunkSize = Math.max(2, Math.ceil(totalBlocks / maxAnalysisPasses));
+            var totalChunks = Math.min(maxAnalysisPasses, Math.ceil(totalBlocks / chunkSize));
+            var accumulatedVocabMap = new Map();
+
+            try {
+                for (var chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
+                    var start = chunkIdx * chunkSize;
+                    var end = Math.min(totalBlocks, start + chunkSize);
+                    if (start >= totalBlocks) break;
+
+                    var currentPct = Math.floor(((chunkIdx + 1) / totalChunks) * 100);
+                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-amber-500"></i> <span>【テキスト再解析】文法・単語抽出 (' + (chunkIdx + 1) + '/' + totalChunks + ')...</span>';
+                    if (progressBar) progressBar.style.width = currentPct + '%';
+                    if (progressPercent) progressPercent.textContent = currentPct + '%';
+
+                    var chunkBlocks = window.transcriptBlocks.slice(start, end);
+                    var inputChunkText = chunkBlocks.map(function(b) {
+                        return `[BLOCK_ID:${b.blockIndex}] ${b.indonesian}\n(Japanese: ${b.japanese})`;
+                    }).join('\n\n');
+
+                    var combinedPrompt = `Analyze the given Indonesian text blocks in detail for Japanese learners.
+
+REQUIREMENTS:
+1. "grammar": Provide exhaustive grammatical anatomy for each block index. Explain syntax (S+V+O), word order, and any affixes (me-, ber-, di-, ter-, -kan, -i, pe-an, ke-an). Output concise Japanese explanations.
+2. "vocab": Extract key vocabulary and derived words from these blocks. Crucially, restore the dictionary base form (baseForm/kata dasar, e.g. "membuang" -> "buang"). Provide precise Japanese translation and POS.
+
+Return ONLY a JSON object:
+{
+  "grammar": [
+    {
+      "blockIndex": 0,
+      "grammarExplanation": "【構文】S(主語) + V(動詞) + O(目的語)\n【接辞解説】me-...-kan (他動詞化)\n【詳細】..."
+    }
+  ],
+  "vocab": [
+    {
+      "indonesian": "membuang",
+      "baseForm": "buang",
+      "japanese": "〜を捨てる",
+      "pos": "verb",
+      "context": "Short context sentence"
+    }
+  ]
+}
+
+INPUT BLOCKS TO ANALYZE:
+${inputChunkText}`;
+
+                    var chunkPayload = {
+                        contents: [{ parts: [{ text: combinedPrompt }] }],
+                        generationConfig: { responseMimeType: "application/json" }
+                    };
+
+                    var chunkResponseData = await fetchGeminiApi(apiKey, chunkPayload);
+                    var chunkRawText = extractGeminiText(chunkResponseData);
+                    var chunkParsed = safeParseTruncatedJson(chunkRawText);
+
+                    if (chunkParsed.grammar && Array.isArray(chunkParsed.grammar)) {
+                        chunkParsed.grammar.forEach(function(gItem, gIdx) {
+                            var bIdx = (gItem.blockIndex !== undefined && gItem.blockIndex !== null) ? Number(gItem.blockIndex) : (start + gIdx);
+                            var targetBlock = window.transcriptBlocks.find(function(b) { return b.blockIndex === bIdx; }) || chunkBlocks[gIdx];
+                            if (targetBlock && gItem.grammarExplanation) {
+                                targetBlock.grammarExplanation = String(gItem.grammarExplanation).trim();
+                            }
+                        });
+                    }
+
+                    chunkBlocks.forEach(function(cb) {
+                        if (cb.grammarExplanation === '解析中...') {
+                            cb.grammarExplanation = '【語順・構文】' + cb.indonesian + '\n（語法解説: 主語・動詞・目的語の標準配置）';
+                        }
+                    });
+
+                    renderGrammarContainer();
+
+                    if (chunkParsed.vocab && Array.isArray(chunkParsed.vocab)) {
+                        chunkParsed.vocab.forEach(function(v) {
+                            var wordForm = (v.indonesian || '').trim();
+                            var base = (v.baseForm || wordForm).trim();
+                            var key = base.toLowerCase();
+
+                            if (wordForm && key) {
+                                if (!accumulatedVocabMap.has(key)) {
+                                    accumulatedVocabMap.set(key, {
+                                        id: 'vocab-' + Date.now() + '-' + accumulatedVocabMap.size,
+                                        indonesian: wordForm,
+                                        baseForm: base,
+                                        japanese: v.japanese || '',
+                                        pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(v.pos) ? v.pos : 'other',
+                                        context: v.context || '',
+                                        mastered: false
+                                    });
+                                }
+                            }
+                        });
+                        window.vocabList = Array.from(accumulatedVocabMap.values());
+                        renderVocabContainer();
+                    }
+
+                    await sleep(300);
+                }
+
+                showToast('高精度テキスト再解析が完了しました！', 'info');
+
+                var name = window.currentLoadedFile ? window.currentLoadedFile.name.replace(/\.[^/.]+$/, "") + '_reanalyzed' : '再解析データ';
+                var singleDataObj = {
+                    id: 'hist-' + Date.now(),
+                    fileName: name,
+                    date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                    blocks: window.transcriptBlocks,
+                    vocab: window.vocabList
+                };
+                exportDataToFile(singleDataObj, name + '.json');
+                saveCurrentToHistory(name, false);
+
+            } catch (err) {
+                console.error('Re-analyze Error:', err);
+                showToast('再解析エラー: ' + err.message, 'error');
+                if (err.message.includes('Spend Cap') || err.message.includes('予算制限')) {
+                    openModal('apiKeyModal', true);
+                }
+            } finally {
+                if (btn) btn.disabled = false;
+                setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
+            }
         };
 
         async function processSingleFileInQueue(queueItem, apiKey, currentIdx, totalIdx) {
