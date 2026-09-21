@@ -50,6 +50,7 @@
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 h-[100dvh] flex flex-col font-sans overflow-hidden">
 
+    <!-- Toast Container -->
     <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-sm"></div>
 
     <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center justify-between shrink-0">
@@ -62,12 +63,14 @@
         </button>
     </header>
 
+    <!-- Mobile Navigation Switcher -->
     <div class="md:hidden bg-slate-200 dark:bg-slate-800 p-1 flex items-center gap-1 shrink-0 border-b border-slate-300 dark:border-slate-700 text-xs font-bold">
         <button id="btnMobSetup" onclick="switchMobileTab('setup')" class="flex-1 py-1.5 text-center bg-white dark:bg-slate-700 rounded shadow-sm text-slate-800 dark:text-slate-100">設定・音源</button>
         <button id="btnMobTranscript" onclick="switchMobileTab('transcript')" class="flex-1 py-1.5 text-center text-slate-600 dark:text-slate-400">本文</button>
         <button id="btnMobVocab" onclick="switchMobileTab('vocab')" class="flex-1 py-1.5 text-center text-slate-600 dark:text-slate-400">単語帳</button>
     </div>
 
+    <!-- Main Workspace Layout -->
     <div class="flex-1 flex overflow-hidden p-2 sm:p-3 gap-3 max-w-7xl mx-auto w-full">
 
         <!-- Panel Left: Setup & Queue & History -->
@@ -119,10 +122,10 @@
             <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[180px]">
                 <div class="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-700 mb-2 gap-1 overflow-x-auto hide-scrollbar">
                     <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1 shrink-0">
-                        <i class="fa-solid fa-clock-rotate-left text-amber-500"></i> 履歴
+                        <i class="fa-solid fa-clock-rotate-left text-amber-500"></i> 履歴 (15件)
                     </h4>
                     <div class="flex items-center gap-1 shrink-0">
-                        <button id="btnReanalyzeSelected" disabled onclick="reanalyzeSelectedHistories()" class="px-1.5 py-0.5 bg-amber-500 text-white rounded text-[10px] font-bold transition flex items-center gap-1 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed" title="選択した履歴を順次テキスト再解析">
+                        <button id="btnReanalyzeSelected" disabled onclick="reanalyzeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[10px] font-bold transition flex items-center gap-1 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed" title="選択した履歴を順次テキスト再解析">
                             <i class="fa-solid fa-rotate-right"></i> 選択再解析
                         </button>
                         <button id="btnMergeSelected" disabled onclick="mergeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[10px] font-bold transition flex items-center gap-1 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed">
@@ -144,8 +147,10 @@
             </div>
         </div>
 
+        <!-- Panel Right: Studio Workspace (Transcript / Grammar / Vocab) -->
         <div id="panelTranscript" class="hidden md:flex flex-1 flex-col bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             
+            <!-- Studio Tab Controls -->
             <div class="bg-white dark:bg-slate-800 px-2 sm:px-3 py-2 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 shrink-0 overflow-x-auto hide-scrollbar">
                 <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl shrink-0 overflow-x-auto hide-scrollbar max-w-full">
                     <button id="navTabTranscript" onclick="setStudioSubView('transcript')" class="no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0">
@@ -180,7 +185,7 @@
                 <div id="transcriptContainer" class="space-y-3"></div>
             </div>
 
-            <!-- View: Grammar -->
+            <!-- View: Grammar Anatomy -->
             <div id="grammarView" class="hidden flex-1 p-3 overflow-y-auto space-y-3">
                 <div id="grammarEmptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
                     <i class="fa-solid fa-diagram-project text-3xl text-slate-300 dark:text-slate-700"></i>
@@ -189,11 +194,11 @@
                 <div id="grammarContainer" class="space-y-3"></div>
             </div>
 
-            <!-- View: Vocab -->
+            <!-- View: Vocab Studio & Flashcard -->
             <div id="vocabView" class="hidden flex-1 flex-col overflow-hidden p-3 space-y-3">
                 <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 shrink-0">
                     <div class="flex items-center gap-2">
-                        <input type="text" id="vocabSearchInput" oninput="window.activeVocabSearchQuery=this.value; renderVocabContainer();" placeholder="検索..." class="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold focus:outline-none focus:border-red-500">
+                        <input type="text" id="vocabSearchInput" oninput="window.activeVocabSearchQuery=this.value; renderVocabContainer();" placeholder="単語・訳・原形を検索..." class="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold focus:outline-none focus:border-red-500">
                         <button id="btnModeCard" onclick="setVocabMode('card')" class="px-3 py-1.5 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition">カード</button>
                         <button id="btnModeList" onclick="setVocabMode('list')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">一覧</button>
                     </div>
@@ -261,7 +266,7 @@
 
     </div>
 
-    <!-- API Key Modal -->
+    <!-- API Key Modal Dialog -->
     <div id="apiKeyModal" class="fixed inset-0 bg-slate-900/60 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white dark:bg-slate-800 rounded-xl p-4 max-w-sm w-full space-y-3 shadow-xl border border-slate-200 dark:border-slate-700">
             <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
@@ -279,6 +284,7 @@
         </div>
     </div>
 
+    <!-- Application Engine Logic -->
     <script>
         window.fileQueue = [];
         window.isQueueProcessing = false;
@@ -304,7 +310,6 @@
 
         function formatOutputFileName(baseName) {
             var clean = String(baseName || '解析データ').trim().replace(/\.[^/.]+$/, "");
-            clean = clean.replace(/^®️/, '').trim();
             return clean || '解析データ';
         }
 
@@ -326,12 +331,12 @@
             var raw = stripJsonCodeFence(jsonString);
             if (!raw) throw new Error('Geminiから応答が返されませんでした');
 
-            // 1. 直接パース試行
+            // 1. Direct JSON parsing
             try {
                 return JSON.parse(raw);
             } catch (e) {}
 
-            // 2. 文字列内の未エスケープ改行・制御文字の自動補正
+            // 2. Sanitize unescaped newlines inside strings
             var sanitized = raw.replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, function(match) {
                 return match.replace(/\r?\n/g, '\\n').replace(/\t/g, '\\t');
             });
@@ -340,7 +345,7 @@
                 return JSON.parse(sanitized);
             } catch (e2) {}
 
-            // 3. 途切れ・カッコ未閉鎖の自動構造修復
+            // 3. Multi-stage structural stack repair for truncated JSON
             var textToRepair = sanitized;
             var firstBrace = textToRepair.indexOf('{');
             var firstBracket = textToRepair.indexOf('[');
@@ -613,11 +618,16 @@
 
                 var wordListStr = Array.from(chunkWords).join(', ');
 
+                // 4段階解剖構造プロンプト
                 var combinedPrompt = 'Analyze the given Indonesian text blocks in detail for Japanese learners.\n\n' +
 'REQUIREMENTS:\n' +
-'1. "grammar": Provide exhaustive grammatical anatomy for each block index. Explain syntax (S+V+O), word order, and any affixes (me-, ber-, di-, ter-, -kan, -i, pe-an, ke-an). Output concise Japanese explanations.\n' +
-'2. "vocab": Process ALL of the provided target words listed below without omission. Restore the dictionary base form (baseForm/kata dasar, e.g. "membuang" -> "buang"), provide precise Japanese translation, POS, and context sentence.\n' +
-'3. "isKeyWord": For each vocabulary item, set "isKeyWord": true if it is a core/important word for sentence understanding, or false if it is a supporting word.\n' +
+'1. "grammar": Provide exhaustive 4-part grammatical analysis for each block index using these exact headings:\n' +
+'   【語句対比】Detail phrase-by-phrase / word-by-word alignment between Indonesian and Japanese.\n' +
+'   【構文構造】Analyze S+V+O syntax, word order, modifiers, passive/active voice, time aspects.\n' +
+'   【接辞解剖】Explain affixes (me-, ber-, di-, ter-, -kan, -i, pe-an, ke-an) showing how base form shifts to derivative meaning.\n' +
+'   【解説・ニュアンス】Explain function words, conjunctions, speech level, and why this translation fits.\n' +
+'2. "vocab": Process ALL of the target words listed below without omission. Restore dictionary base form (baseForm/kata dasar), provide precise Japanese translation, POS, and short context sentence.\n' +
+'3. "isKeyWord": For each vocabulary item, set "isKeyWord": true if it is a core/essential keyword for sentence comprehension, or false if it is a supporting word.\n' +
 '4. CRITICAL: Escape all literal newlines inside JSON string values using \\n. Output strictly valid JSON.\n\n' +
 'TARGET WORDS TO PROCESS (EXTRACTED BY SYSTEM):\n' + wordListStr + '\n\n' +
 'Return ONLY a JSON object:\n' +
@@ -625,7 +635,7 @@
 '  "grammar": [\n' +
 '    {\n' +
 '      "blockIndex": 0,\n' +
-'      "grammarExplanation": "【構文】S(主語) + V(動詞) + O(目的語)\\n【接辞解説】me-...-kan (他動詞化)\\n【詳細】..."\n' +
+'      "grammarExplanation": "【語句対比】\\n・Saya (私) / tidak (〜ない) / bisa (できる) / datang (来る)\\n【構文構造】\\n・S(主語) + 否定副詞 + 助動詞 + V(動詞)\\n【接辞解剖】\\n・datang は原形動詞。\\n【解説・ニュアンス】\\n・bisa は能力を表す助動詞。tidak は動詞・助動詞を否定するため直前に配置されます。"\n' +
 '    }\n' +
 '  ],\n' +
 '  "vocab": [\n' +
@@ -689,7 +699,7 @@
 
                 chunkBlocks.forEach(function(cb) {
                     if (!cb.grammarExplanation || cb.grammarExplanation === '解析中...') {
-                        cb.grammarExplanation = '【語順・構文】' + cb.indonesian + '\n（語法解説: 主語・動詞・目的語の標準配置）';
+                        cb.grammarExplanation = '【語句対比】\n・' + cb.indonesian + ' = ' + cb.japanese + '\n【構文構造】\n・主語・動詞・目的語の標準配置構文\n【接辞解剖】\n・基本語形表現\n【解説・ニュアンス】\n・標準的な文脈表現です。';
                     }
                 });
 
@@ -748,6 +758,7 @@
                         break;
                     }
                 } finally {
+                    // RAM Garbage Collection
                     window.currentAudioBase64 = null;
                 }
             }
@@ -1219,7 +1230,7 @@
                         '<p class="text-xs text-slate-500 dark:text-slate-400 font-medium">' + escapeHtml(block.japanese) + '</p>' +
                     '</div>' +
                     '<div class="bg-blue-50/60 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200/60 dark:border-blue-900/40 text-xs leading-relaxed text-blue-950 dark:text-blue-200 space-y-1.5">' +
-                        '<h5 class="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1 text-[10px] uppercase tracking-wider"><i class="fa-solid fa-diagram-project"></i> 構文解剖・応用例文解説</h5>' +
+                        '<h5 class="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1 text-[10px] uppercase tracking-wider"><i class="fa-solid fa-diagram-project"></i> 4段階精密構文解剖・応用解説</h5>' +
                         '<div class="dynamic-text-ja whitespace-pre-line font-medium pt-0.5 leading-relaxed">' + escapeHtml(block.grammarExplanation) + '</div>' +
                     '</div>' +
                 '</div>';
@@ -1569,7 +1580,7 @@
 
             var globalBlockIdx = 0;
             selectedItems.forEach(function(item) {
-                var cleanTitle = item.fileName.replace(/^®️/, '').replace(/\.[^/.]+$/, "");
+                var cleanTitle = item.fileName.replace(/\.[^/.]+$/, "");
                 titleParts.push(cleanTitle);
                 
                 if (Array.isArray(item.blocks)) {
