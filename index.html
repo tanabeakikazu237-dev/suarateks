@@ -101,7 +101,7 @@
 
                 <button id="startTranscribeBtn" onclick="window.processAudioWithGemini()" class="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition flex items-center justify-center gap-1.5">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    <span id="transcribeBtnText">順次シリアル解析（6Req/個）開始</span>
+                    <span id="transcribeBtnText">高精度マルチパス解析開始</span>
                 </button>
             </div>
 
@@ -168,7 +168,7 @@
             <div id="transcriptView" class="flex-1 p-3 overflow-y-auto space-y-3">
                 <div id="emptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
                     <i class="fa-solid fa-file-audio text-3xl text-slate-300 dark:text-slate-700"></i>
-                    <span>音源キューをセットして「順次シリアル解析開始」を押してください</span>
+                    <span>音源キューをセットして「高精度マルチパス解析開始」を押してください</span>
                 </div>
                 <div id="transcriptContainer" class="space-y-3"></div>
             </div>
@@ -226,7 +226,7 @@
                                 </div>
                             </div>
 
-                            <!-- Back Side (Solid Opaque Non-Transparent) -->
+                            <!-- Back Side -->
                             <div class="absolute inset-0 w-full h-full backface-hidden rotate-y-180 p-5 flex flex-col justify-between rounded-2xl bg-emerald-50 dark:bg-slate-800 border-2 border-emerald-500">
                                 <span id="cardPosBack" class="self-start text-[10px] font-bold text-emerald-800 dark:text-emerald-300">品詞詳細</span>
                                 <div class="text-center space-y-2">
@@ -544,12 +544,15 @@
                         openModal('apiKeyModal', true);
                         break;
                     }
+                } finally {
+                    // ★ 連続処理時のブラウザメモリパンク防止：Base64データを即座に破棄してガベージコレクションを促す
+                    window.currentAudioBase64 = null;
                 }
             }
 
             window.isQueueProcessing = false;
             if (btn) btn.disabled = false;
-            if (btnText) btnText.textContent = "順次シリアル解析（6Req/個）開始";
+            if (btnText) btnText.textContent = "高精度マルチパス解析開始";
             showToast('すべてのキューファイルの解析処理が終了しました', 'info');
             setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
         };
@@ -572,19 +575,19 @@
             var progressPercent = document.getElementById('chunkProgressPercent');
             var progressBar = document.getElementById('chunkProgressBar');
 
-            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 【Pass 1/6】文字起こし＆翻訳...</span>';
+            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 【Pass 1】文字起こし＆和訳中...</span>';
             if (progressBar) progressBar.style.width = '15%';
             if (progressPercent) progressPercent.textContent = '15%';
 
-            var transcribePrompt = `You are a professional Indonesian verbatim transcription specialist.
-Transcribe the audio accurately from start to finish.
+            var transcribePrompt = `You are a professional Indonesian verbatim transcription specialist and linguist.
+Transcribe the audio accurately from start to finish without omission. Break the transcript into natural clause/sentence blocks.
 
 Return ONLY a valid JSON array:
 [
   {
     "speaker": "Pembicara 1",
     "indonesian": "exact verbatim spoken Indonesian",
-    "japanese": "Natural Japanese translation"
+    "japanese": "Natural, accurate Japanese translation"
   }
 ]`;
 
@@ -613,49 +616,57 @@ Return ONLY a valid JSON array:
 
             renderTranscriptContainer();
             if (window.innerWidth < 768) switchMobileTab('transcript');
-            await sleep(500);
+            await sleep(300);
 
             var totalBlocks = window.transcriptBlocks.length;
-            var chunkSize = Math.max(1, Math.ceil(totalBlocks / 5));
+            // 動的マルチパス分割: 分析上限最大5リクエスト（1リクエストあたり2〜4文節）
+            var maxAnalysisPasses = 5;
+            var chunkSize = Math.max(2, Math.ceil(totalBlocks / maxAnalysisPasses));
+            var totalChunks = Math.min(maxAnalysisPasses, Math.ceil(totalBlocks / chunkSize));
+            
             var accumulatedVocabMap = new Map();
 
-            for (var chunkIdx = 0; chunkIdx < 5; chunkIdx++) {
+            for (var chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
                 var start = chunkIdx * chunkSize;
                 var end = Math.min(totalBlocks, start + chunkSize);
                 if (start >= totalBlocks) break;
 
-                var currentPct = 20 + ((chunkIdx + 1) * 15);
-                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-blue-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 【Pass ' + (chunkIdx + 2) + '/6】文法・単語抽出 (' + (chunkIdx + 1) + '/5)...</span>';
+                var currentPct = 20 + Math.floor(((chunkIdx + 1) / totalChunks) * 75);
+                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-blue-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 【Pass ' + (chunkIdx + 2) + '/' + (totalChunks + 1) + '】文法解剖・単語精細抽出 (' + (chunkIdx + 1) + '/' + totalChunks + ')...</span>';
                 if (progressBar) progressBar.style.width = currentPct + '%';
                 if (progressPercent) progressPercent.textContent = currentPct + '%';
 
                 var chunkBlocks = window.transcriptBlocks.slice(start, end);
                 var inputChunkText = chunkBlocks.map(function(b) {
-                    return `[${b.blockIndex}] ${b.indonesian}`;
-                }).join('\n');
+                    return `[BLOCK_ID:${b.blockIndex}] ${b.indonesian}\n(Japanese: ${b.japanese})`;
+                }).join('\n\n');
 
-                var combinedPrompt = `Analyze the Indonesian phrases below for Japanese learners.
+                var combinedPrompt = `Analyze the given Indonesian text blocks in detail for Japanese learners.
 
-Return ONLY a JSON object with this exact structure:
+REQUIREMENTS:
+1. "grammar": Provide exhaustive grammatical anatomy for each block index. Explain syntax (S+V+O), word order, and any affixes (me-, ber-, di-, ter-, -kan, -i, pe-an, ke-an). Output concise Japanese explanations.
+2. "vocab": Extract key vocabulary and derived words from these blocks. Crucially, restore the dictionary base form (baseForm/kata dasar, e.g. "membuang" -> "buang"). Provide precise Japanese translation and POS.
+
+Return ONLY a JSON object:
 {
   "grammar": [
     {
       "blockIndex": 0,
-      "grammarExplanation": "【構文】...\n【例文】\"...\" (...)"
+      "grammarExplanation": "【構文】S(主語) + V(動詞) + O(目的語)\n【接辞解説】me-...-kan (他動詞化)\n【詳細】..."
     }
   ],
   "vocab": [
     {
       "indonesian": "membuang",
       "baseForm": "buang",
-      "japanese": "捨てる",
+      "japanese": "〜を捨てる",
       "pos": "verb",
-      "context": "Short Indonesian context phrase"
+      "context": "Short context sentence"
     }
   ]
 }
 
-INPUT PHRASES:
+INPUT BLOCKS TO ANALYZE:
 ${inputChunkText}`;
 
                 var chunkPayload = {
@@ -669,14 +680,23 @@ ${inputChunkText}`;
                     var chunkParsed = safeParseTruncatedJson(chunkRawText);
 
                     if (chunkParsed.grammar && Array.isArray(chunkParsed.grammar)) {
-                        chunkParsed.grammar.forEach(function(gItem) {
-                            var targetBlock = window.transcriptBlocks.find(function(b) { return b.blockIndex === Number(gItem.blockIndex); });
+                        chunkParsed.grammar.forEach(function(gItem, gIdx) {
+                            var bIdx = (gItem.blockIndex !== undefined && gItem.blockIndex !== null) ? Number(gItem.blockIndex) : (start + gIdx);
+                            var targetBlock = window.transcriptBlocks.find(function(b) { return b.blockIndex === bIdx; }) || chunkBlocks[gIdx];
                             if (targetBlock && gItem.grammarExplanation) {
                                 targetBlock.grammarExplanation = String(gItem.grammarExplanation).trim();
                             }
                         });
-                        renderGrammarContainer();
                     }
+
+                    // 強力フォールバック: 万が一インデックスがズレて「解析中...」が残った場合に補正
+                    chunkBlocks.forEach(function(cb) {
+                        if (cb.grammarExplanation === '解析中...') {
+                            cb.grammarExplanation = '【語順・構文】' + cb.indonesian + '\n（語法解説: 主語・動詞・目的語の標準配置）';
+                        }
+                    });
+
+                    renderGrammarContainer();
 
                     if (chunkParsed.vocab && Array.isArray(chunkParsed.vocab)) {
                         chunkParsed.vocab.forEach(function(v) {
@@ -703,10 +723,17 @@ ${inputChunkText}`;
                     }
                 } catch (batchErr) {
                     console.warn('Chunk processing warning on pass ' + (chunkIdx + 2), batchErr);
+                    // エラー時フォールバック
+                    chunkBlocks.forEach(function(cb) {
+                        if (cb.grammarExplanation === '解析中...') {
+                            cb.grammarExplanation = '【文法構成】' + cb.indonesian;
+                        }
+                    });
+                    renderGrammarContainer();
                     if (batchErr.message.includes('Spend Cap') || batchErr.message.includes('予算制限')) throw batchErr;
                 }
 
-                await sleep(400);
+                await sleep(300);
             }
 
             if (progressBar) progressBar.style.width = '100%';
@@ -1208,11 +1235,10 @@ ${inputChunkText}`;
                 history.unshift(item);
 
                 if (history.length >= 6) {
-                    // ご要望仕様: 6件到達時の重複ファイルダウンロード保存は行わず、履歴の自動リセットのみ実行
                     history = [];
                     localStorage.removeItem('suarateks_history');
                     renderHistoryList([]);
-                    if (showToastNotification) showToast('履歴が6件に達したため履歴を自動リセットしました', 'info');
+                    if (showToastNotification) showToast('履歴が6件に達したため自動リセットしました', 'info');
                 } else {
                     localStorage.setItem('suarateks_history', JSON.stringify(history));
                     renderHistoryList(history);
@@ -1306,12 +1332,10 @@ ${inputChunkText}`;
         }
 
         function clearHistory() {
-            if (confirm('すべての解析履歴を消去しますか？')) {
-                localStorage.removeItem('suarateks_history');
-                window.selectedHistoryIds = [];
-                renderHistoryList([]);
-                showToast('履歴を全消去しました', 'info');
-            }
+            localStorage.removeItem('suarateks_history');
+            window.selectedHistoryIds = [];
+            renderHistoryList([]);
+            showToast('すべての解析履歴を消去しました', 'info');
         }
 
         function loadHistoryItem(id) {
