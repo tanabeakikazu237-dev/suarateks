@@ -70,7 +70,7 @@
 
     <div class="flex-1 flex overflow-hidden p-2 sm:p-3 gap-3 max-w-7xl mx-auto w-full">
 
-        <div id="panelSetup" class="w-full md:w-72 flex flex-col gap-3 shrink-0 overflow-y-auto">
+        <div id="panelSetup" class="w-full md:w-80 flex flex-col gap-3 shrink-0 overflow-y-auto">
             <div id="playerCard" class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
                 <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
                     <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音源キュー選択</span>
@@ -107,7 +107,7 @@
 
             <div id="chunkProgressContainer" class="hidden bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">
                 <div class="flex justify-between text-xs font-bold">
-                    <span id="chunkProgressLabel" class="flex items-center gap-1">順次解析実行中...</span>
+                    <span id="chunkProgressLabel" class="flex items-center gap-1 text-[11px] truncate max-w-[80%]">順次解析実行中...</span>
                     <span id="chunkProgressPercent" class="text-red-600">0%</span>
                 </div>
                 <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
@@ -115,14 +115,17 @@
                 </div>
             </div>
 
-            <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[160px]">
-                <div class="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-700 mb-2 gap-1">
+            <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[180px]">
+                <div class="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-700 mb-2 gap-1 overflow-x-auto hide-scrollbar">
                     <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1 shrink-0">
-                        <i class="fa-solid fa-clock-rotate-left text-amber-500"></i> 解析履歴
+                        <i class="fa-solid fa-clock-rotate-left text-amber-500"></i> 履歴
                     </h4>
                     <div class="flex items-center gap-1 shrink-0">
-                        <button id="btnMergeSelected" disabled onclick="mergeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[10px] font-bold transition flex items-center gap-1 opacity-60 shrink-0 whitespace-nowrap">
-                            <i class="fa-solid fa-code-merge"></i> 選択結合
+                        <button id="btnReanalyzeSelected" disabled onclick="reanalyzeSelectedHistories()" class="px-1.5 py-0.5 bg-amber-500 text-white rounded text-[10px] font-bold transition flex items-center gap-1 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed" title="選択した履歴を順次テキスト再解析">
+                            <i class="fa-solid fa-rotate-right"></i> 選択再解析
+                        </button>
+                        <button id="btnMergeSelected" disabled onclick="mergeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[10px] font-bold transition flex items-center gap-1 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed">
+                            <i class="fa-solid fa-code-merge"></i> 結合
                         </button>
                         <button onclick="manualSaveHistory()" class="px-1.5 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded text-[10px] font-bold transition shrink-0 whitespace-nowrap" title="現在の解析結果を個別JSONとして保存">保存</button>
                         <button onclick="clearHistory()" class="px-1.5 py-0.5 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded text-[10px] font-bold transition shrink-0 whitespace-nowrap">消去</button>
@@ -153,8 +156,8 @@
                     <button id="navTabVocab" onclick="setStudioSubView('vocab')" class="no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
                         <i class="fa-solid fa-book-open text-[11px]"></i> 単語帳 (<span id="vocabCountBadge">0</span>)
                     </button>
-                    <button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-2.5 sm:px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-1" title="保存済みテキストを使って高精度文法・単語再解析を実行">
-                        <i class="fa-solid fa-rotate-right text-[11px]"></i> テキスト再解析
+                    <button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-2.5 sm:px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-1" title="表示中のテキストを使って高精度文法・単語再解析を実行">
+                        <i class="fa-solid fa-rotate-right text-[11px]"></i> 単一テキスト再解析
                     </button>
                 </div>
 
@@ -294,6 +297,12 @@
         window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
 
         var sleep = function(ms) { return new Promise(function(resolve) { setTimeout(resolve, ms); }); };
+
+        function formatOutputFileName(baseName) {
+            var clean = String(baseName || '解析データ').trim().replace(/\.[^/.]+$/, "");
+            if (clean.startsWith('®️')) return clean;
+            return '®️' + clean;
+        }
 
         function getApiKey() { 
             var key = localStorage.getItem('suarateks_gemini_key') || '';
@@ -559,56 +568,29 @@
             setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
         };
 
-        window.reanalyzeCurrentTranscript = async function() {
-            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
-                showToast('再解析対象のテキストデータ（JSON）が読み込まれていません', 'error');
-                return;
-            }
-
-            var apiKey = getApiKey();
-            if (!apiKey) {
-                showToast('Gemini API Key が設定されていません。', 'error');
-                openModal('apiKeyModal');
-                return;
-            }
-
-            var btn = document.getElementById('btnReanalyzeText');
-            var progressContainer = document.getElementById('chunkProgressContainer');
-            var progressLabel = document.getElementById('chunkProgressLabel');
-            var progressPercent = document.getElementById('chunkProgressPercent');
-            var progressBar = document.getElementById('chunkProgressBar');
-
-            if (btn) btn.disabled = true;
-            if (progressContainer) progressContainer.classList.remove('hidden');
-
-            window.transcriptBlocks.forEach(function(b) { b.grammarExplanation = '解析中...'; });
-            window.vocabList = [];
-            renderGrammarContainer();
-            renderVocabContainer();
-
-            var totalBlocks = window.transcriptBlocks.length;
+        async function reanalyzeBlocksCore(blocks, apiKey, fileNameLabel, onProgress) {
+            var totalBlocks = blocks.length;
             var maxAnalysisPasses = 5;
             var chunkSize = Math.max(2, Math.ceil(totalBlocks / maxAnalysisPasses));
             var totalChunks = Math.min(maxAnalysisPasses, Math.ceil(totalBlocks / chunkSize));
             var accumulatedVocabMap = new Map();
 
-            try {
-                for (var chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
-                    var start = chunkIdx * chunkSize;
-                    var end = Math.min(totalBlocks, start + chunkSize);
-                    if (start >= totalBlocks) break;
+            blocks.forEach(function(b) { b.grammarExplanation = '解析中...'; });
 
-                    var currentPct = Math.floor(((chunkIdx + 1) / totalChunks) * 100);
-                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-amber-500"></i> <span>【テキスト再解析】文法・単語抽出 (' + (chunkIdx + 1) + '/' + totalChunks + ')...</span>';
-                    if (progressBar) progressBar.style.width = currentPct + '%';
-                    if (progressPercent) progressPercent.textContent = currentPct + '%';
+            for (var chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
+                var start = chunkIdx * chunkSize;
+                var end = Math.min(totalBlocks, start + chunkSize);
+                if (start >= totalBlocks) break;
 
-                    var chunkBlocks = window.transcriptBlocks.slice(start, end);
-                    var inputChunkText = chunkBlocks.map(function(b) {
-                        return '[BLOCK_ID:' + b.blockIndex + '] ' + b.indonesian + '\n(Japanese: ' + b.japanese + ')';
-                    }).join('\n\n');
+                var currentPct = Math.floor(((chunkIdx + 1) / totalChunks) * 100);
+                if (onProgress) onProgress(chunkIdx + 1, totalChunks, currentPct, fileNameLabel);
 
-                    var combinedPrompt = 'Analyze the given Indonesian text blocks in detail for Japanese learners.\n\n' +
+                var chunkBlocks = blocks.slice(start, end);
+                var inputChunkText = chunkBlocks.map(function(b) {
+                    return '[BLOCK_ID:' + b.blockIndex + '] ' + b.indonesian + '\n(Japanese: ' + b.japanese + ')';
+                }).join('\n\n');
+
+                var combinedPrompt = 'Analyze the given Indonesian text blocks in detail for Japanese learners.\n\n' +
 'REQUIREMENTS:\n' +
 '1. "grammar": Provide exhaustive grammatical anatomy for each block index. Explain syntax (S+V+O), word order, and any affixes (me-, ber-, di-, ter-, -kan, -i, pe-an, ke-an). Output concise Japanese explanations.\n' +
 '2. "vocab": Extract key vocabulary and derived words from these blocks. Crucially, restore the dictionary base form (baseForm/kata dasar, e.g. "membuang" -> "buang"). Provide precise Japanese translation and POS.\n\n' +
@@ -632,72 +614,205 @@
 '}\n\n' +
 'INPUT BLOCKS TO ANALYZE:\n' + inputChunkText;
 
-                    var chunkPayload = {
-                        contents: [{ parts: [{ text: combinedPrompt }] }],
-                        generationConfig: { responseMimeType: "application/json" }
-                    };
+                var chunkPayload = {
+                    contents: [{ parts: [{ text: combinedPrompt }] }],
+                    generationConfig: { responseMimeType: "application/json" }
+                };
 
-                    var chunkResponseData = await fetchGeminiApi(apiKey, chunkPayload);
-                    var chunkRawText = extractGeminiText(chunkResponseData);
-                    var chunkParsed = safeParseTruncatedJson(chunkRawText);
+                var chunkResponseData = await fetchGeminiApi(apiKey, chunkPayload);
+                var chunkRawText = extractGeminiText(chunkResponseData);
+                var chunkParsed = safeParseTruncatedJson(chunkRawText);
 
-                    if (chunkParsed.grammar && Array.isArray(chunkParsed.grammar)) {
-                        chunkParsed.grammar.forEach(function(gItem, gIdx) {
-                            var bIdx = (gItem.blockIndex !== undefined && gItem.blockIndex !== null) ? Number(gItem.blockIndex) : (start + gIdx);
-                            var targetBlock = window.transcriptBlocks.find(function(b) { return b.blockIndex === bIdx; }) || chunkBlocks[gIdx];
-                            if (targetBlock && gItem.grammarExplanation) {
-                                targetBlock.grammarExplanation = String(gItem.grammarExplanation).trim();
-                            }
-                        });
-                    }
-
-                    chunkBlocks.forEach(function(cb) {
-                        if (cb.grammarExplanation === '解析中...') {
-                            cb.grammarExplanation = '【語順・構文】' + cb.indonesian + '\n（語法解説: 主語・動詞・目的語の標準配置）';
+                if (chunkParsed.grammar && Array.isArray(chunkParsed.grammar)) {
+                    chunkParsed.grammar.forEach(function(gItem, gIdx) {
+                        var bIdx = (gItem.blockIndex !== undefined && gItem.blockIndex !== null) ? Number(gItem.blockIndex) : (start + gIdx);
+                        var targetBlock = blocks.find(function(b) { return b.blockIndex === bIdx; }) || chunkBlocks[gIdx];
+                        if (targetBlock && gItem.grammarExplanation) {
+                            targetBlock.grammarExplanation = String(gItem.grammarExplanation).trim();
                         }
                     });
-
-                    renderGrammarContainer();
-
-                    if (chunkParsed.vocab && Array.isArray(chunkParsed.vocab)) {
-                        chunkParsed.vocab.forEach(function(v) {
-                            var wordForm = (v.indonesian || '').trim();
-                            var base = (v.baseForm || wordForm).trim();
-                            var key = base.toLowerCase();
-
-                            if (wordForm && key) {
-                                if (!accumulatedVocabMap.has(key)) {
-                                    accumulatedVocabMap.set(key, {
-                                        id: 'vocab-' + Date.now() + '-' + accumulatedVocabMap.size,
-                                        indonesian: wordForm,
-                                        baseForm: base,
-                                        japanese: v.japanese || '',
-                                        pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(v.pos) ? v.pos : 'other',
-                                        context: v.context || '',
-                                        mastered: false
-                                    });
-                                }
-                            }
-                        });
-                        window.vocabList = Array.from(accumulatedVocabMap.values());
-                        renderVocabContainer();
-                    }
-
-                    await sleep(300);
                 }
 
-                showToast('高精度テキスト再解析が完了しました！', 'info');
+                chunkBlocks.forEach(function(cb) {
+                    if (cb.grammarExplanation === '解析中...') {
+                        cb.grammarExplanation = '【語順・構文】' + cb.indonesian + '\n（語法解説: 主語・動詞・目的語の標準配置）';
+                    }
+                });
 
-                var name = window.currentLoadedFile ? window.currentLoadedFile.name.replace(/\.[^/.]+$/, "") + '_reanalyzed' : '再解析データ';
+                if (chunkParsed.vocab && Array.isArray(chunkParsed.vocab)) {
+                    chunkParsed.vocab.forEach(function(v) {
+                        var wordForm = (v.indonesian || '').trim();
+                        var base = (v.baseForm || wordForm).trim();
+                        var key = base.toLowerCase();
+
+                        if (wordForm && key) {
+                            if (!accumulatedVocabMap.has(key)) {
+                                accumulatedVocabMap.set(key, {
+                                    id: 'vocab-' + Date.now() + '-' + accumulatedVocabMap.size,
+                                    indonesian: wordForm,
+                                    baseForm: base,
+                                    japanese: v.japanese || '',
+                                    pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(v.pos) ? v.pos : 'other',
+                                    context: v.context || '',
+                                    mastered: false
+                                });
+                            }
+                        }
+                    });
+                }
+
+                await sleep(300);
+            }
+
+            return {
+                blocks: blocks,
+                vocab: Array.from(accumulatedVocabMap.values())
+            };
+        }
+
+        window.reanalyzeSelectedHistories = async function() {
+            if (!window.selectedHistoryIds || window.selectedHistoryIds.length === 0) return;
+
+            var apiKey = getApiKey();
+            if (!apiKey) {
+                showToast('Gemini API Key が設定されていません。', 'error');
+                openModal('apiKeyModal');
+                return;
+            }
+
+            var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
+            var selectedItems = window.selectedHistoryIds.map(function(id) {
+                return history.find(function(h) { return h.id === id; });
+            }).filter(Boolean);
+
+            if (selectedItems.length === 0) return;
+
+            var btnRe = document.getElementById('btnReanalyzeSelected');
+            var btnMerge = document.getElementById('btnMergeSelected');
+            var progressContainer = document.getElementById('chunkProgressContainer');
+            var progressLabel = document.getElementById('chunkProgressLabel');
+            var progressPercent = document.getElementById('chunkProgressPercent');
+            var progressBar = document.getElementById('chunkProgressBar');
+
+            if (btnRe) btnRe.disabled = true;
+            if (btnMerge) btnMerge.disabled = true;
+            if (progressContainer) progressContainer.classList.remove('hidden');
+
+            try {
+                for (var i = 0; i < selectedItems.length; i++) {
+                    var item = selectedItems[i];
+                    var baseName = formatOutputFileName(item.fileName);
+
+                    var res = await reanalyzeBlocksCore(
+                        item.blocks || [],
+                        apiKey,
+                        '[' + (i + 1) + '/' + selectedItems.length + '] ' + baseName,
+                        function(cIdx, totalC, pct, label) {
+                            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-rotate-right fa-spin text-amber-500"></i> <span class="truncate">' + label + ' (' + cIdx + '/' + totalC + ')</span>';
+                            if (progressBar) progressBar.style.width = pct + '%';
+                            if (progressPercent) progressPercent.textContent = pct + '%';
+                        }
+                    );
+
+                    item.fileName = baseName;
+                    item.blocks = res.blocks;
+                    item.vocab = res.vocab;
+                    item.date = new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+                    window.transcriptBlocks = res.blocks;
+                    window.vocabList = res.vocab;
+                    renderTranscriptContainer();
+                    renderGrammarContainer();
+                    renderVocabContainer();
+
+                    exportDataToFile({
+                        id: item.id,
+                        fileName: baseName,
+                        date: item.date,
+                        blocks: item.blocks,
+                        vocab: item.vocab
+                    }, baseName + '.json');
+
+                    var freshHistory = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
+                    var idxInFresh = freshHistory.findIndex(function(h) { return h.id === item.id; });
+                    if (idxInFresh !== -1) {
+                        freshHistory[idxInFresh] = item;
+                    } else {
+                        freshHistory.unshift(item);
+                    }
+                    localStorage.setItem('suarateks_history', JSON.stringify(freshHistory));
+                    renderHistoryList(freshHistory);
+                }
+
+                showToast(selectedItems.length + ' 件のテキスト再解析が完了しました！', 'info');
+                window.selectedHistoryIds = [];
+                updateMergeButtonState();
+
+            } catch (err) {
+                console.error('Batch Re-analyze Error:', err);
+                showToast('一括再解析エラー: ' + err.message, 'error');
+                if (err.message.includes('Spend Cap') || err.message.includes('予算制限')) {
+                    openModal('apiKeyModal', true);
+                }
+            } finally {
+                updateMergeButtonState();
+                setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
+            }
+        };
+
+        window.reanalyzeCurrentTranscript = async function() {
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
+                showToast('再解析対象のテキストデータ（JSON）が読み込まれていません', 'error');
+                return;
+            }
+
+            var apiKey = getApiKey();
+            if (!apiKey) {
+                showToast('Gemini API Key が設定されていません。', 'error');
+                openModal('apiKeyModal');
+                return;
+            }
+
+            var btn = document.getElementById('btnReanalyzeText');
+            var progressContainer = document.getElementById('chunkProgressContainer');
+            var progressLabel = document.getElementById('chunkProgressLabel');
+            var progressPercent = document.getElementById('chunkProgressPercent');
+            var progressBar = document.getElementById('chunkProgressBar');
+
+            if (btn) btn.disabled = true;
+            if (progressContainer) progressContainer.classList.remove('hidden');
+
+            try {
+                var targetName = formatOutputFileName(window.currentLoadedFile ? window.currentLoadedFile.name : '再解析データ');
+
+                var res = await reanalyzeBlocksCore(
+                    window.transcriptBlocks,
+                    apiKey,
+                    targetName,
+                    function(cIdx, totalC, pct, label) {
+                        if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-amber-500"></i> <span class="truncate">【再解析】' + label + ' (' + cIdx + '/' + totalC + ')...</span>';
+                        if (progressBar) progressBar.style.width = pct + '%';
+                        if (progressPercent) progressPercent.textContent = pct + '%';
+                    }
+                );
+
+                window.transcriptBlocks = res.blocks;
+                window.vocabList = res.vocab;
+
+                renderGrammarContainer();
+                renderVocabContainer();
+
                 var singleDataObj = {
                     id: 'hist-' + Date.now(),
-                    fileName: name,
+                    fileName: targetName,
                     date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
                     blocks: window.transcriptBlocks,
                     vocab: window.vocabList
                 };
-                exportDataToFile(singleDataObj, name + '.json');
-                saveCurrentToHistory(name, false);
+                exportDataToFile(singleDataObj, targetName + '.json');
+                saveCurrentToHistory(targetName, false);
+
+                showToast('単一テキスト再解析が完了しました！', 'info');
 
             } catch (err) {
                 console.error('Re-analyze Error:', err);
@@ -771,121 +886,25 @@
             if (window.innerWidth < 768) switchMobileTab('transcript');
             await sleep(300);
 
-            var totalBlocks = window.transcriptBlocks.length;
-            var maxAnalysisPasses = 5;
-            var chunkSize = Math.max(2, Math.ceil(totalBlocks / maxAnalysisPasses));
-            var totalChunks = Math.min(maxAnalysisPasses, Math.ceil(totalBlocks / chunkSize));
-            
-            var accumulatedVocabMap = new Map();
+            var cleanFileName = formatOutputFileName(file.name);
 
-            for (var chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
-                var start = chunkIdx * chunkSize;
-                var end = Math.min(totalBlocks, start + chunkSize);
-                if (start >= totalBlocks) break;
-
-                var currentPct = 20 + Math.floor(((chunkIdx + 1) / totalChunks) * 75);
-                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-blue-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 【Pass ' + (chunkIdx + 2) + '/' + (totalChunks + 1) + '】文法解剖・単語精細抽出 (' + (chunkIdx + 1) + '/' + totalChunks + ')...</span>';
-                if (progressBar) progressBar.style.width = currentPct + '%';
-                if (progressPercent) progressPercent.textContent = currentPct + '%';
-
-                var chunkBlocks = window.transcriptBlocks.slice(start, end);
-                var inputChunkText = chunkBlocks.map(function(b) {
-                    return '[BLOCK_ID:' + b.blockIndex + '] ' + b.indonesian + '\n(Japanese: ' + b.japanese + ')';
-                }).join('\n\n');
-
-                var combinedPrompt = 'Analyze the given Indonesian text blocks in detail for Japanese learners.\n\n' +
-'REQUIREMENTS:\n' +
-'1. "grammar": Provide exhaustive grammatical anatomy for each block index. Explain syntax (S+V+O), word order, and any affixes (me-, ber-, di-, ter-, -kan, -i, pe-an, ke-an). Output concise Japanese explanations.\n' +
-'2. "vocab": Extract key vocabulary and derived words from these blocks. Crucially, restore the dictionary base form (baseForm/kata dasar, e.g. "membuang" -> "buang"). Provide precise Japanese translation and POS.\n\n' +
-'Return ONLY a JSON object:\n' +
-'{\n' +
-'  "grammar": [\n' +
-'    {\n' +
-'      "blockIndex": 0,\n' +
-'      "grammarExplanation": "【構文】S(主語) + V(動詞) + O(目的語)\\n【接辞解説】me-...-kan (他動詞化)\\n【詳細】..."\n' +
-'    }\n' +
-'  ],\n' +
-'  "vocab": [\n' +
-'    {\n' +
-'      "indonesian": "membuang",\n' +
-'      "baseForm": "buang",\n' +
-'      "japanese": "〜を捨てる",\n' +
-'      "pos": "verb",\n' +
-'      "context": "Short context sentence"\n' +
-'    }\n' +
-'  ]\n' +
-'}\n\n' +
-'INPUT BLOCKS TO ANALYZE:\n' + inputChunkText;
-
-                var chunkPayload = {
-                    contents: [{ parts: [{ text: combinedPrompt }] }],
-                    generationConfig: { responseMimeType: "application/json" }
-                };
-
-                try {
-                    var chunkResponseData = await fetchGeminiApi(apiKey, chunkPayload);
-                    var chunkRawText = extractGeminiText(chunkResponseData);
-                    var chunkParsed = safeParseTruncatedJson(chunkRawText);
-
-                    if (chunkParsed.grammar && Array.isArray(chunkParsed.grammar)) {
-                        chunkParsed.grammar.forEach(function(gItem, gIdx) {
-                            var bIdx = (gItem.blockIndex !== undefined && gItem.blockIndex !== null) ? Number(gItem.blockIndex) : (start + gIdx);
-                            var targetBlock = window.transcriptBlocks.find(function(b) { return b.blockIndex === bIdx; }) || chunkBlocks[gIdx];
-                            if (targetBlock && gItem.grammarExplanation) {
-                                targetBlock.grammarExplanation = String(gItem.grammarExplanation).trim();
-                            }
-                        });
-                    }
-
-                    chunkBlocks.forEach(function(cb) {
-                        if (cb.grammarExplanation === '解析中...') {
-                            cb.grammarExplanation = '【語順・構文】' + cb.indonesian + '\n（語法解説: 主語・動詞・目的語の標準配置）';
-                        }
-                    });
-
-                    renderGrammarContainer();
-
-                    if (chunkParsed.vocab && Array.isArray(chunkParsed.vocab)) {
-                        chunkParsed.vocab.forEach(function(v) {
-                            var wordForm = (v.indonesian || '').trim();
-                            var base = (v.baseForm || wordForm).trim();
-                            var key = base.toLowerCase();
-
-                            if (wordForm && key) {
-                                if (!accumulatedVocabMap.has(key)) {
-                                    accumulatedVocabMap.set(key, {
-                                        id: 'vocab-' + Date.now() + '-' + accumulatedVocabMap.size,
-                                        indonesian: wordForm,
-                                        baseForm: base,
-                                        japanese: v.japanese || '',
-                                        pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(v.pos) ? v.pos : 'other',
-                                        context: v.context || '',
-                                        mastered: false
-                                    });
-                                }
-                            }
-                        });
-                        window.vocabList = Array.from(accumulatedVocabMap.values());
-                        renderVocabContainer();
-                    }
-                } catch (batchErr) {
-                    console.warn('Chunk processing warning on pass ' + (chunkIdx + 2), batchErr);
-                    chunkBlocks.forEach(function(cb) {
-                        if (cb.grammarExplanation === '解析中...') {
-                            cb.grammarExplanation = '【文法構成】' + cb.indonesian;
-                        }
-                    });
-                    renderGrammarContainer();
-                    if (batchErr.message.includes('Spend Cap') || batchErr.message.includes('予算制限')) throw batchErr;
+            var res = await reanalyzeBlocksCore(
+                window.transcriptBlocks,
+                apiKey,
+                '[' + currentIdx + '/' + totalIdx + '] ' + cleanFileName,
+                function(chunkIdx, totalChunks, currentPct, label) {
+                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-blue-500"></i> <span class="truncate">' + label + ' (' + chunkIdx + '/' + totalChunks + ')...</span>';
+                    if (progressBar) progressBar.style.width = currentPct + '%';
+                    if (progressPercent) progressPercent.textContent = currentPct + '%';
                 }
+            );
 
-                await sleep(300);
-            }
+            window.transcriptBlocks = res.blocks;
+            window.vocabList = res.vocab;
 
             if (progressBar) progressBar.style.width = '100%';
             if (progressPercent) progressPercent.textContent = '100%';
 
-            var cleanFileName = file.name.replace(/\.[^/.]+$/, "");
             var singleDataObj = {
                 id: 'hist-' + Date.now(),
                 fileName: cleanFileName,
@@ -1310,16 +1329,32 @@
         }
 
         function updateMergeButtonState() {
-            var btn = document.getElementById('btnMergeSelected');
-            if (!btn) return;
-            if (window.selectedHistoryIds.length >= 2) {
-                btn.disabled = false;
-                btn.className = "px-1.5 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
-                btn.innerHTML = '<i class="fa-solid fa-code-merge"></i> 結合 (' + window.selectedHistoryIds.length + ')';
-            } else {
-                btn.disabled = true;
-                btn.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[10px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
-                btn.innerHTML = '<i class="fa-solid fa-code-merge"></i> 選択結合';
+            var btnMerge = document.getElementById('btnMergeSelected');
+            var btnRe = document.getElementById('btnReanalyzeSelected');
+            var count = window.selectedHistoryIds.length;
+
+            if (btnRe) {
+                if (count >= 1) {
+                    btnRe.disabled = false;
+                    btnRe.className = "px-1.5 py-0.5 bg-amber-500 hover:bg-amber-600 text-white rounded text-[10px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
+                    btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 選択再解析 (' + count + ')';
+                } else {
+                    btnRe.disabled = true;
+                    btnRe.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[10px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
+                    btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 選択再解析';
+                }
+            }
+
+            if (btnMerge) {
+                if (count >= 2) {
+                    btnMerge.disabled = false;
+                    btnMerge.className = "px-1.5 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
+                    btnMerge.innerHTML = '<i class="fa-solid fa-code-merge"></i> 結合 (' + count + ')';
+                } else {
+                    btnMerge.disabled = true;
+                    btnMerge.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[10px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
+                    btnMerge.innerHTML = '<i class="fa-solid fa-code-merge"></i> 結合';
+                }
             }
         }
 
@@ -1357,17 +1392,19 @@
                 showToast('保存する解析データがありません', 'error');
                 return;
             }
-            var name = window.currentLoadedFile ? window.currentLoadedFile.name.replace(/\.[^/.]+$/, "") : '解析データ';
+            var baseName = window.currentLoadedFile ? window.currentLoadedFile.name : '解析データ';
+            var formattedName = formatOutputFileName(baseName);
+
             var singleDataObj = {
                 id: 'hist-' + Date.now(),
-                fileName: name,
+                fileName: formattedName,
                 date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
                 blocks: window.transcriptBlocks,
                 vocab: window.vocabList
             };
-            exportDataToFile(singleDataObj, name + '_suarateks_analysis.json');
-            saveCurrentToHistory(name, false);
-            showToast('個別のJSONファイルとして保存しました！', 'info');
+            exportDataToFile(singleDataObj, formattedName + '.json');
+            saveCurrentToHistory(formattedName, false);
+            showToast('「' + formattedName + '」を個別JSONとして保存しました！', 'info');
         }
 
         function saveCurrentToHistory(fileName, showToastNotification) {
@@ -1376,13 +1413,14 @@
 
             try {
                 var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
-                var targetName = fileName || (window.currentLoadedFile ? window.currentLoadedFile.name : '音源解析データ');
+                var rawName = fileName || (window.currentLoadedFile ? window.currentLoadedFile.name : '音源解析データ');
+                var formattedName = formatOutputFileName(rawName);
 
-                history = history.filter(function(h) { return h.fileName !== targetName; });
+                history = history.filter(function(h) { return h.fileName !== formattedName && h.fileName !== rawName; });
 
                 var item = {
                     id: 'hist-' + Date.now(),
-                    fileName: targetName,
+                    fileName: formattedName,
                     date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
                     blocks: window.transcriptBlocks,
                     vocab: window.vocabList
@@ -1406,12 +1444,13 @@
         window.addEventListener('beforeunload', function() {
             if (window.transcriptBlocks && window.transcriptBlocks.length > 0) {
                 try {
-                    var targetName = window.currentLoadedFile ? window.currentLoadedFile.name.replace(/\.[^/.]+$/, "") : '自動一時保存';
+                    var rawName = window.currentLoadedFile ? window.currentLoadedFile.name : '自動一時保存';
+                    var formattedName = formatOutputFileName(rawName);
                     var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
-                    history = history.filter(function(h) { return h.fileName !== targetName; });
+                    history = history.filter(function(h) { return h.fileName !== formattedName && h.fileName !== rawName; });
                     history.unshift({
                         id: 'hist-' + Date.now(),
-                        fileName: targetName,
+                        fileName: formattedName,
                         date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
                         blocks: window.transcriptBlocks,
                         vocab: window.vocabList
@@ -1438,7 +1477,8 @@
 
             var globalBlockIdx = 0;
             selectedItems.forEach(function(item) {
-                titleParts.push(item.fileName.replace(/\.[^/.]+$/, ""));
+                var cleanTitle = item.fileName.replace(/^®️/, '').replace(/\.[^/.]+$/, "");
+                titleParts.push(cleanTitle);
                 
                 if (Array.isArray(item.blocks)) {
                     item.blocks.forEach(function(b) {
@@ -1465,7 +1505,9 @@
                 }
             });
 
-            var mergedTitle = '結合_' + titleParts.join('_').substring(0, 20);
+            var rawTitle = '結合_' + titleParts.join('_').substring(0, 20);
+            var mergedTitle = formatOutputFileName(rawTitle);
+
             window.transcriptBlocks = mergedBlocks;
             window.vocabList = Array.from(mergedVocabMap.values());
 
@@ -1481,7 +1523,7 @@
                 vocab: window.vocabList
             };
 
-            exportDataToFile(mergedDataObj, mergedTitle + '_merged.json');
+            exportDataToFile(mergedDataObj, mergedTitle + '.json');
             saveCurrentToHistory(mergedTitle, false);
             window.selectedHistoryIds = [];
             showToast('選択した ' + selectedItems.length + ' 件を1つの統合ファイルに結合・保存しました！', 'info');
@@ -1526,7 +1568,7 @@
             var url = URL.createObjectURL(blob);
             var a = document.createElement('a');
             a.href = url;
-            a.download = customFilename || ('suarateks_backup_' + new Date().toISOString().slice(0,10).replace(/-/g, '') + '.json');
+            a.download = customFilename || (formatOutputFileName('suarateks_backup_' + new Date().toISOString().slice(0,10).replace(/-/g, '')) + '.json');
             a.click();
             URL.revokeObjectURL(url);
         }
@@ -1555,13 +1597,14 @@
 
                     if (!singleObj || !singleObj.blocks) continue;
 
-                    var targetName = singleObj.fileName || file.name.replace(/\.[^/.]+$/, "");
+                    var rawName = singleObj.fileName || file.name;
+                    var formattedName = formatOutputFileName(rawName);
                     
-                    history = history.filter(function(h) { return h.fileName !== targetName; });
+                    history = history.filter(function(h) { return h.fileName !== formattedName && h.fileName !== rawName; });
 
                     var item = {
                         id: 'hist-' + Date.now() + '-' + i,
-                        fileName: targetName,
+                        fileName: formattedName,
                         date: singleObj.date || new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
                         blocks: singleObj.blocks || [],
                         vocab: singleObj.vocab || []
@@ -1591,7 +1634,7 @@
             }
 
             if (successCount > 0) {
-                showToast(successCount + ' 件のJSONバックアップを復元・保存しました！', 'info');
+                showToast(successCount + ' 件のJSONを復元読み込みしました！', 'info');
                 if (window.innerWidth < 768) switchMobileTab('transcript');
             } else {
                 showToast('有効なJSONファイルを読み込めませんでした', 'error');
