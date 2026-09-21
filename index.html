@@ -117,15 +117,15 @@
 
             <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[160px]">
                 <div class="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-700 mb-2 gap-1">
-                    <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1">
+                    <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1 shrink-0">
                         <i class="fa-solid fa-clock-rotate-left text-amber-500"></i> 解析履歴
                     </h4>
-                    <div class="flex items-center gap-1">
-                        <button id="btnMergeSelected" disabled onclick="mergeSelectedHistories()" class="px-2 py-0.5 bg-slate-200 text-slate-400 rounded text-[10px] font-bold transition flex items-center gap-1 opacity-60">
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button id="btnMergeSelected" disabled onclick="mergeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[10px] font-bold transition flex items-center gap-1 opacity-60 shrink-0 whitespace-nowrap">
                             <i class="fa-solid fa-code-merge"></i> 選択結合
                         </button>
-                        <button onclick="manualSaveHistory()" class="px-1.5 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded text-[10px] font-bold transition" title="現在の解析結果を個別JSONとして保存">保存</button>
-                        <button onclick="clearHistory()" class="px-1.5 py-0.5 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded text-[10px] font-bold transition">消去</button>
+                        <button onclick="manualSaveHistory()" class="px-1.5 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded text-[10px] font-bold transition shrink-0 whitespace-nowrap" title="現在の解析結果を個別JSONとして保存">保存</button>
+                        <button onclick="clearHistory()" class="px-1.5 py-0.5 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded text-[10px] font-bold transition shrink-0 whitespace-nowrap">消去</button>
                     </div>
                 </div>
 
@@ -133,8 +133,8 @@
 
                 <div class="pt-2 border-t border-slate-100 dark:border-slate-700 mt-1">
                     <label class="w-full py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition">
-                        <i class="fa-solid fa-file-import"></i> JSONバックアップから復元
-                        <input type="file" accept=".json" onchange="importHistoryBackup(event)" class="hidden">
+                        <i class="fa-solid fa-file-import"></i> JSON復元（最大15件選択可）
+                        <input type="file" accept=".json" multiple onchange="importHistoryBackup(event)" class="hidden">
                     </label>
                 </div>
             </div>
@@ -485,7 +485,7 @@
             }
 
             if (!response.ok || data.error) {
-                var errDetail = data.error?.message || ('HTTP Error ' + response.status);
+                var errDetail = (data.error && data.error.message) ? data.error.message : ('HTTP Error ' + response.status);
                 var isSpendCap = errDetail.toLowerCase().includes('spend cap breached') || response.status === 403;
                 if (isSpendCap) {
                     throw new Error('API利用予算制限（Spend Cap / Billing Limit）に達しました。Google AI Studioで予算設定を確認するか、新しいAPI Keyをご利用ください。');
@@ -497,7 +497,7 @@
         }
 
         function extractGeminiText(data) {
-            var parts = data.candidates?.[0]?.content?.parts;
+            var parts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) ? data.candidates[0].content.parts : null;
             if (!Array.isArray(parts)) throw new Error('応答にテキストデータが含まれていません');
             return parts.map(function(p) { return p.text || ''; }).join('').trim();
         }
@@ -548,7 +548,6 @@
                         break;
                     }
                 } finally {
-                    // ★ 連続処理時のブラウザメモリパンク防止：Base64データを即座に破棄してガベージコレクションを促す
                     window.currentAudioBase64 = null;
                 }
             }
@@ -582,7 +581,6 @@
             if (btn) btn.disabled = true;
             if (progressContainer) progressContainer.classList.remove('hidden');
 
-            // 文法解剖の初期化
             window.transcriptBlocks.forEach(function(b) { b.grammarExplanation = '解析中...'; });
             window.vocabList = [];
             renderGrammarContainer();
@@ -607,36 +605,32 @@
 
                     var chunkBlocks = window.transcriptBlocks.slice(start, end);
                     var inputChunkText = chunkBlocks.map(function(b) {
-                        return `[BLOCK_ID:${b.blockIndex}] ${b.indonesian}\n(Japanese: ${b.japanese})`;
+                        return '[BLOCK_ID:' + b.blockIndex + '] ' + b.indonesian + '\n(Japanese: ' + b.japanese + ')';
                     }).join('\n\n');
 
-                    var combinedPrompt = `Analyze the given Indonesian text blocks in detail for Japanese learners.
-
-REQUIREMENTS:
-1. "grammar": Provide exhaustive grammatical anatomy for each block index. Explain syntax (S+V+O), word order, and any affixes (me-, ber-, di-, ter-, -kan, -i, pe-an, ke-an). Output concise Japanese explanations.
-2. "vocab": Extract key vocabulary and derived words from these blocks. Crucially, restore the dictionary base form (baseForm/kata dasar, e.g. "membuang" -> "buang"). Provide precise Japanese translation and POS.
-
-Return ONLY a JSON object:
-{
-  "grammar": [
-    {
-      "blockIndex": 0,
-      "grammarExplanation": "【構文】S(主語) + V(動詞) + O(目的語)\n【接辞解説】me-...-kan (他動詞化)\n【詳細】..."
-    }
-  ],
-  "vocab": [
-    {
-      "indonesian": "membuang",
-      "baseForm": "buang",
-      "japanese": "〜を捨てる",
-      "pos": "verb",
-      "context": "Short context sentence"
-    }
-  ]
-}
-
-INPUT BLOCKS TO ANALYZE:
-${inputChunkText}`;
+                    var combinedPrompt = 'Analyze the given Indonesian text blocks in detail for Japanese learners.\n\n' +
+'REQUIREMENTS:\n' +
+'1. "grammar": Provide exhaustive grammatical anatomy for each block index. Explain syntax (S+V+O), word order, and any affixes (me-, ber-, di-, ter-, -kan, -i, pe-an, ke-an). Output concise Japanese explanations.\n' +
+'2. "vocab": Extract key vocabulary and derived words from these blocks. Crucially, restore the dictionary base form (baseForm/kata dasar, e.g. "membuang" -> "buang"). Provide precise Japanese translation and POS.\n\n' +
+'Return ONLY a JSON object:\n' +
+'{\n' +
+'  "grammar": [\n' +
+'    {\n' +
+'      "blockIndex": 0,\n' +
+'      "grammarExplanation": "【構文】S(主語) + V(動詞) + O(目的語)\\n【接辞解説】me-...-kan (他動詞化)\\n【詳細】..."\n' +
+'    }\n' +
+'  ],\n' +
+'  "vocab": [\n' +
+'    {\n' +
+'      "indonesian": "membuang",\n' +
+'      "baseForm": "buang",\n' +
+'      "japanese": "〜を捨てる",\n' +
+'      "pos": "verb",\n' +
+'      "context": "Short context sentence"\n' +
+'    }\n' +
+'  ]\n' +
+'}\n\n' +
+'INPUT BLOCKS TO ANALYZE:\n' + inputChunkText;
 
                     var chunkPayload = {
                         contents: [{ parts: [{ text: combinedPrompt }] }],
@@ -739,17 +733,16 @@ ${inputChunkText}`;
             if (progressBar) progressBar.style.width = '15%';
             if (progressPercent) progressPercent.textContent = '15%';
 
-            var transcribePrompt = `You are a professional Indonesian verbatim transcription specialist and linguist.
-Transcribe the audio accurately from start to finish without omission. Break the transcript into natural clause/sentence blocks.
-
-Return ONLY a valid JSON array:
-[
-  {
-    "speaker": "Pembicara 1",
-    "indonesian": "exact verbatim spoken Indonesian",
-    "japanese": "Natural, accurate Japanese translation"
-  }
-]`;
+            var transcribePrompt = 'You are a professional Indonesian verbatim transcription specialist and linguist.\n' +
+'Transcribe the audio accurately from start to finish without omission. Break the transcript into natural clause/sentence blocks.\n\n' +
+'Return ONLY a valid JSON array:\n' +
+'[\n' +
+'  {\n' +
+'    "speaker": "Pembicara 1",\n' +
+'    "indonesian": "exact verbatim spoken Indonesian",\n' +
+'    "japanese": "Natural, accurate Japanese translation"\n' +
+'  }\n' +
+']';
 
             var transcribePayload = {
                 contents: [{ role: 'user', parts: [{ text: transcribePrompt }, { inlineData: { mimeType: mimeType, data: base64Data } }] }],
@@ -779,7 +772,6 @@ Return ONLY a valid JSON array:
             await sleep(300);
 
             var totalBlocks = window.transcriptBlocks.length;
-            // 動的マルチパス分割: 分析上限最大5リクエスト（1リクエストあたり2〜4文節）
             var maxAnalysisPasses = 5;
             var chunkSize = Math.max(2, Math.ceil(totalBlocks / maxAnalysisPasses));
             var totalChunks = Math.min(maxAnalysisPasses, Math.ceil(totalBlocks / chunkSize));
@@ -798,36 +790,32 @@ Return ONLY a valid JSON array:
 
                 var chunkBlocks = window.transcriptBlocks.slice(start, end);
                 var inputChunkText = chunkBlocks.map(function(b) {
-                    return `[BLOCK_ID:${b.blockIndex}] ${b.indonesian}\n(Japanese: ${b.japanese})`;
+                    return '[BLOCK_ID:' + b.blockIndex + '] ' + b.indonesian + '\n(Japanese: ' + b.japanese + ')';
                 }).join('\n\n');
 
-                var combinedPrompt = `Analyze the given Indonesian text blocks in detail for Japanese learners.
-
-REQUIREMENTS:
-1. "grammar": Provide exhaustive grammatical anatomy for each block index. Explain syntax (S+V+O), word order, and any affixes (me-, ber-, di-, ter-, -kan, -i, pe-an, ke-an). Output concise Japanese explanations.
-2. "vocab": Extract key vocabulary and derived words from these blocks. Crucially, restore the dictionary base form (baseForm/kata dasar, e.g. "membuang" -> "buang"). Provide precise Japanese translation and POS.
-
-Return ONLY a JSON object:
-{
-  "grammar": [
-    {
-      "blockIndex": 0,
-      "grammarExplanation": "【構文】S(主語) + V(動詞) + O(目的語)\n【接辞解説】me-...-kan (他動詞化)\n【詳細】..."
-    }
-  ],
-  "vocab": [
-    {
-      "indonesian": "membuang",
-      "baseForm": "buang",
-      "japanese": "〜を捨てる",
-      "pos": "verb",
-      "context": "Short context sentence"
-    }
-  ]
-}
-
-INPUT BLOCKS TO ANALYZE:
-${inputChunkText}`;
+                var combinedPrompt = 'Analyze the given Indonesian text blocks in detail for Japanese learners.\n\n' +
+'REQUIREMENTS:\n' +
+'1. "grammar": Provide exhaustive grammatical anatomy for each block index. Explain syntax (S+V+O), word order, and any affixes (me-, ber-, di-, ter-, -kan, -i, pe-an, ke-an). Output concise Japanese explanations.\n' +
+'2. "vocab": Extract key vocabulary and derived words from these blocks. Crucially, restore the dictionary base form (baseForm/kata dasar, e.g. "membuang" -> "buang"). Provide precise Japanese translation and POS.\n\n' +
+'Return ONLY a JSON object:\n' +
+'{\n' +
+'  "grammar": [\n' +
+'    {\n' +
+'      "blockIndex": 0,\n' +
+'      "grammarExplanation": "【構文】S(主語) + V(動詞) + O(目的語)\\n【接辞解説】me-...-kan (他動詞化)\\n【詳細】..."\n' +
+'    }\n' +
+'  ],\n' +
+'  "vocab": [\n' +
+'    {\n' +
+'      "indonesian": "membuang",\n' +
+'      "baseForm": "buang",\n' +
+'      "japanese": "〜を捨てる",\n' +
+'      "pos": "verb",\n' +
+'      "context": "Short context sentence"\n' +
+'    }\n' +
+'  ]\n' +
+'}\n\n' +
+'INPUT BLOCKS TO ANALYZE:\n' + inputChunkText;
 
                 var chunkPayload = {
                     contents: [{ parts: [{ text: combinedPrompt }] }],
@@ -849,7 +837,6 @@ ${inputChunkText}`;
                         });
                     }
 
-                    // 強力フォールバック: 万が一インデックスがズレて「解析中...」が残った場合に補正
                     chunkBlocks.forEach(function(cb) {
                         if (cb.grammarExplanation === '解析中...') {
                             cb.grammarExplanation = '【語順・構文】' + cb.indonesian + '\n（語法解説: 主語・動詞・目的語の標準配置）';
@@ -883,7 +870,6 @@ ${inputChunkText}`;
                     }
                 } catch (batchErr) {
                     console.warn('Chunk processing warning on pass ' + (chunkIdx + 2), batchErr);
-                    // エラー時フォールバック
                     chunkBlocks.forEach(function(cb) {
                         if (cb.grammarExplanation === '解析中...') {
                             cb.grammarExplanation = '【文法構成】' + cb.indonesian;
@@ -1071,11 +1057,11 @@ ${inputChunkText}`;
             var emptyState = document.getElementById('emptyState');
             var container = document.getElementById('transcriptContainer');
             if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
-                emptyState?.classList.remove('hidden');
+                if (emptyState) emptyState.classList.remove('hidden');
                 if (container) container.innerHTML = '';
                 return;
             }
-            emptyState?.classList.add('hidden');
+            if (emptyState) emptyState.classList.add('hidden');
             var html = '';
             window.transcriptBlocks.forEach(function(block, idx) {
                 var clickableIndo = renderClickableIndonesianWords(block.indonesian, 't-' + block.id);
@@ -1103,11 +1089,11 @@ ${inputChunkText}`;
             var emptyState = document.getElementById('grammarEmptyState');
             var container = document.getElementById('grammarContainer');
             if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
-                emptyState?.classList.remove('hidden');
+                if (emptyState) emptyState.classList.remove('hidden');
                 if (container) container.innerHTML = '';
                 return;
             }
-            emptyState?.classList.add('hidden');
+            if (emptyState) emptyState.classList.add('hidden');
             var html = '';
             window.transcriptBlocks.forEach(function(block, idx) {
                 var clickableIndo = renderClickableIndonesianWords(block.indonesian, 'g-' + block.id);
@@ -1144,7 +1130,7 @@ ${inputChunkText}`;
         }
 
         function getFilteredVocabList() {
-            var filtered = window.isShuffled ? [...window.shuffledVocabList] : (window.vocabList || []);
+            var filtered = window.isShuffled ? Array.from(window.shuffledVocabList) : (window.vocabList || []);
             if (window.activeVocabPosFilter !== 'all') {
                 filtered = filtered.filter(function(v) { return v.pos === window.activeVocabPosFilter; });
             }
@@ -1170,17 +1156,17 @@ ${inputChunkText}`;
             updateModeBtnUI();
 
             if (!filtered || filtered.length === 0) {
-                emptyState?.classList.remove('hidden');
+                if (emptyState) emptyState.classList.remove('hidden');
                 if (listContainer) listContainer.innerHTML = '';
-                cardContainer?.classList.add('hidden');
+                if (cardContainer) cardContainer.classList.add('hidden');
                 return;
             }
 
-            emptyState?.classList.add('hidden');
+            if (emptyState) emptyState.classList.add('hidden');
 
             if (window.activeVocabMode === 'list') {
-                cardContainer?.classList.add('hidden');
-                listContainer?.classList.remove('hidden');
+                if (cardContainer) cardContainer.classList.add('hidden');
+                if (listContainer) listContainer.classList.remove('hidden');
 
                 var html = '';
                 var q = window.activeVocabSearchQuery;
@@ -1206,16 +1192,22 @@ ${inputChunkText}`;
                 });
                 if (listContainer) listContainer.innerHTML = html;
             } else {
-                listContainer?.classList.add('hidden');
-                cardContainer?.classList.remove('hidden');
-                cardContainer?.classList.add('flex');
+                if (listContainer) listContainer.classList.add('hidden');
+                if (cardContainer) {
+                    cardContainer.classList.remove('hidden');
+                    cardContainer.classList.add('flex');
+                }
                 updateFlashcardUI();
             }
         }
 
         function getPosLabel(pos) {
             switch(pos) {
-                case 'noun': return '名詞'; case 'verb': return '動詞'; case 'adjective': return '形容詞'; case 'adverb': return '副詞'; default: return 'その他';
+                case 'noun': return '名詞';
+                case 'verb': return '動詞';
+                case 'adjective': return '形容詞';
+                case 'adverb': return '副詞';
+                default: return 'その他';
             }
         }
 
@@ -1247,7 +1239,7 @@ ${inputChunkText}`;
         function setVocabPosFilter(pos) { window.activeVocabPosFilter = pos; window.currentCardIndex = 0; renderVocabContainer(); }
         function toggleShuffleCards() {
             window.isShuffled = !window.isShuffled;
-            if (window.isShuffled) window.shuffledVocabList = [...window.vocabList].sort(function() { return Math.random() - 0.5; });
+            if (window.isShuffled) window.shuffledVocabList = Array.from(window.vocabList).sort(function() { return Math.random() - 0.5; });
             window.currentCardIndex = 0;
             renderVocabContainer();
         }
@@ -1280,14 +1272,18 @@ ${inputChunkText}`;
             if (progressLabel) progressLabel.textContent = (window.currentCardIndex + 1) + ' / ' + filtered.length;
 
             window.isCardFlipped = false;
-            document.getElementById('flashcardInner')?.classList.remove('rotate-y-180');
+            var flashcardInner = document.getElementById('flashcardInner');
+            if (flashcardInner) flashcardInner.classList.remove('rotate-y-180');
         }
 
         function flipFlashcard() {
             window.isCardFlipped = !window.isCardFlipped;
             var inner = document.getElementById('flashcardInner');
-            if (window.isCardFlipped) inner?.classList.add('rotate-y-180');
-            else inner?.classList.remove('rotate-y-180');
+            if (window.isCardFlipped) {
+                if (inner) inner.classList.add('rotate-y-180');
+            } else {
+                if (inner) inner.classList.remove('rotate-y-180');
+            }
         }
 
         function nextFlashcard(mastered) {
@@ -1306,7 +1302,7 @@ ${inputChunkText}`;
         }
 
         function toggleHistorySelect(id, event) {
-            event.stopPropagation();
+            if (event) event.stopPropagation();
             var idx = window.selectedHistoryIds.indexOf(id);
             if (idx > -1) window.selectedHistoryIds.splice(idx, 1);
             else window.selectedHistoryIds.push(id);
@@ -1318,11 +1314,11 @@ ${inputChunkText}`;
             if (!btn) return;
             if (window.selectedHistoryIds.length >= 2) {
                 btn.disabled = false;
-                btn.className = "px-2 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold shadow transition flex items-center gap-1 cursor-pointer";
+                btn.className = "px-1.5 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
                 btn.innerHTML = '<i class="fa-solid fa-code-merge"></i> 結合 (' + window.selectedHistoryIds.length + ')';
             } else {
                 btn.disabled = true;
-                btn.className = "px-2 py-0.5 bg-slate-200 text-slate-400 rounded text-[10px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60";
+                btn.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[10px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
                 btn.innerHTML = '<i class="fa-solid fa-code-merge"></i> 選択結合';
             }
         }
@@ -1331,7 +1327,7 @@ ${inputChunkText}`;
             var container = document.getElementById('historyList');
             if (!container) return;
             if (!history || history.length === 0) {
-                container.innerHTML = '<p class="text-xs text-slate-400 py-1.5 text-center">履歴なし (0/6)</p>';
+                container.innerHTML = '<p class="text-xs text-slate-400 py-1.5 text-center">履歴なし (0/15)</p>';
                 window.selectedHistoryIds = [];
                 updateMergeButtonState();
                 return;
@@ -1394,15 +1390,15 @@ ${inputChunkText}`;
 
                 history.unshift(item);
 
-                if (history.length >= 6) {
+                if (history.length >= 15) {
                     history = [];
                     localStorage.removeItem('suarateks_history');
                     renderHistoryList([]);
-                    if (showToastNotification) showToast('履歴が6件に達したため自動リセットしました', 'info');
+                    if (showToastNotification) showToast('履歴が15件に達したため履歴を自動リセットしました', 'info');
                 } else {
                     localStorage.setItem('suarateks_history', JSON.stringify(history));
                     renderHistoryList(history);
-                    if (showToastNotification) showToast('履歴に保存しました (' + history.length + '/6件)', 'info');
+                    if (showToastNotification) showToast('履歴に保存しました (' + history.length + '/15件)', 'info');
                 }
             } catch (e) { console.warn('LocalStorage Save Error:', e); }
         }
@@ -1420,7 +1416,7 @@ ${inputChunkText}`;
                         blocks: window.transcriptBlocks,
                         vocab: window.vocabList
                     });
-                    if (history.length > 6) history = history.slice(0, 6);
+                    if (history.length > 15) history = history.slice(0, 15);
                     localStorage.setItem('suarateks_history', JSON.stringify(history));
                 } catch(e) {}
             }
@@ -1462,7 +1458,8 @@ ${inputChunkText}`;
                     item.vocab.forEach(function(v) {
                         var key = (v.indonesian || '').trim().toLowerCase();
                         if (key && !mergedVocabMap.has(key)) {
-                            mergedVocabMap.set(key, { ...v, id: 'vocab-merged-' + Date.now() + '-' + mergedVocabMap.size });
+                            var itemCopy = Object.assign({}, v, { id: 'vocab-merged-' + Date.now() + '-' + mergedVocabMap.size });
+                            mergedVocabMap.set(key, itemCopy);
                         }
                     });
                 }
@@ -1534,36 +1531,73 @@ ${inputChunkText}`;
             URL.revokeObjectURL(url);
         }
 
-        function importHistoryBackup(event) {
-            var file = event.target.files ? event.target.files[0] : null;
-            if (!file) return;
+        async function importHistoryBackup(event) {
+            var files = event.target.files ? Array.from(event.target.files) : [];
+            if (files.length === 0) return;
 
-            var reader = new FileReader();
-            reader.onload = function(e) {
+            var targetFiles = files.slice(0, 15);
+            var successCount = 0;
+            var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
+            var lastLoadedData = null;
+
+            for (var i = 0; i < targetFiles.length; i++) {
+                var file = targetFiles[i];
                 try {
-                    var importedData = JSON.parse(e.target.result);
+                    var content = await new Promise(function(resolve, reject) {
+                        var reader = new FileReader();
+                        reader.onload = function(e) { resolve(e.target.result); };
+                        reader.onerror = function(err) { reject(err); };
+                        reader.readAsText(file);
+                    });
+
+                    var importedData = JSON.parse(content);
                     var singleObj = Array.isArray(importedData) ? importedData[0] : importedData;
 
-                    if (!singleObj || !singleObj.blocks) {
-                        throw new Error('正しい解析JSONファイルではありません');
-                    }
+                    if (!singleObj || !singleObj.blocks) continue;
 
-                    window.transcriptBlocks = singleObj.blocks || [];
-                    window.vocabList = singleObj.vocab || [];
+                    var targetName = singleObj.fileName || file.name.replace(/\.[^/.]+$/, "");
+                    
+                    history = history.filter(function(h) { return h.fileName !== targetName; });
 
-                    renderTranscriptContainer();
-                    renderGrammarContainer();
-                    renderVocabContainer();
+                    var item = {
+                        id: 'hist-' + Date.now() + '-' + i,
+                        fileName: targetName,
+                        date: singleObj.date || new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                        blocks: singleObj.blocks || [],
+                        vocab: singleObj.vocab || []
+                    };
 
-                    saveCurrentToHistory(singleObj.fileName || file.name, false);
-                    showToast('「' + (singleObj.fileName || file.name) + '」を復元読み込みしました！', 'info');
-                    if (window.innerWidth < 768) switchMobileTab('transcript');
-
+                    history.unshift(item);
+                    lastLoadedData = item;
+                    successCount++;
                 } catch (err) {
-                    showToast('復元失敗: ' + err.message, 'error');
-                } finally { event.target.value = ''; }
-            };
-            reader.readAsText(file);
+                    console.warn('Import error for file:', file.name, err);
+                }
+            }
+
+            if (history.length > 15) {
+                history = history.slice(0, 15);
+            }
+
+            localStorage.setItem('suarateks_history', JSON.stringify(history));
+            renderHistoryList(history);
+
+            if (lastLoadedData) {
+                window.transcriptBlocks = lastLoadedData.blocks;
+                window.vocabList = lastLoadedData.vocab;
+                renderTranscriptContainer();
+                renderGrammarContainer();
+                renderVocabContainer();
+            }
+
+            if (successCount > 0) {
+                showToast(successCount + ' 件のJSONバックアップを復元・保存しました！', 'info');
+                if (window.innerWidth < 768) switchMobileTab('transcript');
+            } else {
+                showToast('有効なJSONファイルを読み込めませんでした', 'error');
+            }
+
+            event.target.value = '';
         }
 
         function showToast(message, type) {
@@ -1621,25 +1655,29 @@ ${inputChunkText}`;
             var btnGrammar = document.getElementById('navTabGrammar');
             var btnVocab = document.getElementById('navTabVocab');
 
-            viewTranscript?.classList.add('hidden');
-            viewGrammar?.classList.add('hidden');
-            viewVocab?.classList.add('hidden');
-            viewVocab?.classList.remove('flex');
+            if (viewTranscript) viewTranscript.classList.add('hidden');
+            if (viewGrammar) viewGrammar.classList.add('hidden');
+            if (viewVocab) {
+                viewVocab.classList.add('hidden');
+                viewVocab.classList.remove('flex');
+            }
 
             [btnTranscript, btnGrammar, btnVocab].forEach(function(btn) {
                 if (btn) btn.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0";
             });
 
             if (subView === 'transcript') {
-                viewTranscript?.classList.remove('hidden');
+                if (viewTranscript) viewTranscript.classList.remove('hidden');
                 if (btnTranscript) btnTranscript.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
             } else if (subView === 'grammar') {
-                viewGrammar?.classList.remove('hidden');
+                if (viewGrammar) viewGrammar.classList.remove('hidden');
                 if (btnGrammar) btnGrammar.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
                 renderGrammarContainer();
             } else if (subView === 'vocab') {
-                viewVocab?.classList.remove('hidden');
-                viewVocab?.classList.add('flex');
+                if (viewVocab) {
+                    viewVocab.classList.remove('hidden');
+                    viewVocab.classList.add('flex');
+                }
                 if (btnVocab) btnVocab.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
                 renderVocabContainer();
             }
