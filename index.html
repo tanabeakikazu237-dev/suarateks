@@ -116,7 +116,6 @@
                 </div>
             </div>
 
-            <!-- History Section -->
             <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[180px]">
                 <div class="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-700 mb-2 gap-1 overflow-x-auto hide-scrollbar">
                     <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1 shrink-0">
@@ -145,7 +144,6 @@
             </div>
         </div>
 
-        <!-- Panel Right: Studio Views -->
         <div id="panelTranscript" class="hidden md:flex flex-1 flex-col bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             
             <div class="bg-white dark:bg-slate-800 px-2 sm:px-3 py-2 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 shrink-0 overflow-x-auto hide-scrollbar">
@@ -285,6 +283,7 @@
         window.fileQueue = [];
         window.isQueueProcessing = false;
         window.currentLoadedFile = null;
+        window.currentLoadedFileName = '';
         window.currentAudioBase64 = null;
         window.transcriptBlocks = [];
         window.vocabList = [];
@@ -305,8 +304,8 @@
 
         function formatOutputFileName(baseName) {
             var clean = String(baseName || '解析データ').trim().replace(/\.[^/.]+$/, "");
-            if (clean.startsWith('®️')) return clean;
-            return '®️' + clean;
+            clean = clean.replace(/^®️/, '').trim();
+            return clean || '解析データ';
         }
 
         function getApiKey() { 
@@ -526,7 +525,6 @@
                         var errText = await response.text();
                         var waitMs = attempt * 6000;
                         
-                        // Parse recommended retry wait duration from API response (e.g. "Please retry in 45.23s")
                         var retryMatch = errText.match(/retry in ([0-9.]+)s/i);
                         if (retryMatch && retryMatch[1]) {
                             waitMs = Math.ceil(parseFloat(retryMatch[1]) * 1000) + 2000;
@@ -573,63 +571,6 @@
             return parts.map(function(p) { return p.text || ''; }).join('').trim();
         }
 
-        window.processAudioWithGemini = async function() {
-            if (!window.fileQueue || window.fileQueue.length === 0) {
-                showToast('音源ファイルがキューに追加されていません', 'error');
-                return;
-            }
-
-            var apiKey = getApiKey();
-            if (!apiKey) {
-                showToast('Gemini API Key が設定されていません。', 'error');
-                openModal('apiKeyModal');
-                return;
-            }
-
-            if (window.isQueueProcessing) return;
-            window.isQueueProcessing = true;
-
-            var btn = document.getElementById('startTranscribeBtn');
-            var btnText = document.getElementById('transcribeBtnText');
-            var progressContainer = document.getElementById('chunkProgressContainer');
-            if (btn) btn.disabled = true;
-            if (progressContainer) progressContainer.classList.remove('hidden');
-
-            for (var i = 0; i < window.fileQueue.length; i++) {
-                var item = window.fileQueue[i];
-                if (item.status === 'completed') continue;
-
-                item.status = 'processing';
-                renderQueueUI();
-
-                if (btnText) btnText.textContent = '解析中 (' + (i + 1) + '/' + window.fileQueue.length + ')';
-
-                try {
-                    await processSingleFileInQueue(item, apiKey, i + 1, window.fileQueue.length);
-                    item.status = 'completed';
-                    renderQueueUI();
-                } catch (err) {
-                    console.error('Single File Queue Process Error:', err);
-                    item.status = 'error';
-                    renderQueueUI();
-                    showToast('「' + item.file.name + '」のエラー: ' + err.message, 'error');
-                    
-                    if (err.message.includes('Spend Cap') || err.message.includes('予算制限')) {
-                        openModal('apiKeyModal', true);
-                        break;
-                    }
-                } finally {
-                    window.currentAudioBase64 = null;
-                }
-            }
-
-            window.isQueueProcessing = false;
-            if (btn) btn.disabled = false;
-            if (btnText) btnText.textContent = "高精度マルチパス解析開始";
-            showToast('すべてのキューファイルの解析処理が終了しました', 'info');
-            setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
-        };
-
         async function reanalyzeBlocksCore(blocks, apiKey, fileNameLabel, onProgress) {
             var totalBlocks = blocks.length;
             var maxAnalysisPasses = 5;
@@ -675,9 +616,10 @@
                 var combinedPrompt = 'Analyze the given Indonesian text blocks in detail for Japanese learners.\n\n' +
 'REQUIREMENTS:\n' +
 '1. "grammar": Provide exhaustive grammatical anatomy for each block index. Explain syntax (S+V+O), word order, and any affixes (me-, ber-, di-, ter-, -kan, -i, pe-an, ke-an). Output concise Japanese explanations.\n' +
-'2. "vocab": Extract ALL meaningful vocabulary and derived words from these blocks without omitting standard words. Crucially, restore the dictionary base form (baseForm/kata dasar, e.g. "membuang" -> "buang"). Provide precise Japanese translation and POS.\n' +
-'3. "isKeyWord": For each extracted vocabulary item, set "isKeyWord": true if it is a core/important word for context understanding, or false if it is a common/supporting word.\n' +
+'2. "vocab": Process ALL of the provided target words listed below without omission. Restore the dictionary base form (baseForm/kata dasar, e.g. "membuang" -> "buang"), provide precise Japanese translation, POS, and context sentence.\n' +
+'3. "isKeyWord": For each vocabulary item, set "isKeyWord": true if it is a core/important word for sentence understanding, or false if it is a supporting word.\n' +
 '4. CRITICAL: Escape all literal newlines inside JSON string values using \\n. Output strictly valid JSON.\n\n' +
+'TARGET WORDS TO PROCESS (EXTRACTED BY SYSTEM):\n' + wordListStr + '\n\n' +
 'Return ONLY a JSON object:\n' +
 '{\n' +
 '  "grammar": [\n' +
@@ -759,6 +701,63 @@
                 vocab: Array.from(accumulatedVocabMap.values())
             };
         }
+
+        window.processAudioWithGemini = async function() {
+            if (!window.fileQueue || window.fileQueue.length === 0) {
+                showToast('音源ファイルがキューに追加されていません', 'error');
+                return;
+            }
+
+            var apiKey = getApiKey();
+            if (!apiKey) {
+                showToast('Gemini API Key が設定されていません。', 'error');
+                openModal('apiKeyModal');
+                return;
+            }
+
+            if (window.isQueueProcessing) return;
+            window.isQueueProcessing = true;
+
+            var btn = document.getElementById('startTranscribeBtn');
+            var btnText = document.getElementById('transcribeBtnText');
+            var progressContainer = document.getElementById('chunkProgressContainer');
+            if (btn) btn.disabled = true;
+            if (progressContainer) progressContainer.classList.remove('hidden');
+
+            for (var i = 0; i < window.fileQueue.length; i++) {
+                var item = window.fileQueue[i];
+                if (item.status === 'completed') continue;
+
+                item.status = 'processing';
+                renderQueueUI();
+
+                if (btnText) btnText.textContent = '解析中 (' + (i + 1) + '/' + window.fileQueue.length + ')';
+
+                try {
+                    await processSingleFileInQueue(item, apiKey, i + 1, window.fileQueue.length);
+                    item.status = 'completed';
+                    renderQueueUI();
+                } catch (err) {
+                    console.error('Single File Queue Process Error:', err);
+                    item.status = 'error';
+                    renderQueueUI();
+                    showToast('「' + item.file.name + '」のエラー: ' + err.message, 'error');
+                    
+                    if (err.message.includes('Spend Cap') || err.message.includes('予算制限')) {
+                        openModal('apiKeyModal', true);
+                        break;
+                    }
+                } finally {
+                    window.currentAudioBase64 = null;
+                }
+            }
+
+            window.isQueueProcessing = false;
+            if (btn) btn.disabled = false;
+            if (btnText) btnText.textContent = "高精度マルチパス解析開始";
+            showToast('すべてのキューファイルの解析処理が終了しました', 'info');
+            setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
+        };
 
         window.reanalyzeSelectedHistories = async function() {
             if (!window.selectedHistoryIds || window.selectedHistoryIds.length === 0) return;
@@ -873,7 +872,8 @@
             if (progressContainer) progressContainer.classList.remove('hidden');
 
             try {
-                var targetName = formatOutputFileName(window.currentLoadedFile ? window.currentLoadedFile.name : '再解析データ');
+                var rawName = window.currentLoadedFileName || (window.currentLoadedFile ? window.currentLoadedFile.name : '解析データ');
+                var targetName = formatOutputFileName(rawName);
 
                 var res = await reanalyzeBlocksCore(
                     window.transcriptBlocks,
@@ -1635,6 +1635,7 @@
             if (found) {
                 window.transcriptBlocks = found.blocks || [];
                 window.vocabList = found.vocab || [];
+                window.currentLoadedFileName = found.fileName || '';
                 renderTranscriptContainer();
                 renderGrammarContainer();
                 renderVocabContainer();
