@@ -637,6 +637,13 @@
             var totalChunks = Math.min(maxAnalysisPasses, Math.ceil(totalBlocks / chunkSize));
             var accumulatedVocabMap = new Map();
 
+            // 超基本助詞・機能語のフィルター（これらは単語帳への登録を除外）
+            var stopWords = new Set([
+                'yang', 'di', 'ke', 'dari', 'ini', 'itu', 'dan', 'atau', 'saya', 'kamu', 'dia', 
+                'mereka', 'kita', 'kami', 'ada', 'tidak', 'bukan', 'akan', 'sudah', 'bisa', 'untuk', 
+                'dengan', 'pada', 'juga', 'kalau', 'bila', 'karena', 'ia', 'nya'
+            ]);
+
             blocks.forEach(function(b) { if (!b.grammarExplanation || b.grammarExplanation === '解析中...') b.grammarExplanation = '解析中...'; });
 
             for (var chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
@@ -652,11 +659,25 @@
                     return '[BLOCK_ID:' + b.blockIndex + '] ' + b.indonesian + '\n(Japanese: ' + b.japanese + ')';
                 }).join('\n\n');
 
+                // JS側で該当チャンク内のすべての単語を重複なく抽出
+                var chunkWords = new Set();
+                chunkBlocks.forEach(function(b) {
+                    var words = (b.indonesian || '').toLowerCase().match(/[a-zA-Z-']+/g) || [];
+                    words.forEach(function(w) {
+                        if (w.length > 1 && !stopWords.has(w)) {
+                            chunkWords.add(w);
+                        }
+                    });
+                });
+
+                var wordListStr = Array.from(chunkWords).join(', ');
+
                 var combinedPrompt = 'Analyze the given Indonesian text blocks in detail for Japanese learners.\n\n' +
 'REQUIREMENTS:\n' +
 '1. "grammar": Provide exhaustive grammatical anatomy for each block index. Explain syntax (S+V+O), word order, and any affixes (me-, ber-, di-, ter-, -kan, -i, pe-an, ke-an). Output concise Japanese explanations.\n' +
-'2. "vocab": Extract key vocabulary and derived words from these blocks. Crucially, restore the dictionary base form (baseForm/kata dasar, e.g. "membuang" -> "buang"). Provide precise Japanese translation and POS.\n' +
-'3. CRITICAL: Escape all literal newlines inside JSON string values using \\n. Output strictly valid JSON.\n\n' +
+'2. "vocab": Extract ALL meaningful vocabulary and derived words from these blocks without omitting standard words. Crucially, restore the dictionary base form (baseForm/kata dasar, e.g. "membuang" -> "buang"). Provide precise Japanese translation and POS.\n' +
+'3. "isKeyWord": For each extracted vocabulary item, set "isKeyWord": true if it is a core/important word for context understanding, or false if it is a common/supporting word.\n' +
+'4. CRITICAL: Escape all literal newlines inside JSON string values using \\n. Output strictly valid JSON.\n\n' +
 'Return ONLY a JSON object:\n' +
 '{\n' +
 '  "grammar": [\n' +
@@ -671,7 +692,8 @@
 '      "baseForm": "buang",\n' +
 '      "japanese": "〜を捨てる",\n' +
 '      "pos": "verb",\n' +
-'      "context": "Short context sentence"\n' +
+'      "context": "Short context sentence",\n' +
+'      "isKeyWord": true\n' +
 '    }\n' +
 '  ]\n' +
 '}\n\n' +
@@ -712,6 +734,7 @@
                                         japanese: v.japanese || '',
                                         pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(v.pos) ? v.pos : 'other',
                                         context: v.context || '',
+                                        isKeyWord: Boolean(v.isKeyWord),
                                         mastered: false
                                     });
                                 }
@@ -1259,13 +1282,15 @@
                 filtered.forEach(function(v) {
                     var hIndo = highlightMatch(v.indonesian, q);
                     var hJap = highlightMatch(v.japanese, q);
+                    var keyTag = v.isKeyWord ? '<span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/50 flex items-center gap-0.5 shrink-0"><i class="fa-solid fa-star text-[8px]"></i>重要</span>' : '';
 
                     html += '<div class="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between gap-2">' +
                         '<div class="space-y-0.5 flex-1 min-w-0">' +
-                            '<div class="flex items-center gap-2">' +
-                                '<span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">' + getPosLabel(v.pos) + '</span>' +
+                            '<div class="flex items-center gap-1.5 flex-wrap">' +
+                                '<span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0">' + getPosLabel(v.pos) + '</span>' +
+                                keyTag +
                                 '<h4 class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100 truncate">' + hIndo + '</h4>' +
-                                '<button onclick="speakIndonesian(\'' + escapeHtml(v.indonesian) + '\')" class="text-slate-400 hover:text-emerald-500 p-1">' +
+                                '<button onclick="speakIndonesian(\'' + escapeHtml(v.indonesian) + '\')" class="text-slate-400 hover:text-emerald-500 p-1 shrink-0">' +
                                     '<i class="fa-solid fa-volume-high text-xs"></i>' +
                                 '</button>' +
                             '</div>' +
@@ -1353,8 +1378,8 @@
             if (cardIndo) cardIndo.innerHTML = highlightMatch(item.indonesian, q);
             if (cardJap) cardJap.innerHTML = highlightMatch(item.japanese, q);
             if (cardContext) cardContext.innerHTML = item.context ? ('文脈: "' + highlightMatch(item.context, q) + '"') : '文脈なし';
-            if (cardPosFront) cardPosFront.textContent = getPosLabel(item.pos);
-            if (cardPosBack) cardPosBack.textContent = '品詞: ' + getPosLabel(item.pos) + (item.baseForm ? (' (原形: ' + item.baseForm + ')') : '');
+            if (cardPosFront) cardPosFront.innerHTML = getPosLabel(item.pos) + (item.isKeyWord ? ' <span class="ml-1 px-1.5 py-0.5 bg-amber-500 text-white rounded text-[9px] font-extrabold shadow-xs"><i class="fa-solid fa-star text-[8px]"></i> 重要語</span>' : '');
+            if (cardPosBack) cardPosBack.innerHTML = '品詞: ' + getPosLabel(item.pos) + (item.baseForm ? (' (原形: ' + item.baseForm + ')') : '') + (item.isKeyWord ? ' <span class="ml-1 text-amber-600 font-bold">★ 重要単語</span>' : '');
             if (progressLabel) progressLabel.textContent = (window.currentCardIndex + 1) + ' / ' + filtered.length;
 
             window.isCardFlipped = false;
