@@ -572,6 +572,8 @@
 
             if (!payload.generationConfig) payload.generationConfig = {};
             payload.generationConfig.temperature = 0.1;
+            // 明示開放：最大出力トークン数で途中切れを防止
+            payload.generationConfig.maxOutputTokens = 8192;
 
             var targetUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=' + cleanKey;
 
@@ -713,7 +715,10 @@
 
                 var chunkPayload = {
                     contents: [{ parts: [{ text: combinedPrompt }] }],
-                    generationConfig: { responseMimeType: "application/json" }
+                    generationConfig: { 
+                        responseMimeType: "application/json",
+                        maxOutputTokens: 8192
+                    }
                 };
 
                 try {
@@ -753,8 +758,43 @@
                             }
                         });
                     }
+
+                    // 二重安全装置: 万が一AIの返答文字数が切れて単語が漏れた場合、JS抽出単語を100%自動補テン救済
+                    chunkWords.forEach(function(w) {
+                        var key = w.toLowerCase();
+                        if (!accumulatedVocabMap.has(key)) {
+                            accumulatedVocabMap.set(key, {
+                                id: 'vocab-rescued-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
+                                indonesian: w,
+                                baseForm: w,
+                                japanese: '（自動抽出語）',
+                                pos: 'other',
+                                context: '文中出現語句',
+                                isKeyWord: false,
+                                mastered: false
+                            });
+                        }
+                    });
+
                 } catch (chunkErr) {
                     console.warn('[reanalyzeBlocksCore] チャンク解析警告 (Chunk ' + (chunkIdx + 1) + '):', chunkErr);
+                    
+                    // エラー時フォールバック: JS事前抽出単語を確実に補填
+                    chunkWords.forEach(function(w) {
+                        var key = w.toLowerCase();
+                        if (!accumulatedVocabMap.has(key)) {
+                            accumulatedVocabMap.set(key, {
+                                id: 'vocab-rescued-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
+                                indonesian: w,
+                                baseForm: w,
+                                japanese: '（自動抽出語）',
+                                pos: 'other',
+                                context: '文中出現語句',
+                                isKeyWord: false,
+                                mastered: false
+                            });
+                        }
+                    });
                 }
 
                 chunkBlocks.forEach(function(cb) {
@@ -1021,7 +1061,10 @@
 
             var transcribePayload = {
                 contents: [{ role: 'user', parts: [{ text: transcribePrompt }, { inlineData: { mimeType: mimeType, data: base64Data } }] }],
-                generationConfig: { responseMimeType: "application/json" }
+                generationConfig: { 
+                    responseMimeType: "application/json",
+                    maxOutputTokens: 8192
+                }
             };
 
             var transcribeData = await fetchGeminiApi(apiKey, transcribePayload);
