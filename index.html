@@ -31,7 +31,7 @@
     <style>
         :root { --transcript-font-size: 20px; }
         .dynamic-text-indo { font-size: var(--transcript-font-size, 20px); line-height: 1.4; }
-        .dynamic-text-ja { font-size: calc(var(--transcript-font-size, 20px) * 0.75); line-height: 1.4; }
+        .dynamic-text-ja { font-size: calc(var(--transcript-font-size, 20px) * 0.85); line-height: 1.4; }
         
         .perspective-1000 { perspective: 1000px; }
         .transform-style-3d { transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
@@ -73,72 +73,107 @@
     <!-- Main Workspace Layout -->
     <div class="flex-1 flex overflow-hidden p-2 sm:p-3 gap-3 max-w-7xl mx-auto w-full">
 
-        <!-- Panel Left: Setup & Queue & History -->
-        <div id="panelSetup" class="w-full md:w-80 flex flex-col gap-3 shrink-0 overflow-y-auto">
-            <div id="playerCard" class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
+        <!-- Panel Left: Setup & Settings & Queue & History -->
+        <div id="panelSetup" class="w-full md:w-80 flex flex-col gap-2.5 shrink-0 overflow-y-auto">
+            
+            <!-- Global App Settings Card (Compact) -->
+            <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
+                <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                    <i class="fa-solid fa-sliders text-red-600"></i> 表示・音声調整
+                </h3>
+                
+                <!-- Font Size Setting -->
+                <div class="space-y-1 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
+                    <div class="flex items-center justify-between text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                        <span><i class="fa-solid fa-font text-slate-400 mr-1"></i>文字サイズ</span>
+                        <span class="fontSizeDisplayPt text-red-600 font-extrabold">20pt</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[9px] text-slate-400 font-bold">20</span>
+                        <input type="range" min="20" max="30" value="20" oninput="setFontSize(this.value)" class="fontSizeSlider w-full accent-red-600 cursor-pointer h-1.5 rounded-lg bg-slate-200 dark:bg-slate-700">
+                        <span class="text-[9px] text-slate-400 font-bold">30</span>
+                    </div>
+                </div>
+
+                <!-- Speech Rate Setting -->
+                <div class="space-y-1 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
+                    <div class="flex items-center justify-between text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                        <span><i class="fa-solid fa-gauge-high text-slate-400 mr-1"></i>音声再生速度</span>
+                        <span id="speechRateDisplay" class="text-red-600 font-extrabold">0.85x</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[9px] text-slate-400 font-bold">0.6</span>
+                        <input type="range" id="speechRateSlider" min="0.6" max="1.3" step="0.05" value="0.85" oninput="setSpeechRate(this.value)" class="w-full accent-red-600 cursor-pointer h-1.5 rounded-lg bg-slate-200 dark:bg-slate-700">
+                        <span class="text-[9px] text-slate-400 font-bold">1.3</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Queue & Upload Card (Slimmed down) -->
+            <div id="playerCard" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
                 <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
                     <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音源キュー選択</span>
-                    <span class="text-[10px] text-slate-400">最大10件</span>
+                    <span class="text-[9px] text-slate-400">最大10件</span>
                 </h3>
                 
                 <label id="fileDropLabel" for="audioFileInput" class="relative group cursor-pointer block">
                     <input type="file" id="audioFileInput" accept="audio/*" multiple onchange="window.handleFileChange(event)" class="hidden">
                     
-                    <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-red-500 rounded-xl p-3 text-center bg-slate-50 dark:bg-slate-900 transition-all duration-200 group-hover:bg-red-50/30">
-                        <div id="dropzoneDefault" class="space-y-1">
-                            <div class="w-8 h-8 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
-                                <i class="fa-solid fa-cloud-arrow-up text-sm"></i>
+                    <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-red-500 rounded-lg p-2 text-center bg-slate-50 dark:bg-slate-900 transition-all duration-200 group-hover:bg-red-50/30">
+                        <div id="dropzoneDefault" class="space-y-0.5">
+                            <div class="w-6 h-6 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
                             </div>
-                            <p class="text-xs font-extrabold text-slate-700 dark:text-slate-200">複数音源を選択（最大10件）</p>
-                            <p class="text-[9px] text-slate-400">ドラッグ＆ドロップ対応</p>
+                            <p class="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">複数音源を選択（最大10件）</p>
                         </div>
 
                         <div id="dropzoneSelected" class="hidden space-y-1 text-left">
-                            <div class="flex items-center justify-between text-emerald-600 mb-1">
-                                <span class="text-[10px] font-extrabold"><i class="fa-solid fa-list-check"></i> キューセット完了</span>
-                                <span class="text-[9px] text-slate-400">タップで再選択</span>
+                            <div class="flex items-center justify-between text-emerald-600 mb-0.5">
+                                <span class="text-[9px] font-extrabold"><i class="fa-solid fa-list-check"></i> キューセット完了</span>
+                                <span class="text-[8px] text-slate-400">タップで再選択</span>
                             </div>
-                            <div id="queueListContainer" class="max-h-36 overflow-y-auto pr-1"></div>
+                            <div id="queueListContainer" class="max-h-24 overflow-y-auto pr-1"></div>
                         </div>
                     </div>
                 </label>
 
-                <button id="startTranscribeBtn" onclick="window.processAudioWithGemini()" class="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition flex items-center justify-center gap-1.5">
+                <button id="startTranscribeBtn" onclick="window.processAudioWithGemini()" class="w-full py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition flex items-center justify-center gap-1.5">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
                     <span id="transcribeBtnText">高精度マルチパス解析開始</span>
                 </button>
             </div>
 
-            <div id="chunkProgressContainer" class="hidden bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">
+            <div id="chunkProgressContainer" class="hidden bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-1.5 shrink-0">
                 <div class="flex justify-between text-xs font-bold">
-                    <span id="chunkProgressLabel" class="flex items-center gap-1 text-[11px] truncate max-w-[80%]">順次解析実行中...</span>
-                    <span id="chunkProgressPercent" class="text-red-600">0%</span>
+                    <span id="chunkProgressLabel" class="flex items-center gap-1 text-[10px] truncate max-w-[80%]">順次解析実行中...</span>
+                    <span id="chunkProgressPercent" class="text-red-600 text-[10px]">0%</span>
                 </div>
-                <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
-                    <div id="chunkProgressBar" class="bg-red-600 h-2 rounded-full w-0 transition-all duration-300"></div>
+                <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                    <div id="chunkProgressBar" class="bg-red-600 h-1.5 rounded-full w-0 transition-all duration-300"></div>
                 </div>
             </div>
 
-            <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[180px]">
-                <div class="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-700 mb-2 gap-1 overflow-x-auto hide-scrollbar">
+            <!-- History Card (Expanded for min 5 items visible) -->
+            <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[220px]">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-700 mb-1.5 gap-1 overflow-x-auto hide-scrollbar shrink-0">
                     <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1 shrink-0">
                         <i class="fa-solid fa-clock-rotate-left text-amber-500"></i> 履歴 (15件)
                     </h4>
                     <div class="flex items-center gap-1 shrink-0">
-                        <button id="btnReanalyzeSelected" disabled onclick="reanalyzeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[10px] font-bold transition flex items-center gap-1 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed" title="選択した履歴を順次テキスト再解析">
+                        <button id="btnReanalyzeSelected" disabled onclick="reanalyzeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed" title="選択した履歴を順次テキスト再解析">
                             <i class="fa-solid fa-rotate-right"></i> 選択再解析
                         </button>
-                        <button id="btnMergeSelected" disabled onclick="mergeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[10px] font-bold transition flex items-center gap-1 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed">
+                        <button id="btnMergeSelected" disabled onclick="mergeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed">
                             <i class="fa-solid fa-code-merge"></i> 結合
                         </button>
-                        <button onclick="manualSaveHistory()" class="px-1.5 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded text-[10px] font-bold transition shrink-0 whitespace-nowrap" title="現在の解析結果を個別JSONとして保存">保存</button>
-                        <button onclick="clearHistory()" class="px-1.5 py-0.5 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded text-[10px] font-bold transition shrink-0 whitespace-nowrap">消去</button>
+                        <button onclick="manualSaveHistory()" class="px-1.5 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded text-[9px] font-bold transition shrink-0 whitespace-nowrap" title="現在の解析結果を個別JSONとして保存">保存</button>
+                        <button onclick="clearHistory()" class="px-1.5 py-0.5 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded text-[9px] font-bold transition shrink-0 whitespace-nowrap">消去</button>
                     </div>
                 </div>
 
-                <div id="historyList" class="space-y-1 flex-1 overflow-y-auto"></div>
+                <div id="historyList" class="space-y-1 flex-1 overflow-y-auto max-h-[280px] pr-0.5"></div>
 
-                <div class="pt-2 border-t border-slate-100 dark:border-slate-700 mt-1">
+                <div class="pt-1.5 border-t border-slate-100 dark:border-slate-700 mt-1 shrink-0">
                     <label class="w-full py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition">
                         <i class="fa-solid fa-file-import"></i> JSON復元（最大15件選択可）
                         <input type="file" accept=".json" multiple onchange="importHistoryBackup(event)" class="hidden">
@@ -151,28 +186,28 @@
         <div id="panelTranscript" class="hidden md:flex flex-1 flex-col bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             
             <!-- Studio Tab Controls -->
-            <div class="bg-white dark:bg-slate-800 px-2 sm:px-3 py-2 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 shrink-0 overflow-x-auto hide-scrollbar">
+            <div class="bg-white dark:bg-slate-800 px-2 sm:px-3 py-1.5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-1 shrink-0 overflow-x-auto hide-scrollbar">
                 <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl shrink-0 overflow-x-auto hide-scrollbar max-w-full">
-                    <button id="navTabTranscript" onclick="setStudioSubView('transcript')" class="no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0">
-                        <i class="fa-solid fa-align-left text-[11px]"></i> 本文
+                    <button id="navTabTranscript" onclick="setStudioSubView('transcript')" class="no-wrap-tab px-2 sm:px-3 py-1 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0">
+                        <i class="fa-solid fa-align-left text-[10px]"></i> 本文
                     </button>
-                    <button id="navTabGrammar" onclick="setStudioSubView('grammar')" class="no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
-                        <i class="fa-solid fa-diagram-project text-[11px]"></i> 文法解剖
+                    <button id="navTabGrammar" onclick="setStudioSubView('grammar')" class="no-wrap-tab px-2 sm:px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
+                        <i class="fa-solid fa-diagram-project text-[10px]"></i> 文法解剖
                     </button>
-                    <button id="navTabVocab" onclick="setStudioSubView('vocab')" class="no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
-                        <i class="fa-solid fa-book-open text-[11px]"></i> 単語帳 (<span id="vocabCountBadge">0</span>)
+                    <button id="navTabVocab" onclick="setStudioSubView('vocab')" class="no-wrap-tab px-2 sm:px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
+                        <i class="fa-solid fa-book-open text-[10px]"></i> 単語帳 (<span id="vocabCountBadge">0</span>)
                     </button>
-                    <button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-2.5 sm:px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-1" title="表示中のテキストを使って高精度文法・単語再解析を実行">
-                        <i class="fa-solid fa-rotate-right text-[11px]"></i> 単一テキスト再解析
+                    <button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-1.5 sm:px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] sm:text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-0.5 whitespace-nowrap" title="表示中のテキストを使って高精度文法・単語再解析を実行">
+                        <i class="fa-solid fa-rotate-right text-[9px]"></i> 再解析
                     </button>
                 </div>
 
-                <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
-                    <span class="text-[10px] font-extrabold text-slate-500 shrink-0">文字</span>
+                <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
+                    <span class="text-[9px] font-extrabold text-slate-500 shrink-0">文字</span>
                     <button onclick="adjustFontSize(-1)" class="w-4 h-4 flex items-center justify-center rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-200 text-xs shrink-0">-</button>
-                    <input type="range" id="fontSizeSlider" min="16" max="32" value="20" oninput="setFontSize(this.value)" class="w-12 accent-red-600 cursor-pointer shrink-0">
+                    <input type="range" min="20" max="30" value="20" oninput="setFontSize(this.value)" class="fontSizeSlider w-8 sm:w-10 accent-red-600 cursor-pointer shrink-0">
                     <button onclick="adjustFontSize(1)" class="w-4 h-4 flex items-center justify-center rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-200 text-xs shrink-0">+</button>
-                    <span id="fontSizeDisplayPt" class="text-[10px] font-black text-red-600 w-7 text-right shrink-0">20pt</span>
+                    <span class="fontSizeDisplayPt text-[9px] font-black text-red-600 w-6 text-right shrink-0">20pt</span>
                 </div>
             </div>
 
@@ -229,7 +264,7 @@
                             <div class="absolute inset-0 w-full h-full backface-hidden p-5 flex flex-col justify-between rounded-2xl bg-white dark:bg-slate-800">
                                 <span id="cardBadgeFront" class="self-start text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300">品詞</span>
                                 <div class="text-center space-y-2">
-                                    <h2 id="cardIndoText" class="text-2xl font-black text-slate-800 dark:text-slate-100">---</h2>
+                                    <h2 id="cardIndoText" class="dynamic-text-indo font-black text-slate-800 dark:text-slate-100">---</h2>
                                     <p class="text-xs text-slate-400">タップして裏面を表示</p>
                                 </div>
                                 <div class="text-right">
@@ -243,7 +278,7 @@
                             <div class="absolute inset-0 w-full h-full backface-hidden rotate-y-180 p-5 flex flex-col justify-between rounded-2xl bg-emerald-50 dark:bg-slate-800 border-2 border-emerald-500">
                                 <span id="cardPosBack" class="self-start text-[10px] font-bold text-emerald-800 dark:text-emerald-300">品詞詳細</span>
                                 <div class="text-center space-y-2">
-                                    <h3 id="cardJapText" class="text-xl font-extrabold text-emerald-800 dark:text-emerald-300">---</h3>
+                                    <h3 id="cardJapText" class="dynamic-text-ja font-extrabold text-emerald-800 dark:text-emerald-300">---</h3>
                                     <p id="cardContextFull" class="text-xs text-slate-600 dark:text-slate-400 italic">---</p>
                                 </div>
                                 <div class="text-right">
@@ -303,6 +338,7 @@
         window.isShuffled = false;
         window.shuffledVocabList = [];
         window.selectedHistoryIds = [];
+        window.speechRate = 0.85;
 
         window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
 
@@ -310,7 +346,33 @@
 
         function formatOutputFileName(baseName) {
             var clean = String(baseName || '解析データ').trim().replace(/\.[^/.]+$/, "");
+            clean = clean.replace(/^®️\s*/, '');
             return clean || '解析データ';
+        }
+
+        function setSpeechRate(val) {
+            var num = parseFloat(val);
+            if (isNaN(num)) num = 0.85;
+            window.speechRate = Math.max(0.6, Math.min(1.3, num));
+            var display = document.getElementById('speechRateDisplay');
+            if (display) display.textContent = window.speechRate.toFixed(2) + 'x';
+            var slider = document.getElementById('speechRateSlider');
+            if (slider) slider.value = window.speechRate;
+        }
+
+        function setFontSize(val) {
+            var num = parseInt(val);
+            if (isNaN(num)) num = 20;
+            num = Math.max(20, Math.min(30, num));
+            document.documentElement.style.setProperty('--transcript-font-size', num + 'px');
+            
+            document.querySelectorAll('.fontSizeDisplayPt').forEach(function(el) { el.textContent = num + 'pt'; });
+            document.querySelectorAll('.fontSizeSlider').forEach(function(el) { el.value = num; });
+        }
+
+        function adjustFontSize(delta) {
+            var current = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--transcript-font-size')) || 20;
+            setFontSize(current + delta);
         }
 
         function getApiKey() { 
@@ -331,12 +393,10 @@
             var raw = stripJsonCodeFence(jsonString);
             if (!raw) throw new Error('Geminiから応答が返されませんでした');
 
-            // 1. Direct JSON parsing
             try {
                 return JSON.parse(raw);
             } catch (e) {}
 
-            // 2. Sanitize unescaped newlines inside strings
             var sanitized = raw.replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, function(match) {
                 return match.replace(/\r?\n/g, '\\n').replace(/\t/g, '\\t');
             });
@@ -345,7 +405,6 @@
                 return JSON.parse(sanitized);
             } catch (e2) {}
 
-            // 3. Multi-stage structural stack repair for truncated JSON
             var textToRepair = sanitized;
             var firstBrace = textToRepair.indexOf('{');
             var firstBracket = textToRepair.indexOf('[');
@@ -465,10 +524,10 @@
                 else if (q.status === 'completed') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500 text-white font-bold"><i class="fa-solid fa-check"></i> 完了</span>';
                 else if (q.status === 'error') statusBadge = '<button onclick="retryQueueItem(\'' + q.id + '\', event)" class="text-[9px] px-1.5 py-0.5 rounded bg-rose-600 hover:bg-rose-700 text-white font-bold transition flex items-center gap-1"><i class="fa-solid fa-rotate-right text-[8px]"></i> 再試行</button>';
 
-                html += '<div class="flex items-center justify-between gap-1 text-xs p-1.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 mb-1">' +
+                html += '<div class="flex items-center justify-between gap-1 text-xs p-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 mb-1">' +
                     '<div class="min-w-0 flex-1">' +
-                        '<p class="font-bold text-slate-800 dark:text-slate-100 truncate text-[11px]">' + (idx + 1) + '. ' + escapeHtml(q.file.name) + '</p>' +
-                        '<p class="text-[9px] text-slate-400 font-mono">' + formatBytes(q.file.size) + '</p>' +
+                        '<p class="font-bold text-slate-800 dark:text-slate-100 truncate text-[10px]">' + (idx + 1) + '. ' + escapeHtml(q.file.name) + '</p>' +
+                        '<p class="text-[8px] text-slate-400 font-mono">' + formatBytes(q.file.size) + '</p>' +
                     '</div>' +
                     '<div class="shrink-0">' + statusBadge + '</div>' +
                 '</div>';
@@ -564,6 +623,10 @@
                 if (isSpendCap) {
                     throw new Error('API利用予算制限（Spend Cap / Billing Limit）に達しました。Google AI Studioで予算設定を確認するか、新しいAPI Keyをご利用ください。');
                 }
+                if (response.status === 400 || response.status === 401 || errDetail.toLowerCase().includes('invalid authentication credentials')) {
+                    openModal('apiKeyModal');
+                    throw new Error('API Key認証エラー: AI Studioから取得した有効なAPI Keyを再入力してください');
+                }
                 throw new Error(errDetail);
             }
 
@@ -583,7 +646,6 @@
             var totalChunks = Math.min(maxAnalysisPasses, Math.ceil(totalBlocks / chunkSize));
             var accumulatedVocabMap = new Map();
 
-            // 超基本助詞・機能語のフィルター（これらは単語帳への登録を除外）
             var stopWords = new Set([
                 'yang', 'di', 'ke', 'dari', 'ini', 'itu', 'dan', 'atau', 'saya', 'kamu', 'dia', 
                 'mereka', 'kita', 'kami', 'ada', 'tidak', 'bukan', 'akan', 'sudah', 'bisa', 'untuk', 
@@ -605,7 +667,6 @@
                     return '[BLOCK_ID:' + b.blockIndex + '] ' + b.indonesian + '\n(Japanese: ' + b.japanese + ')';
                 }).join('\n\n');
 
-                // JS側で該当チャンク内のすべての単語を重複なく抽出
                 var chunkWords = new Set();
                 chunkBlocks.forEach(function(b) {
                     var words = (b.indonesian || '').toLowerCase().match(/[a-zA-Z-']+/g) || [];
@@ -618,7 +679,6 @@
 
                 var wordListStr = Array.from(chunkWords).join(', ');
 
-                // 4段階解剖構造プロンプト
                 var combinedPrompt = 'Analyze the given Indonesian text blocks in detail for Japanese learners.\n\n' +
 'REQUIREMENTS:\n' +
 '1. "grammar": Provide exhaustive 4-part grammatical analysis for each block index using these exact headings:\n' +
@@ -758,7 +818,6 @@
                         break;
                     }
                 } finally {
-                    // RAM Garbage Collection
                     window.currentAudioBase64 = null;
                 }
             }
@@ -1056,28 +1115,12 @@
             }
         }
 
-        function setFontSize(val) {
-            document.documentElement.style.setProperty('--transcript-font-size', val + 'px');
-            var ptDisplay = document.getElementById('fontSizeDisplayPt');
-            if (ptDisplay) ptDisplay.textContent = val + ' pt';
-        }
-
-        function adjustFontSize(delta) {
-            var slider = document.getElementById('fontSizeSlider');
-            if (slider) {
-                var val = parseInt(slider.value) + delta;
-                val = Math.max(16, Math.min(32, val));
-                slider.value = val;
-                setFontSize(val);
-            }
-        }
-
         function speakIndonesian(text) {
             if (!('speechSynthesis' in window) || !text) return;
             window.speechSynthesis.cancel();
             var utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'id-ID';
-            utterance.rate = 0.85;
+            utterance.rate = window.speechRate || 0.85;
             var voices = window.speechSynthesis.getVoices();
             var indoVoice = voices.find(function(v) { return v.lang.startsWith('id') || v.lang.includes('ID'); });
             if (indoVoice) utterance.voice = indoVoice;
@@ -1130,7 +1173,7 @@
             var textToSpeak = customText || block.indonesian;
             var utterance = new SpeechSynthesisUtterance(textToSpeak);
             utterance.lang = 'id-ID';
-            utterance.rate = 0.85;
+            utterance.rate = window.speechRate || 0.85;
 
             var voices = window.speechSynthesis.getVoices();
             var indoVoice = voices.find(function(v) { return v.lang.startsWith('id') || v.lang.includes('ID'); });
@@ -1227,7 +1270,7 @@
                     '</div>' +
                     '<div class="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border-l-4 border-blue-500 space-y-1">' +
                         '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + clickableIndo + '</p>' +
-                        '<p class="text-xs text-slate-500 dark:text-slate-400 font-medium">' + escapeHtml(block.japanese) + '</p>' +
+                        '<p class="dynamic-text-ja text-slate-500 dark:text-slate-400 font-medium">' + escapeHtml(block.japanese) + '</p>' +
                     '</div>' +
                     '<div class="bg-blue-50/60 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200/60 dark:border-blue-900/40 text-xs leading-relaxed text-blue-950 dark:text-blue-200 space-y-1.5">' +
                         '<h5 class="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1 text-[10px] uppercase tracking-wider"><i class="fa-solid fa-diagram-project"></i> 4段階精密構文解剖・応用解説</h5>' +
@@ -1439,11 +1482,11 @@
             if (btnRe) {
                 if (count >= 1) {
                     btnRe.disabled = false;
-                    btnRe.className = "px-1.5 py-0.5 bg-amber-500 hover:bg-amber-600 text-white rounded text-[10px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
+                    btnRe.className = "px-1.5 py-0.5 bg-amber-500 hover:bg-amber-600 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
                     btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 選択再解析 (' + count + ')';
                 } else {
                     btnRe.disabled = true;
-                    btnRe.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[10px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
+                    btnRe.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
                     btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 選択再解析';
                 }
             }
@@ -1451,11 +1494,11 @@
             if (btnMerge) {
                 if (count >= 2) {
                     btnMerge.disabled = false;
-                    btnMerge.className = "px-1.5 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
+                    btnMerge.className = "px-1.5 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
                     btnMerge.innerHTML = '<i class="fa-solid fa-code-merge"></i> 結合 (' + count + ')';
                 } else {
                     btnMerge.disabled = true;
-                    btnMerge.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[10px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
+                    btnMerge.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
                     btnMerge.innerHTML = '<i class="fa-solid fa-code-merge"></i> 結合';
                 }
             }
@@ -1473,16 +1516,16 @@
             var html = '';
             history.forEach(function(item) {
                 var isChecked = window.selectedHistoryIds.includes(item.id);
-                html += '<div onclick="loadHistoryItem(\'' + item.id + '\')" class="p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer flex justify-between items-center text-xs transition mb-1">' +
-                    '<div class="flex items-center gap-2 min-w-0 flex-1">' +
-                        '<input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onclick="toggleHistorySelect(\'' + item.id + '\', event)" class="rounded text-red-600 focus:ring-0 cursor-pointer shrink-0">' +
+                html += '<div onclick="loadHistoryItem(\'' + item.id + '\')" class="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer flex justify-between items-center text-xs transition mb-1">' +
+                    '<div class="flex items-center gap-1.5 min-w-0 flex-1">' +
+                        '<input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onclick="toggleHistorySelect(\'' + item.id + '\', event)" class="rounded text-red-600 focus:ring-0 cursor-pointer shrink-0 w-3.5 h-3.5">' +
                         '<div class="min-w-0 flex-1">' +
-                            '<p class="font-bold text-slate-800 dark:text-slate-100 truncate leading-tight">' + escapeHtml(item.fileName) + '</p>' +
-                            '<p class="text-[9px] text-slate-400 mt-0.5">' + escapeHtml(item.date) + '</p>' +
+                            '<p class="font-bold text-slate-800 dark:text-slate-100 truncate leading-tight text-[11px]">' + escapeHtml(item.fileName) + '</p>' +
+                            '<p class="text-[8px] text-slate-400 font-mono">' + escapeHtml(item.date) + '</p>' +
                         '</div>' +
                     '</div>' +
                     '<button onclick="deleteHistoryItem(\'' + item.id + '\', event)" class="text-slate-400 hover:text-rose-500 p-1 shrink-0 ml-1" title="削除">' +
-                        '<i class="fa-solid fa-trash-can text-xs"></i>' +
+                        '<i class="fa-solid fa-trash-can text-[10px]"></i>' +
                     '</button>' +
                 '</div>';
             });
@@ -1831,6 +1874,8 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            setFontSize(20);
+            setSpeechRate(0.85);
             loadHistoryFromStorage();
             initDropzoneEvents();
             if ('speechSynthesis' in window) window.speechSynthesis.getVoices();
