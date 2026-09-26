@@ -763,7 +763,11 @@
                 var chunkWords = new Set();
                 chunkBlocks.forEach(function(b) {
                     var words = (b.indonesian || '').toLowerCase().match(/[a-zA-Z-']+/g) || [];
-                    words.forEach(function(w) { if (w.length >= 1) chunkWords.add(w); });
+                    words.forEach(function(w) {
+                        if (w.length >= 1) {
+                            chunkWords.add(w);
+                        }
+                    });
                 });
 
                 var wordListStr = Array.from(chunkWords).join(', ');
@@ -775,8 +779,8 @@
 '   【構文構造】Analyze S+V+O syntax, word order, modifiers, passive/active voice, time aspects.\n' +
 '   【接辞解剖】Explain affixes (me-, ber-, di-, ter-, -kan, -i, pe-an, ke-an) showing how base form shifts to derivative meaning.\n' +
 '   【解説・ニュアンス】Explain function words, conjunctions, speech level, and why this translation fits.\n' +
-'2. "vocab": Process ALL of the target words listed below without omission. Extract every single word. Restore dictionary base form, provide precise Japanese translation, POS, and short context sentence.\n' +
-'3. "isKeyWord": For each vocabulary item, set "isKeyWord": true if core keyword, or false if supporting word.\n' +
+'2. "vocab": Process ALL of the target words listed below without omission. For EVERY single word in TARGET WORDS TO PROCESS, you MUST provide a precise Japanese translation ("japanese"), dictionary base form ("baseForm"), part of speech ("pos"), and context sentence. Do NOT leave any word with placeholder meanings.\n' +
+'3. "isKeyWord": For each vocabulary item, set "isKeyWord": true if it is a core/essential keyword for sentence comprehension, or false if it is a basic or supporting word.\n' +
 '4. CRITICAL: Escape all literal newlines inside JSON string values using \\n. Output strictly valid JSON.\n\n' +
 'TARGET WORDS TO PROCESS:\n' + wordListStr + '\n\n' +
 'Return ONLY a JSON object:\n' +
@@ -802,7 +806,10 @@
 
                 var chunkPayload = {
                     contents: [{ parts: [{ text: combinedPrompt }] }],
-                    generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 }
+                    generationConfig: { 
+                        responseMimeType: "application/json",
+                        maxOutputTokens: 8192
+                    }
                 };
 
                 try {
@@ -825,50 +832,92 @@
                             var wordForm = (v.indonesian || '').trim();
                             var base = (v.baseForm || wordForm).trim();
                             var key = base.toLowerCase();
-                            if (wordForm && key && !accumulatedVocabMap.has(key)) {
-                                accumulatedVocabMap.set(key, {
-                                    id: 'vocab-' + Date.now() + '-' + accumulatedVocabMap.size,
-                                    indonesian: wordForm,
-                                    baseForm: base,
-                                    japanese: v.japanese || '',
-                                    pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(v.pos) ? v.pos : 'other',
-                                    context: v.context || '',
-                                    isKeyWord: Boolean(v.isKeyWord),
-                                    mastered: false
-                                });
+                            var japMeaning = (v.japanese || '').trim();
+
+                            if (wordForm && key) {
+                                if (!accumulatedVocabMap.has(key) || accumulatedVocabMap.get(key).japanese === '（自動抽出語）') {
+                                    accumulatedVocabMap.set(key, {
+                                        id: 'vocab-' + Date.now() + '-' + accumulatedVocabMap.size,
+                                        indonesian: wordForm,
+                                        baseForm: base,
+                                        japanese: japMeaning || '（意味取得中）',
+                                        pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(v.pos) ? v.pos : 'other',
+                                        context: v.context || '',
+                                        isKeyWord: Boolean(v.isKeyWord),
+                                        mastered: false
+                                    });
+                                }
                             }
                         });
                     }
-                } catch (chunkErr) {
-                    console.warn('[reanalyzeBlocksCore] Chunk warning:', chunkErr);
-                }
 
-                chunkWords.forEach(function(w) {
-                    var key = w.toLowerCase();
-                    if (!accumulatedVocabMap.has(key)) {
-                        accumulatedVocabMap.set(key, {
-                            id: 'vocab-rescued-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
-                            indonesian: w,
-                            baseForm: w,
-                            japanese: '（自動抽出語）',
-                            pos: 'other',
-                            context: '文中出現語句',
-                            isKeyWord: false,
-                            mastered: false
-                        });
+                    // 意味が未定義だった救出単語に対して、文脈や辞書ベースの簡易補完を行う代わりに、AI辞書補完フェーズを実行
+                    var missingWords = [];
+                    chunkWords.forEach(function(w) {
+                        var key = w.toLowerCase();
+                        if (!accumulatedVocabMap.has(key) || accumulatedVocabMap.get(key).japanese === '（自動抽出語）') {
+                            missingWords.push(w);
+                        }
+                    });
+
+                    if (missingWords.length > 0) {
+                        var rescuePrompt = 'Provide Japanese translations, base forms, and parts of speech for the following Indonesian words in the context of these sentences:\n\n' +
+                        'WORDS: ' + missingWords.join(', ') + '\n\n' +
+                        'Return ONLY a JSON array:\n' +
+                        '[\n' +
+                        '  {\n' +
+                        '    "indonesian": "kata",\n' +
+                        '    "baseForm": "kata",\n' +
+                        '    "japanese": "言葉、単語",\n' +
+                        '    "pos": "noun",\n' +
+                        '    "context": "Context sentence",\n' +
+                        '    "isKeyWord": false\n' +
+                        '  }\n' +
+                        ']';
+
+                        try {
+                            var rescueRes = await fetchGeminiApi(apiKey, {
+                                contents: [{ parts: [{ text: rescuePrompt }] }],
+                                generationConfig: { responseMimeType: "application/json", maxOutputTokens: 4096 }
+                            });
+                            var rescueParsed = safeParseTruncatedJson(extractGeminiText(rescueRes));
+                            if (Array.isArray(rescueParsed)) {
+                                rescueParsed.forEach(function(rv) {
+                                    var rKey = (rv.baseForm || rv.indonesian || '').trim().toLowerCase();
+                                    if (rKey && rv.japanese) {
+                                        accumulatedVocabMap.set(rKey, {
+                                            id: 'vocab-rescued-fixed-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
+                                            indonesian: rv.indonesian || rKey,
+                                            baseForm: rv.baseForm || rKey,
+                                            japanese: rv.japanese,
+                                            pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(rv.pos) ? rv.pos : 'other',
+                                            context: rv.context || '',
+                                            isKeyWord: Boolean(rv.isKeyWord),
+                                            mastered: false
+                                        });
+                                    }
+                                });
+                            }
+                        } catch (resErr) {}
                     }
-                });
+
+                } catch (chunkErr) {
+                    console.warn('[reanalyzeBlocksCore] チャンク解析警告:', chunkErr);
+                }
 
                 chunkBlocks.forEach(function(cb) {
                     if (!cb.grammarExplanation || cb.grammarExplanation === '解析中...') {
-                        cb.grammarExplanation = '【語句対比】\n・' + cb.indonesian + ' = ' + cb.japanese + '\n【構文構造】\n・標準構文配置\n【接辞解剖】\n・基本語形\n【解説・ニュアンス】\n・標準的表現です。';
+                        cb.grammarExplanation = '【語句対比】\n・' + cb.indonesian + ' = ' + cb.japanese + '\n【構文構造】\n・主語・動詞・目的語の標準配置構文\n【接辞解剖】\n・基本語形表現\n【解説・ニュアンス】\n・標準的な文脈表現です。';
                     }
                 });
 
                 await sleep(1000);
             }
 
-            return { blocks: blocks, vocab: Array.from(accumulatedVocabMap.values()) };
+            return {
+                blocks: blocks,
+                vocab: Array.from(accumulatedVocabMap.values())
+            };
         }
 
         window.processAudioWithGemini = async function() {
