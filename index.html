@@ -55,12 +55,15 @@
     <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center justify-between shrink-0">
         <h1 class="font-extrabold text-sm flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block"></span>
-            SuaraTeks<span class="text-red-600">ID</span> Pro
+            SuaraTeks<span class="text-red-600">ID</span> Pro <span class="text-[10px] text-slate-400 font-normal">v5.0 (Phase 1 & 2)</span>
             <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-wifi-slash"></i> オフライン動作中</span>
         </h1>
-        <button onclick="openModal('apiKeyModal')" class="px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-xs font-bold transition flex items-center gap-1">
-            <i class="fa-solid fa-key text-[10px]"></i> API Key
-        </button>
+        <div class="flex items-center gap-2">
+            <span id="activeSessionBadge" class="hidden text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 px-2 py-0.5 rounded-full font-extrabold border border-blue-200/50 truncate max-w-[150px]"></span>
+            <button onclick="openModal('apiKeyModal')" class="px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-xs font-bold transition flex items-center gap-1">
+                <i class="fa-solid fa-key text-[10px]"></i> API Key
+            </button>
+        </div>
     </header>
 
     <div class="md:hidden bg-slate-200 dark:bg-slate-800 p-1 flex items-center gap-1 shrink-0 border-b border-slate-300 dark:border-slate-700 text-xs font-bold">
@@ -71,6 +74,7 @@
 
     <div class="flex-1 flex overflow-hidden p-2 sm:p-3 gap-3 max-w-7xl mx-auto w-full">
 
+        <!-- Left Setup Panel -->
         <div id="panelSetup" class="w-full md:w-80 flex flex-col gap-2.5 shrink-0 overflow-y-auto">
             
             <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
@@ -103,10 +107,11 @@
                 </div>
             </div>
 
+            <!-- Audio Queue Selection -->
             <div id="playerCard" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
                 <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
                     <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音源キュー選択</span>
-                    <span class="text-[9px] text-slate-400">長尺音声自動分割対応</span>
+                    <span class="text-[9px] text-slate-400">セッション完全隔離対応</span>
                 </h3>
                 
                 <label id="fileDropLabel" for="audioFileInput" class="relative group cursor-pointer block">
@@ -117,7 +122,7 @@
                             <div class="w-6 h-6 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
                                 <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
                             </div>
-                            <p class="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">音声ファイルを選択（長尺自動分割）</p>
+                            <p class="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">音声ファイルを選択（複数可）</p>
                         </div>
 
                         <div id="dropzoneSelected" class="hidden space-y-1 text-left">
@@ -132,13 +137,14 @@
 
                 <button id="startTranscribeBtn" onclick="window.processAudioWithGemini()" class="w-full py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition flex items-center justify-center gap-1.5">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    <span id="transcribeBtnText">長尺事前分割 ＆ マルチパス解析</span>
+                    <span id="transcribeBtnText">独立セッション順次解析スタート</span>
                 </button>
             </div>
 
+            <!-- Progress Bar -->
             <div id="chunkProgressContainer" class="hidden bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-1.5 shrink-0">
                 <div class="flex justify-between text-xs font-bold">
-                    <span id="chunkProgressLabel" class="flex items-center gap-1 text-[10px] truncate max-w-[80%]">音声分割・解析実行中...</span>
+                    <span id="chunkProgressLabel" class="flex items-center gap-1 text-[10px] truncate max-w-[80%]">解析実行中...</span>
                     <span id="chunkProgressPercent" class="text-red-600 text-[10px]">0%</span>
                 </div>
                 <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
@@ -146,36 +152,40 @@
                 </div>
             </div>
 
+            <!-- IndexedDB Unlimited History Panel -->
             <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[220px]">
                 <div class="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-700 mb-1.5 gap-1 overflow-x-auto hide-scrollbar shrink-0">
                     <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1 shrink-0">
-                        <i class="fa-solid fa-clock-rotate-left text-amber-500"></i> 履歴 (15件)
+                        <i class="fa-solid fa-database text-blue-500"></i> IndexedDB履歴 (無制限)
                     </h4>
                     <div class="flex items-center gap-1 shrink-0">
                         <button id="btnReanalyzeSelected" disabled onclick="reanalyzeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed">
-                            <i class="fa-solid fa-rotate-right"></i> 選択再解析
+                            <i class="fa-solid fa-rotate-right"></i> 再解析
                         </button>
                         <button id="btnMergeSelected" disabled onclick="mergeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed">
                             <i class="fa-solid fa-code-merge"></i> 結合
                         </button>
-                        <button id="btnSaveSelected" disabled onclick="saveSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed" title="チェックした履歴を個別JSONとして保存">
+                        <button id="btnSaveSelected" disabled onclick="saveSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed">
                             <i class="fa-solid fa-download"></i> 保存
                         </button>
                         <button onclick="clearHistory()" class="px-1.5 py-0.5 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded text-[9px] font-bold transition shrink-0 whitespace-nowrap">消去</button>
                     </div>
                 </div>
 
-                <div id="historyList" class="space-y-1 flex-1 overflow-y-auto max-h-[280px] pr-0.5"></div>
+                <div id="historyList" class="space-y-1 flex-1 overflow-y-auto max-h-[280px] pr-0.5">
+                    <p class="text-xs text-slate-400 py-1.5 text-center">読み込み中...</p>
+                </div>
 
                 <div class="pt-1.5 border-t border-slate-100 dark:border-slate-700 mt-1 shrink-0">
                     <label class="w-full py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition">
-                        <i class="fa-solid fa-file-import"></i> JSON復元（オフライン対応）
+                        <i class="fa-solid fa-file-import"></i> JSONインポート
                         <input type="file" accept=".json" multiple onchange="importHistoryBackup(event)" class="hidden">
                     </label>
                 </div>
             </div>
         </div>
 
+        <!-- Right Studio Panel (Transcript, Grammar, Vocab) -->
         <div id="panelTranscript" class="hidden md:flex flex-1 flex-col bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             
             <div class="bg-white dark:bg-slate-800 px-2 sm:px-3 py-1.5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-1 shrink-0 overflow-x-auto hide-scrollbar">
@@ -189,7 +199,7 @@
                     <button id="navTabVocab" onclick="setStudioSubView('vocab')" class="no-wrap-tab px-2 sm:px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
                         <i class="fa-solid fa-book-open text-[10px]"></i> 単語帳 (<span id="vocabCountBadge">0</span>)
                     </button>
-                    <button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-1.5 sm:px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] sm:text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-0.5 whitespace-nowrap" title="再解析">
+                    <button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-1.5 sm:px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] sm:text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-0.5 whitespace-nowrap" title="現在のセッションを再解析">
                         <i class="fa-solid fa-rotate-right text-[9px]"></i> 再解析
                     </button>
                 </div>
@@ -203,14 +213,16 @@
                 </div>
             </div>
 
+            <!-- Transcript Subview -->
             <div id="transcriptView" class="flex-1 p-3 overflow-y-auto space-y-3">
                 <div id="emptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
                     <i class="fa-solid fa-file-audio text-3xl text-slate-300 dark:text-slate-700"></i>
-                    <span>音源ファイルを選択して「長尺事前分割 ＆ マルチパス解析」を押してください</span>
+                    <span>音声ファイルを選択して「独立セッション順次解析スタート」を押してください</span>
                 </div>
                 <div id="transcriptContainer" class="space-y-3"></div>
             </div>
 
+            <!-- Grammar Subview -->
             <div id="grammarView" class="hidden flex-1 p-3 overflow-y-auto space-y-3">
                 <div id="grammarEmptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
                     <i class="fa-solid fa-diagram-project text-3xl text-slate-300 dark:text-slate-700"></i>
@@ -219,6 +231,7 @@
                 <div id="grammarContainer" class="space-y-3"></div>
             </div>
 
+            <!-- Vocab Subview -->
             <div id="vocabView" class="hidden flex-1 flex-col overflow-hidden p-3 space-y-3">
                 <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 shrink-0">
                     <div class="flex items-center gap-2">
@@ -288,6 +301,7 @@
 
     </div>
 
+    <!-- API Key Modal -->
     <div id="apiKeyModal" class="fixed inset-0 bg-slate-900/60 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white dark:bg-slate-800 rounded-xl p-4 max-w-sm w-full space-y-3 shadow-xl border border-slate-200 dark:border-slate-700">
             <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
@@ -306,10 +320,126 @@
     </div>
 
     <script>
+        // ==========================================
+        // PHASE 2: INDEXEDDB HYBRID STORAGE LAYER
+        // ==========================================
+        const DB_NAME = 'SuaraTeksIDProDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'sessions';
+
+        function openIndexedDB() {
+            return new Promise((resolve, reject) => {
+                var request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+                request.onupgradeneeded = (event) => {
+                    var db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+            });
+        }
+
+        async function dbSaveSession(sessionObj) {
+            try {
+                var db = await openIndexedDB();
+                return new Promise((resolve, reject) => {
+                    var transaction = db.transaction(STORE_NAME, 'readwrite');
+                    var store = transaction.objectStore(STORE_NAME);
+                    var request = store.put(sessionObj);
+                    request.onsuccess = () => resolve(true);
+                    request.onerror = () => reject(request.error);
+                });
+            } catch (e) {
+                console.warn('IndexedDB save failed, falling back to localStorage:', e);
+                saveToLocalStorageFallback(sessionObj);
+            }
+        }
+
+        async function dbGetAllSessions() {
+            try {
+                var db = await openIndexedDB();
+                return new Promise((resolve, reject) => {
+                    var transaction = db.transaction(STORE_NAME, 'readonly');
+                    var store = transaction.objectStore(STORE_NAME);
+                    var request = store.getAll();
+                    request.onsuccess = () => {
+                        var res = request.result || [];
+                        res.sort((a, b) => b.timestamp - a.timestamp);
+                        resolve(res);
+                    };
+                    request.onerror = () => reject(request.error);
+                });
+            } catch (e) {
+                console.warn('IndexedDB getAll failed, using localStorage fallback');
+                var local = localStorage.getItem('suarateks_history');
+                return local ? JSON.parse(local) : [];
+            }
+        }
+
+        async function dbGetSession(id) {
+            try {
+                var db = await openIndexedDB();
+                return new Promise((resolve, reject) => {
+                    var transaction = db.transaction(STORE_NAME, 'readonly');
+                    var store = transaction.objectStore(STORE_NAME);
+                    var request = store.get(id);
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            } catch (e) {
+                var local = localStorage.getItem('suarateks_history');
+                var list = local ? JSON.parse(local) : [];
+                return list.find(item => item.id === id) || null;
+            }
+        }
+
+        async function dbDeleteSession(id) {
+            try {
+                var db = await openIndexedDB();
+                return new Promise((resolve, reject) => {
+                    var transaction = db.transaction(STORE_NAME, 'readwrite');
+                    var store = transaction.objectStore(STORE_NAME);
+                    var request = store.delete(id);
+                    request.onsuccess = () => resolve(true);
+                    request.onerror = () => reject(request.error);
+                });
+            } catch (e) {}
+        }
+
+        async function dbClearAll() {
+            try {
+                var db = await openIndexedDB();
+                return new Promise((resolve, reject) => {
+                    var transaction = db.transaction(STORE_NAME, 'readwrite');
+                    var store = transaction.objectStore(STORE_NAME);
+                    var request = store.clear();
+                    request.onsuccess = () => resolve(true);
+                    request.onerror = () => reject(request.error);
+                });
+            } catch (e) {
+                localStorage.removeItem('suarateks_history');
+            }
+        }
+
+        function saveToLocalStorageFallback(sessionObj) {
+            try {
+                var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
+                history = history.filter(h => h.id !== sessionObj.id);
+                history.unshift(sessionObj);
+                if (history.length > 20) history = history.slice(0, 20);
+                localStorage.setItem('suarateks_history', JSON.stringify(history));
+            } catch (err) {}
+        }
+
+        // ==========================================
+        // SERVICE WORKER & OFFLINE SETUP
+        // ==========================================
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 var swCode = `
-                    const CACHE_NAME = 'suarateks-pro-v4';
+                    const CACHE_NAME = 'suarateks-pro-v5';
                     const ASSETS = [
                         '/',
                         'https://cdn.tailwindcss.com',
@@ -351,7 +481,7 @@
             if (!badge) return;
             if (!navigator.onLine) {
                 badge.classList.remove('hidden');
-                showToast('ネットワークがオフラインです（保存済み履歴・単語帳は完全に動作します）', 'info');
+                showToast('ネットワークがオフラインです（IndexedDB履歴・単語帳は完全に動作します）', 'info');
             } else {
                 badge.classList.add('hidden');
             }
@@ -467,9 +597,12 @@
             return new Blob([out.buffer], { type: 'audio/wav' });
         }
 
+        // ==========================================
+        // APP STATE & PHASE 1 SESSION ISOLATION
+        // ==========================================
         window.fileQueue = [];
         window.isQueueProcessing = false;
-        window.currentLoadedFile = null;
+        window.currentLoadedSessionId = null;
         window.currentLoadedFileName = '';
         window.transcriptBlocks = [];
         window.vocabList = [];
@@ -595,6 +728,40 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
         }
 
+        // ==========================================
+        // PHASE 1: SESSION STATE ISOLATION & CLEARANCE
+        // ==========================================
+        function resetActiveSessionState(newFileName) {
+            window.currentLoadedSessionId = 'session-' + Date.now();
+            window.currentLoadedFileName = newFileName || '新規セッション';
+            window.transcriptBlocks = [];
+            window.vocabList = [];
+            window.activeVocabSearchQuery = '';
+            window.currentCardIndex = 0;
+            window.isCardFlipped = false;
+            window.isShuffled = false;
+            window.shuffledVocabList = [];
+            
+            var searchInput = document.getElementById('vocabSearchInput');
+            if (searchInput) searchInput.value = '';
+
+            updateActiveSessionBadge();
+            renderTranscriptContainer();
+            renderGrammarContainer();
+            renderVocabContainer();
+        }
+
+        function updateActiveSessionBadge() {
+            var badge = document.getElementById('activeSessionBadge');
+            if (!badge) return;
+            if (window.currentLoadedFileName) {
+                badge.textContent = '表示中: ' + window.currentLoadedFileName;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
         window.handleFileChange = function(event) {
             var input = (event && event.target) ? event.target : document.getElementById('audioFileInput');
             var files = input ? input.files : null;
@@ -612,7 +779,7 @@
                 return { id: 'queue-' + Date.now() + '-' + idx, file: f, status: 'waiting', progress: 0 };
             });
             renderQueueUI();
-            showToast(window.fileQueue.length + ' 件の音源をキューに追加しました！', 'info');
+            showToast(window.fileQueue.length + ' 件の音源をキューに隔離セットしました！', 'info');
         }
 
         function renderQueueUI() {
@@ -909,9 +1076,12 @@
                 var item = window.fileQueue[i];
                 if (item.status === 'completed') continue;
 
+                // 【フェーズ1の徹底】新規ファイル処理開始前に必ず状態を完全隔離リセット
+                resetActiveSessionState(item.file.name);
+
                 item.status = 'processing';
                 renderQueueUI();
-                if (btnText) btnText.textContent = '長尺分割・解析中 (' + (i + 1) + '/' + window.fileQueue.length + ')';
+                if (btnText) btnText.textContent = '独立隔離解析中 (' + (i + 1) + '/' + window.fileQueue.length + ')';
 
                 try {
                     await processSingleFileWithLongAudioChunking(item, apiKey, i + 1, window.fileQueue.length);
@@ -931,20 +1101,19 @@
 
             window.isQueueProcessing = false;
             if (btn) btn.disabled = false;
-            if (btnText) btnText.textContent = "長尺事前分割 ＆ マルチパス解析";
-            showToast('すべてのキューファイルの解析処理が終了しました', 'info');
+            if (btnText) btnText.textContent = "独立セッション順次解析スタート";
+            showToast('すべてのキューファイルの独立解析処理が完了しました', 'info');
             setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
         };
 
         async function processSingleFileWithLongAudioChunking(queueItem, apiKey, currentIdx, totalIdx) {
             var file = queueItem.file;
-            window.currentLoadedFile = file;
 
             var progressLabel = document.getElementById('chunkProgressLabel');
             var progressPercent = document.getElementById('chunkProgressPercent');
             var progressBar = document.getElementById('chunkProgressBar');
 
-            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-scissors text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 長音声を2分ごとに事前分割中...</span>';
+            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-scissors text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 音声を2分ごとに事前分割中...</span>';
             if (progressBar) progressBar.style.width = '10%';
             if (progressPercent) progressPercent.textContent = '10%';
 
@@ -1003,7 +1172,7 @@
                 cleanFileName,
                 function(chunkIdx, totalChunks, currentPct, label) {
                     var mappedPct = Math.floor(50 + (currentPct * 0.5));
-                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-blue-500"></i> <span class="truncate">【文法・単語再解析】' + chunkIdx + '/' + totalChunks + '</span>';
+                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-blue-500"></i> <span class="truncate">【文法・単語解析】' + chunkIdx + '/' + totalChunks + '</span>';
                     if (progressBar) progressBar.style.width = mappedPct + '%';
                     if (progressPercent) progressPercent.textContent = mappedPct + '%';
                 }
@@ -1015,15 +1184,21 @@
             if (progressBar) progressBar.style.width = '100%';
             if (progressPercent) progressPercent.textContent = '100%';
 
+            renderTranscriptContainer();
+            renderGrammarContainer();
+            renderVocabContainer();
+
+            // IndexedDB への永続化保存
+            await saveCurrentToHistory(cleanFileName, false);
             var singleDataObj = {
-                id: 'hist-' + Date.now(),
+                id: window.currentLoadedSessionId,
                 fileName: cleanFileName,
                 date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                timestamp: Date.now(),
                 blocks: window.transcriptBlocks,
                 vocab: window.vocabList
             };
             exportDataToFile(singleDataObj, cleanFileName + '.json');
-            saveCurrentToHistory(cleanFileName, false);
         }
 
         window.reanalyzeSelectedHistories = async function() {
@@ -1036,9 +1211,9 @@
                 return;
             }
 
-            var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
+            var allSessions = await dbGetAllSessions();
             var selectedItems = window.selectedHistoryIds.map(function(id) {
-                return history.find(function(h) { return h.id === id; });
+                return allSessions.find(function(h) { return h.id === id; });
             }).filter(Boolean);
 
             if (selectedItems.length === 0) return;
@@ -1076,22 +1251,22 @@
                     item.blocks = res.blocks;
                     item.vocab = res.vocab;
                     item.date = new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    item.timestamp = Date.now();
 
+                    window.currentLoadedSessionId = item.id;
+                    window.currentLoadedFileName = item.fileName;
                     window.transcriptBlocks = res.blocks;
                     window.vocabList = res.vocab;
+                    updateActiveSessionBadge();
                     renderTranscriptContainer();
                     renderGrammarContainer();
                     renderVocabContainer();
 
-                    var freshHistory = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
-                    var idxInFresh = freshHistory.findIndex(function(h) { return h.id === item.id; });
-                    if (idxInFresh !== -1) freshHistory[idxInFresh] = item;
-                    else freshHistory.unshift(item);
-                    localStorage.setItem('suarateks_history', JSON.stringify(freshHistory));
-                    renderHistoryList(freshHistory);
+                    await dbSaveSession(item);
                 }
                 showToast(selectedItems.length + ' 件の選択再解析が完了しました！', 'info');
                 window.selectedHistoryIds = [];
+                await loadHistoryFromStorage();
             } catch (err) {
                 showToast('一括再解析エラー: ' + translateErrorMessage(err.message), 'error');
             } finally {
@@ -1123,7 +1298,7 @@
             if (progressContainer) progressContainer.classList.remove('hidden');
 
             try {
-                var rawName = window.currentLoadedFileName || (window.currentLoadedFile ? window.currentLoadedFile.name : '解析データ');
+                var rawName = window.currentLoadedFileName || '解析データ';
                 var targetName = formatOutputFileName(rawName);
 
                 var res = await reanalyzeBlocksCore(
@@ -1141,7 +1316,7 @@
                 window.vocabList = res.vocab;
                 renderGrammarContainer();
                 renderVocabContainer();
-                saveCurrentToHistory(targetName, false);
+                await saveCurrentToHistory(targetName, false);
                 showToast('テキスト再解析が完了しました！', 'info');
             } catch (err) {
                 showToast('再解析エラー: ' + translateErrorMessage(err.message), 'error');
@@ -1526,9 +1701,9 @@
             updateFlashcardUI();
         }
 
-        function loadHistoryFromStorage() {
+        async function loadHistoryFromStorage() {
             try {
-                var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
+                var history = await dbGetAllSessions();
                 renderHistoryList(history);
             } catch (e) { renderHistoryList([]); }
         }
@@ -1551,11 +1726,11 @@
                 if (count >= 1) {
                     btnRe.disabled = false;
                     btnRe.className = "px-1.5 py-0.5 bg-amber-500 hover:bg-amber-600 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
-                    btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 選択再解析 (' + count + ')';
+                    btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 再解析 (' + count + ')';
                 } else {
                     btnRe.disabled = true;
                     btnRe.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
-                    btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 選択再解析';
+                    btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 再解析';
                 }
             }
 
@@ -1588,7 +1763,7 @@
             var container = document.getElementById('historyList');
             if (!container) return;
             if (!history || history.length === 0) {
-                container.innerHTML = '<p class="text-xs text-slate-400 py-1.5 text-center">履歴なし (0/15)</p>';
+                container.innerHTML = '<p class="text-xs text-slate-400 py-1.5 text-center">履歴なし (IndexedDB)</p>';
                 window.selectedHistoryIds = [];
                 updateHistoryActionButtonsState();
                 return;
@@ -1596,7 +1771,8 @@
             var html = '';
             history.forEach(function(item) {
                 var isChecked = window.selectedHistoryIds.includes(item.id);
-                html += '<div onclick="loadHistoryItem(\'' + item.id + '\')" class="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-red-50 cursor-pointer flex justify-between items-center text-xs transition mb-1">' +
+                var isCurrent = window.currentLoadedSessionId === item.id;
+                html += '<div onclick="loadHistoryItem(\'' + item.id + '\')" class="p-1.5 rounded-lg ' + (isCurrent ? 'bg-red-50 dark:bg-red-950/40 border-red-300' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700') + ' border hover:bg-red-50 cursor-pointer flex justify-between items-center text-xs transition mb-1">' +
                     '<div class="flex items-center gap-1.5 min-w-0 flex-1">' +
                         '<input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onclick="toggleHistorySelect(\'' + item.id + '\', event)" class="rounded text-red-600 cursor-pointer shrink-0 w-3.5 h-3.5">' +
                         '<div class="min-w-0 flex-1">' +
@@ -1611,11 +1787,11 @@
             updateHistoryActionButtonsState();
         }
 
-        function saveSelectedHistories() {
+        async function saveSelectedHistories() {
             if (!window.selectedHistoryIds || window.selectedHistoryIds.length === 0) return;
-            var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
+            var allSessions = await dbGetAllSessions();
             var selectedItems = window.selectedHistoryIds.map(function(id) {
-                return history.find(function(h) { return h.id === id; });
+                return allSessions.find(function(h) { return h.id === id; });
             }).filter(Boolean);
 
             if (selectedItems.length === 0) return;
@@ -1637,31 +1813,32 @@
             showToast(selectedItems.length + ' 件の履歴を個別JSONとして保存しました！', 'info');
         }
 
-        function saveCurrentToHistory(fileName, showToastNotification) {
+        async function saveCurrentToHistory(fileName, showToastNotification) {
             if (showToastNotification === undefined) showToastNotification = true;
             if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
             try {
-                var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
                 var formattedName = formatOutputFileName(fileName);
-                history = history.filter(function(h) { return h.fileName !== formattedName; });
-                history.unshift({
-                    id: 'hist-' + Date.now(),
+                if (!window.currentLoadedSessionId) window.currentLoadedSessionId = 'session-' + Date.now();
+                var sessionObj = {
+                    id: window.currentLoadedSessionId,
                     fileName: formattedName,
                     date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                    timestamp: Date.now(),
                     blocks: window.transcriptBlocks,
                     vocab: window.vocabList
-                });
-                if (history.length > 15) history = history.slice(0, 15);
-                localStorage.setItem('suarateks_history', JSON.stringify(history));
+                };
+                await dbSaveSession(sessionObj);
+                var history = await dbGetAllSessions();
                 renderHistoryList(history);
+                updateActiveSessionBadge();
             } catch (e) {}
         }
 
-        function mergeSelectedHistories() {
+        async function mergeSelectedHistories() {
             if (window.selectedHistoryIds.length < 2) return;
-            var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
+            var allSessions = await dbGetAllSessions();
             var selectedItems = window.selectedHistoryIds.map(function(id) {
-                return history.find(function(h) { return h.id === id; });
+                return allSessions.find(function(h) { return h.id === id; });
             }).filter(Boolean);
 
             var mergedBlocks = [], mergedVocabMap = new Map(), titleParts = [];
@@ -1684,54 +1861,64 @@
             });
 
             var mergedTitle = formatOutputFileName('結合_' + titleParts.join('_').substring(0, 20));
+            window.currentLoadedSessionId = 'session-merged-' + Date.now();
+            window.currentLoadedFileName = mergedTitle;
             window.transcriptBlocks = mergedBlocks;
             window.vocabList = Array.from(mergedVocabMap.values());
+            updateActiveSessionBadge();
             renderTranscriptContainer();
             renderGrammarContainer();
             renderVocabContainer();
 
             var mergedDataObj = {
-                id: 'hist-merged-' + Date.now(),
+                id: window.currentLoadedSessionId,
                 fileName: mergedTitle,
                 date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                timestamp: Date.now(),
                 blocks: window.transcriptBlocks,
                 vocab: window.vocabList
             };
+            await dbSaveSession(mergedDataObj);
+            var history = await dbGetAllSessions();
+            renderHistoryList(history);
+
             exportDataToFile(mergedDataObj, mergedTitle + '.json');
-            saveCurrentToHistory(mergedTitle, false);
             window.selectedHistoryIds = [];
             showToast('選択した履歴を結合しました！', 'info');
         }
 
-        function clearHistory() {
-            localStorage.removeItem('suarateks_history');
+        async function clearHistory() {
+            await dbClearAll();
             window.selectedHistoryIds = [];
             renderHistoryList([]);
-            showToast('履歴を消去しました', 'info');
+            showToast('IndexedDB履歴をすべて消去しました', 'info');
         }
 
-        function loadHistoryItem(id) {
-            var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
-            var found = history.find(function(h) { return h.id === id; });
+        async function loadHistoryItem(id) {
+            var found = await dbGetSession(id);
             if (found) {
+                window.currentLoadedSessionId = found.id;
+                window.currentLoadedFileName = found.fileName || '';
                 window.transcriptBlocks = found.blocks || [];
                 window.vocabList = found.vocab || [];
-                window.currentLoadedFileName = found.fileName || '';
+                updateActiveSessionBadge();
                 renderTranscriptContainer();
                 renderGrammarContainer();
                 renderVocabContainer();
-                showToast('「' + found.fileName + '」を読み込みました', 'info');
+                var history = await dbGetAllSessions();
+                renderHistoryList(history);
+                showToast('「' + found.fileName + '」を切り替え読み込みました', 'info');
                 if (window.innerWidth < 768) switchMobileTab('transcript');
             }
         }
 
-        function deleteHistoryItem(id, event) {
+        async function deleteHistoryItem(id, event) {
             if (event) event.stopPropagation();
-            var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
-            history = history.filter(function(h) { return h.id !== id; });
+            await dbDeleteSession(id);
             window.selectedHistoryIds = window.selectedHistoryIds.filter(function(sid) { return sid !== id; });
-            localStorage.setItem('suarateks_history', JSON.stringify(history));
+            var history = await dbGetAllSessions();
             renderHistoryList(history);
+            showToast('履歴から削除しました', 'info');
         }
 
         function exportDataToFile(dataObj, customFilename) {
@@ -1748,8 +1935,7 @@
             var files = event.target.files ? Array.from(event.target.files) : [];
             if (files.length === 0) return;
 
-            var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
-            var lastLoadedData = null, successCount = 0;
+            var successCount = 0, lastLoadedData = null;
 
             for (var i = 0; i < files.length; i++) {
                 try {
@@ -1764,32 +1950,34 @@
                     if (!singleObj || !singleObj.blocks) continue;
 
                     var formattedName = formatOutputFileName(singleObj.fileName || files[i].name);
-                    history = history.filter(function(h) { return h.fileName !== formattedName; });
                     var item = {
-                        id: 'hist-' + Date.now() + '-' + i,
+                        id: singleObj.id || ('session-imported-' + Date.now() + '-' + i),
                         fileName: formattedName,
                         date: singleObj.date || new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                        timestamp: Date.now(),
                         blocks: singleObj.blocks,
                         vocab: singleObj.vocab || []
                     };
-                    history.unshift(item);
+                    await dbSaveSession(item);
                     lastLoadedData = item;
                     successCount++;
                 } catch (e) {}
             }
 
-            if (history.length > 15) history = history.slice(0, 15);
-            localStorage.setItem('suarateks_history', JSON.stringify(history));
+            var history = await dbGetAllSessions();
             renderHistoryList(history);
 
             if (lastLoadedData) {
+                window.currentLoadedSessionId = lastLoadedData.id;
+                window.currentLoadedFileName = lastLoadedData.fileName;
                 window.transcriptBlocks = lastLoadedData.blocks;
                 window.vocabList = lastLoadedData.vocab;
+                updateActiveSessionBadge();
                 renderTranscriptContainer();
                 renderGrammarContainer();
                 renderVocabContainer();
             }
-            showToast(successCount + ' 件のJSONを復元しました！', 'info');
+            showToast(successCount + ' 件のJSONをIndexedDBにインポートしました！', 'info');
             event.target.value = '';
         }
 
