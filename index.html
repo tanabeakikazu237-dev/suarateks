@@ -57,6 +57,7 @@
         <h1 class="font-extrabold text-sm flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block"></span>
             SuaraTeks<span class="text-red-600">ID</span> Pro
+            <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-wifi-slash"></i> オフライン動作中</span>
         </h1>
         <button onclick="openModal('apiKeyModal')" class="px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-xs font-bold transition flex items-center gap-1">
             <i class="fa-solid fa-key text-[10px]"></i> API Key
@@ -109,11 +110,11 @@
                 </div>
             </div>
 
-            <!-- Queue & Upload Card (Slimmed down) -->
+            <!-- Queue & Upload Card -->
             <div id="playerCard" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
                 <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
                     <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音源キュー選択</span>
-                    <span class="text-[9px] text-slate-400">最大10件</span>
+                    <span class="text-[9px] text-slate-400">長時間音声自動分割対応</span>
                 </h3>
                 
                 <label id="fileDropLabel" for="audioFileInput" class="relative group cursor-pointer block">
@@ -124,7 +125,7 @@
                             <div class="w-6 h-6 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
                                 <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
                             </div>
-                            <p class="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">複数音源を選択（最大10件）</p>
+                            <p class="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">音声ファイルを選択（長尺自動分割）</p>
                         </div>
 
                         <div id="dropzoneSelected" class="hidden space-y-1 text-left">
@@ -139,13 +140,13 @@
 
                 <button id="startTranscribeBtn" onclick="window.processAudioWithGemini()" class="w-full py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition flex items-center justify-center gap-1.5">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    <span id="transcribeBtnText">高精度マルチパス解析開始</span>
+                    <span id="transcribeBtnText">長尺事前分割 ＆ マルチパス解析</span>
                 </button>
             </div>
 
             <div id="chunkProgressContainer" class="hidden bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-1.5 shrink-0">
                 <div class="flex justify-between text-xs font-bold">
-                    <span id="chunkProgressLabel" class="flex items-center gap-1 text-[10px] truncate max-w-[80%]">順次解析実行中...</span>
+                    <span id="chunkProgressLabel" class="flex items-center gap-1 text-[10px] truncate max-w-[80%]">音声分割・解析実行中...</span>
                     <span id="chunkProgressPercent" class="text-red-600 text-[10px]">0%</span>
                 </div>
                 <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
@@ -153,20 +154,20 @@
                 </div>
             </div>
 
-            <!-- History Card (Expanded for min 5 items visible) -->
+            <!-- History Card -->
             <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[220px]">
                 <div class="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-700 mb-1.5 gap-1 overflow-x-auto hide-scrollbar shrink-0">
                     <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1 shrink-0">
                         <i class="fa-solid fa-clock-rotate-left text-amber-500"></i> 履歴 (15件)
                     </h4>
                     <div class="flex items-center gap-1 shrink-0">
-                        <button id="btnReanalyzeSelected" disabled onclick="reanalyzeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed" title="選択した履歴を順次テキスト再解析">
+                        <button id="btnReanalyzeSelected" disabled onclick="reanalyzeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed">
                             <i class="fa-solid fa-rotate-right"></i> 選択再解析
                         </button>
                         <button id="btnMergeSelected" disabled onclick="mergeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed">
                             <i class="fa-solid fa-code-merge"></i> 結合
                         </button>
-                        <button onclick="manualSaveHistory()" class="px-1.5 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded text-[9px] font-bold transition shrink-0 whitespace-nowrap" title="現在の解析結果を個別JSONとして保存">保存</button>
+                        <button onclick="manualSaveHistory()" class="px-1.5 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded text-[9px] font-bold transition shrink-0 whitespace-nowrap">保存</button>
                         <button onclick="clearHistory()" class="px-1.5 py-0.5 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded text-[9px] font-bold transition shrink-0 whitespace-nowrap">消去</button>
                     </div>
                 </div>
@@ -175,7 +176,7 @@
 
                 <div class="pt-1.5 border-t border-slate-100 dark:border-slate-700 mt-1 shrink-0">
                     <label class="w-full py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition">
-                        <i class="fa-solid fa-file-import"></i> JSON復元（最大15件選択可）
+                        <i class="fa-solid fa-file-import"></i> JSON復元（オフライン対応）
                         <input type="file" accept=".json" multiple onchange="importHistoryBackup(event)" class="hidden">
                     </label>
                 </div>
@@ -197,7 +198,7 @@
                     <button id="navTabVocab" onclick="setStudioSubView('vocab')" class="no-wrap-tab px-2 sm:px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
                         <i class="fa-solid fa-book-open text-[10px]"></i> 単語帳 (<span id="vocabCountBadge">0</span>)
                     </button>
-                    <button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-1.5 sm:px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] sm:text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-0.5 whitespace-nowrap" title="表示中のテキストを使って高精度文法・単語再解析を実行">
+                    <button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-1.5 sm:px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] sm:text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-0.5 whitespace-nowrap" title="再解析">
                         <i class="fa-solid fa-rotate-right text-[9px]"></i> 再解析
                     </button>
                 </div>
@@ -215,7 +216,7 @@
             <div id="transcriptView" class="flex-1 p-3 overflow-y-auto space-y-3">
                 <div id="emptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
                     <i class="fa-solid fa-file-audio text-3xl text-slate-300 dark:text-slate-700"></i>
-                    <span>音源キューをセットして「高精度マルチパス解析開始」を押してください</span>
+                    <span>音源ファイルを選択して「長尺事前分割 ＆ マルチパス解析」を押してください</span>
                 </div>
                 <div id="transcriptContainer" class="space-y-3"></div>
             </div>
@@ -308,7 +309,7 @@
                 <i class="fa-solid fa-key text-amber-500"></i> Gemini API Key 設定
             </h3>
             <div id="apiKeyNotice" class="hidden p-2 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded text-[11px] text-amber-800 dark:text-amber-200 font-medium leading-snug">
-                <i class="fa-solid fa-triangle-exclamation mr-1 text-amber-600"></i> API利用上限（Spend Cap / Quota）に達しました。新しいAPI Keyを入力して保存すると、解析を再開できます。
+                <i class="fa-solid fa-triangle-exclamation mr-1 text-amber-600"></i> API利用上限に達しました。新しいAPI Keyを入力して保存してください。
             </div>
             <p class="text-[10px] text-slate-400">Google AI Studio で取得した API Key を入力してください</p>
             <input type="password" id="apiKeyInput" placeholder="API Key を貼り付け" class="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 text-xs dark:bg-slate-900 font-mono text-slate-800 dark:text-slate-100 focus:outline-none focus:border-red-500">
@@ -321,11 +322,158 @@
 
     <!-- Application Engine Logic -->
     <script>
+        // --- 1. Service Worker 登録＆オフライン対応初期化 ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                var swCode = `
+                    const CACHE_NAME = 'suarateks-pro-v1';
+                    const ASSETS = [
+                        '/',
+                        'https://cdn.tailwindcss.com',
+                        'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+                        'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap'
+                    ];
+                    self.addEventListener('install', event => {
+                        event.waitUntil(
+                            caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())
+                        );
+                    });
+                    self.addEventListener('activate', event => {
+                        event.waitUntil(self.clients.claim());
+                    });
+                    self.addEventListener('fetch', event => {
+                        event.respondWith(
+                            caches.match(event.request).then(response => {
+                                return response || fetch(event.request).catch(() => {
+                                    if (event.request.mode === 'navigate') {
+                                        return caches.match('/');
+                                    }
+                                });
+                            })
+                        );
+                    });
+                `;
+                var blob = new Blob([swCode], { type: 'application/javascript' });
+                var swUrl = URL.createObjectURL(blob);
+
+                navigator.serviceWorker.register(swUrl).then(function(reg) {
+                    console.log('ServiceWorker registered successfully');
+                }).catch(function(err) {
+                    console.warn('ServiceWorker registration failed:', err);
+                });
+            });
+        }
+
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        function updateOnlineStatus() {
+            var badge = document.getElementById('offlineBadge');
+            if (!badge) return;
+            if (!navigator.onLine) {
+                badge.classList.remove('hidden');
+                showToast('ネットワークがオフラインです（保存済み履歴・音声合成は完全に動作します）', 'info');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        // --- 2. クライアント側 音声長尺事前分割 (Web Audio API & WAV Blob) ---
+        async function splitAudioFileIntoWavChunks(file, maxDurationSeconds = 120) {
+            try {
+                var arrayBuffer = await file.arrayBuffer();
+                var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                var audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                await audioCtx.close();
+
+                var sampleRate = audioBuffer.sampleRate;
+                var numberOfChannels = audioBuffer.numberOfChannels;
+                var totalDuration = audioBuffer.duration;
+
+                if (totalDuration <= maxDurationSeconds) {
+                    return [{ chunkIndex: 0, blob: file, duration: totalDuration }];
+                }
+
+                var samplesPerChunk = maxDurationSeconds * sampleRate;
+                var totalChunks = Math.ceil(audioBuffer.length / samplesPerChunk);
+                var chunks = [];
+
+                for (var i = 0; i < totalChunks; i++) {
+                    var startSample = i * samplesPerChunk;
+                    var endSample = Math.min(audioBuffer.length, startSample + samplesPerChunk);
+                    var frameCount = endSample - startSample;
+
+                    var chunkBuffer = new AudioContext().createBuffer(numberOfChannels, frameCount, sampleRate);
+                    for (var channel = 0; channel < numberOfChannels; channel++) {
+                        var channelData = audioBuffer.getChannelData(channel);
+                        chunkBuffer.copyToChannel(channelData.subarray(startSample, endSample), channel);
+                    }
+
+                    var wavBlob = audioBufferToWavBlob(chunkBuffer);
+                    chunks.push({
+                        chunkIndex: i,
+                        blob: wavBlob,
+                        duration: frameCount / sampleRate
+                    });
+                }
+
+                return chunks;
+            } catch (e) {
+                console.warn('Audio decoding/splitting failed, falling back to original file:', e);
+                return [{ chunkIndex: 0, blob: file, duration: 0 }];
+            }
+        }
+
+        function audioBufferToWavBlob(buffer) {
+            var numOfChan = buffer.numberOfChannels;
+            var length = buffer.length * numOfChan * 2 + 44;
+            var out = new DataView(new ArrayBuffer(length));
+            var channels = [];
+            var sampleRate = buffer.sampleRate;
+            var offset = 0;
+            var pos = 0;
+
+            function writeString(str) {
+                for (var i = 0; i < str.length; i++) {
+                    out.setUint8(pos++, str.charCodeAt(i));
+                }
+            }
+
+            writeString('RIFF');
+            out.setUint32(pos, length - 8, true); pos += 4;
+            writeString('WAVE');
+            writeString('fmt ');
+            out.setUint32(pos, 16, true); pos += 4;
+            out.setUint16(pos, 1, true); pos += 2;
+            out.setUint16(pos, numOfChan, true); pos += 2;
+            out.setUint32(pos, sampleRate, true); pos += 4;
+            out.setUint32(pos, sampleRate * 2 * numOfChan, true); pos += 4;
+            out.setUint16(pos, numOfChan * 2, true); pos += 2;
+            out.setUint16(pos, 16, true); pos += 2;
+            writeString('data');
+            out.setUint32(pos, length - pos - 4, true); pos += 4;
+
+            for (var i = 0; i < buffer.numberOfChannels; i++) {
+                channels.push(buffer.getChannelData(i));
+            }
+
+            while (offset < buffer.length) {
+                for (var i = 0; i < numOfChan; i++) {
+                    var sample = Math.max(-1, Math.min(1, channels[i][offset]));
+                    sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+                    out.setInt16(pos, sample, true);
+                    pos += 2;
+                }
+                offset++;
+            }
+
+            return new Blob([out.buffer], { type: 'audio/wav' });
+        }
+
+        // --- 3. アプリケーション状態変数 ---
         window.fileQueue = [];
         window.isQueueProcessing = false;
         window.currentLoadedFile = null;
         window.currentLoadedFileName = '';
-        window.currentAudioBase64 = null;
         window.transcriptBlocks = [];
         window.vocabList = [];
         window.activeMobileTab = 'setup';
@@ -343,6 +491,23 @@
         window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
 
         var sleep = function(ms) { return new Promise(function(resolve) { setTimeout(resolve, ms); }); };
+
+        function translateErrorMessage(rawMessage) {
+            var str = String(rawMessage || '').toLowerCase();
+            if (str.includes('prepayment credits are depleted') || str.includes('billing#prepay') || str.includes('credit depleted')) {
+                return 'API前払いクレジットがなくなりました。Google AI Studioでチャージしてください。';
+            }
+            if (str.includes('spend cap breached') || str.includes('quota exceeded') || str.includes('resourcehasexhausted')) {
+                return 'API利用上限に達しました。時間をおくかGoogle AI Studioで設定をご確認ください。';
+            }
+            if (str.includes('invalid authentication credentials') || str.includes('api_key_invalid') || str.includes('unauthorized')) {
+                return 'API Key認証エラーです。新しいAPI Keyを発行し、設定し直してください。';
+            }
+            if (str.includes('network') || str.includes('failed to fetch')) {
+                return 'ネットワーク通信エラーが発生しました。接続状況をご確認の上、再度お試しください。';
+            }
+            return rawMessage;
+        }
 
         function formatOutputFileName(baseName) {
             var clean = String(baseName || '解析データ').trim().replace(/\.[^/.]+$/, "");
@@ -365,7 +530,6 @@
             if (isNaN(num)) num = 20;
             num = Math.max(20, Math.min(30, num));
             document.documentElement.style.setProperty('--transcript-font-size', num + 'px');
-            
             document.querySelectorAll('.fontSizeDisplayPt').forEach(function(el) { el.textContent = num + 'pt'; });
             document.querySelectorAll('.fontSizeSlider').forEach(function(el) { el.value = num; });
         }
@@ -381,34 +545,22 @@
         }
 
         function stripJsonCodeFence(text) {
-            return String(text || '')
-                .trim()
-                .replace(/^```json\s*/i, '')
-                .replace(/^```\s*/i, '')
-                .replace(/\s*```$/i, '')
-                .trim();
+            return String(text || '').trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
         }
 
         function safeParseTruncatedJson(jsonString) {
             var raw = stripJsonCodeFence(jsonString);
             if (!raw) throw new Error('Geminiから応答が返されませんでした');
-
-            try {
-                return JSON.parse(raw);
-            } catch (e) {}
+            try { return JSON.parse(raw); } catch (e) {}
 
             var sanitized = raw.replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, function(match) {
                 return match.replace(/\r?\n/g, '\\n').replace(/\t/g, '\\t');
             });
-
-            try {
-                return JSON.parse(sanitized);
-            } catch (e2) {}
+            try { return JSON.parse(sanitized); } catch (e2) {}
 
             var textToRepair = sanitized;
             var firstBrace = textToRepair.indexOf('{');
             var firstBracket = textToRepair.indexOf('[');
-
             var startIdx = -1;
             var isObject = false;
 
@@ -421,50 +573,24 @@
             }
 
             if (startIdx !== -1) {
-                var sub = textToRepair.substring(startIdx);
-                sub = sub.replace(/,\s*$/, '').replace(/,\s*([}\]])/g, '$1');
-
-                var openQuotes = false;
-                var stack = [];
-                var repaired = '';
-
+                var sub = textToRepair.substring(startIdx).replace(/,\s*$/, '').replace(/,\s*([}\]])/g, '$1');
+                var openQuotes = false, stack = [], repaired = '';
                 for (var i = 0; i < sub.length; i++) {
-                    var ch = sub[i];
-                    var prevCh = i > 0 ? sub[i - 1] : '';
-
-                    if (ch === '"' && prevCh !== '\\') {
-                        openQuotes = !openQuotes;
-                    }
-
+                    var ch = sub[i], prevCh = i > 0 ? sub[i - 1] : '';
+                    if (ch === '"' && prevCh !== '\\') openQuotes = !openQuotes;
                     if (!openQuotes) {
                         if (ch === '{' || ch === '[') stack.push(ch);
-                        else if (ch === '}' || ch === ']') {
-                            if (stack.length > 0) stack.pop();
-                        }
+                        else if (ch === '}' || ch === ']') { if (stack.length > 0) stack.pop(); }
                     }
                     repaired += ch;
                 }
-
                 if (openQuotes) repaired += '"';
-
                 while (stack.length > 0) {
                     var top = stack.pop();
-                    if (top === '{') repaired += '}';
-                    else if (top === '[') repaired += ']';
+                    repaired += (top === '{' ? '}' : ']');
                 }
-
-                try {
-                    return JSON.parse(repaired);
-                } catch (e3) {
-                    if (!isObject) {
-                        var lastObjEnd = sub.lastIndexOf('}');
-                        if (lastObjEnd !== -1) {
-                            try { return JSON.parse(sub.substring(0, lastObjEnd + 1) + ']'); } catch (e4) {}
-                        }
-                    }
-                }
+                try { return JSON.parse(repaired); } catch (e3) {}
             }
-
             throw new Error('GeminiのJSON応答構造を正常に解釈できませんでした');
         }
 
@@ -490,12 +616,7 @@
             }
 
             window.fileQueue = validFiles.map(function(f, idx) {
-                return {
-                    id: 'queue-' + Date.now() + '-' + idx,
-                    file: f,
-                    status: 'waiting',
-                    progress: 0
-                };
+                return { id: 'queue-' + Date.now() + '-' + idx, file: f, status: 'waiting', progress: 0 };
             });
 
             renderQueueUI();
@@ -522,7 +643,7 @@
                 if (q.status === 'waiting') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 font-bold">待機中</span>';
                 else if (q.status === 'processing') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500 text-white font-bold"><i class="fa-solid fa-spinner fa-spin"></i> 解析中</span>';
                 else if (q.status === 'completed') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500 text-white font-bold"><i class="fa-solid fa-check"></i> 完了</span>';
-                else if (q.status === 'error') statusBadge = '<button onclick="retryQueueItem(\'' + q.id + '\', event)" class="text-[9px] px-1.5 py-0.5 rounded bg-rose-600 hover:bg-rose-700 text-white font-bold transition flex items-center gap-1"><i class="fa-solid fa-rotate-right text-[8px]"></i> 再試行</button>';
+                else if (q.status === 'error') statusBadge = '<button onclick="retryQueueItem(\'' + q.id + '\', event)" class="text-[9px] px-1.5 py-0.5 rounded bg-rose-600 hover:bg-rose-700 text-white font-bold transition flex items-center gap-1">再試行</button>';
 
                 html += '<div class="flex items-center justify-between gap-1 text-xs p-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 mb-1">' +
                     '<div class="min-w-0 flex-1">' +
@@ -532,18 +653,13 @@
                     '<div class="shrink-0">' + statusBadge + '</div>' +
                 '</div>';
             });
-
             if (queueListContainer) queueListContainer.innerHTML = html;
         }
 
         window.retryQueueItem = function(itemId, event) {
             if (event) event.stopPropagation();
             var item = window.fileQueue.find(function(q) { return q.id === itemId; });
-            if (item) {
-                item.status = 'waiting';
-                renderQueueUI();
-                window.processAudioWithGemini();
-            }
+            if (item) { item.status = 'waiting'; renderQueueUI(); window.processAudioWithGemini(); }
         };
 
         function initDropzoneEvents() {
@@ -556,11 +672,8 @@
                 label.addEventListener(eventName, function(e) { e.preventDefault(); e.stopPropagation(); label.classList.remove('dropzone-active'); }, false);
             });
             label.addEventListener('drop', function(e) {
-                var dt = e.dataTransfer;
-                var files = dt.files;
-                if (files && files.length > 0) {
-                    processSelectedFiles(Array.from(files));
-                }
+                var files = e.dataTransfer.files;
+                if (files && files.length > 0) processSelectedFiles(Array.from(files));
             }, false);
         }
 
@@ -572,7 +685,6 @@
 
             if (!payload.generationConfig) payload.generationConfig = {};
             payload.generationConfig.temperature = 0.1;
-            // 明示開放：最大出力トークン数で途中切れを防止
             payload.generationConfig.maxOutputTokens = 8192;
 
             var targetUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=' + cleanKey;
@@ -590,14 +702,8 @@
                     if (response.status === 429 || response.status === 503) {
                         var errText = await response.text();
                         var waitMs = attempt * 6000;
-                        
                         var retryMatch = errText.match(/retry in ([0-9.]+)s/i);
-                        if (retryMatch && retryMatch[1]) {
-                            waitMs = Math.ceil(parseFloat(retryMatch[1]) * 1000) + 2000;
-                        }
-                        
-                        var waitSec = Math.ceil(waitMs / 1000);
-                        showToast('レート制限(429/Quota)のため ' + waitSec + '秒間待機して自動再試行します (' + attempt + '/' + maxAttempts + ')', 'info');
+                        if (retryMatch && retryMatch[1]) waitMs = Math.ceil(parseFloat(retryMatch[1]) * 1000) + 2000;
                         await sleep(waitMs);
                         continue;
                     }
@@ -609,29 +715,20 @@
             }
 
             if (!response) throw new Error('Gemini APIへの通信に失敗しました');
-
             var responseText = await response.text();
-            var data;
-
-            try {
-                data = JSON.parse(responseText);
-            } catch (err) {
-                throw new Error('Gemini APIから無効な応答形式を受信しました (HTTP ' + response.status + ')');
-            }
+            var data = JSON.parse(responseText);
 
             if (!response.ok || data.error) {
                 var errDetail = (data.error && data.error.message) ? data.error.message : ('HTTP Error ' + response.status);
-                var isSpendCap = errDetail.toLowerCase().includes('spend cap breached');
-                if (isSpendCap) {
-                    throw new Error('API利用予算制限（Spend Cap / Billing Limit）に達しました。Google AI Studioで予算設定を確認するか、新しいAPI Keyをご利用ください。');
+                if (errDetail.toLowerCase().includes('spend cap') || errDetail.toLowerCase().includes('prepayment')) {
+                    throw new Error(translateErrorMessage(errDetail));
                 }
-                if (response.status === 400 || response.status === 401 || errDetail.toLowerCase().includes('invalid authentication credentials')) {
+                if (response.status === 400 || response.status === 401) {
                     openModal('apiKeyModal');
-                    throw new Error('API Key認証エラー: AI Studioから取得した有効なAPI Keyを再入力してください');
+                    throw new Error('API Key認証エラーです。有効なAPI Keyを再入力してください。');
                 }
-                throw new Error(errDetail);
+                throw new Error(translateErrorMessage(errDetail));
             }
-
             return data;
         }
 
@@ -647,12 +744,6 @@
             var chunkSize = Math.max(2, Math.ceil(totalBlocks / maxAnalysisPasses));
             var totalChunks = Math.min(maxAnalysisPasses, Math.ceil(totalBlocks / chunkSize));
             var accumulatedVocabMap = new Map();
-
-            var stopWords = new Set([
-                'yang', 'di', 'ke', 'dari', 'ini', 'itu', 'dan', 'atau', 'saya', 'kamu', 'dia', 
-                'mereka', 'kita', 'kami', 'ada', 'tidak', 'bukan', 'akan', 'sudah', 'bisa', 'untuk', 
-                'dengan', 'pada', 'juga', 'kalau', 'bila', 'karena', 'ia', 'nya'
-            ]);
 
             blocks.forEach(function(b) { if (!b.grammarExplanation || b.grammarExplanation === '解析中...') b.grammarExplanation = '解析中...'; });
 
@@ -672,11 +763,7 @@
                 var chunkWords = new Set();
                 chunkBlocks.forEach(function(b) {
                     var words = (b.indonesian || '').toLowerCase().match(/[a-zA-Z-']+/g) || [];
-                    words.forEach(function(w) {
-                        if (w.length > 1 && !stopWords.has(w)) {
-                            chunkWords.add(w);
-                        }
-                    });
+                    words.forEach(function(w) { if (w.length >= 1) chunkWords.add(w); });
                 });
 
                 var wordListStr = Array.from(chunkWords).join(', ');
@@ -688,16 +775,16 @@
 '   【構文構造】Analyze S+V+O syntax, word order, modifiers, passive/active voice, time aspects.\n' +
 '   【接辞解剖】Explain affixes (me-, ber-, di-, ter-, -kan, -i, pe-an, ke-an) showing how base form shifts to derivative meaning.\n' +
 '   【解説・ニュアンス】Explain function words, conjunctions, speech level, and why this translation fits.\n' +
-'2. "vocab": Process ALL of the target words listed below without omission. Restore dictionary base form (baseForm/kata dasar), provide precise Japanese translation, POS, and short context sentence.\n' +
-'3. "isKeyWord": For each vocabulary item, set "isKeyWord": true if it is a core/essential keyword for sentence comprehension, or false if it is a supporting word.\n' +
+'2. "vocab": Process ALL of the target words listed below without omission. Extract every single word. Restore dictionary base form, provide precise Japanese translation, POS, and short context sentence.\n' +
+'3. "isKeyWord": For each vocabulary item, set "isKeyWord": true if core keyword, or false if supporting word.\n' +
 '4. CRITICAL: Escape all literal newlines inside JSON string values using \\n. Output strictly valid JSON.\n\n' +
-'TARGET WORDS TO PROCESS (EXTRACTED BY SYSTEM):\n' + wordListStr + '\n\n' +
+'TARGET WORDS TO PROCESS:\n' + wordListStr + '\n\n' +
 'Return ONLY a JSON object:\n' +
 '{\n' +
 '  "grammar": [\n' +
 '    {\n' +
 '      "blockIndex": 0,\n' +
-'      "grammarExplanation": "【語句対比】\\n・Saya (私) / tidak (〜ない) / bisa (できる) / datang (来る)\\n【構文構造】\\n・S(主語) + 否定副詞 + 助動詞 + V(動詞)\\n【接辞解剖】\\n・datang は原形動詞。\\n【解説・ニュアンス】\\n・bisa は能力を表す助動詞。tidak は動詞・助動詞を否定するため直前に配置されます。"\n' +
+'      "grammarExplanation": "【語句対比】\\n...\\n【構文構造】\\n...\\n【接辞解剖】\\n...\\n【解説・ニュアンス】\\n..."\n' +
 '    }\n' +
 '  ],\n' +
 '  "vocab": [\n' +
@@ -706,19 +793,16 @@
 '      "baseForm": "buang",\n' +
 '      "japanese": "〜を捨てる",\n' +
 '      "pos": "verb",\n' +
-'      "context": "Short context sentence",\n' +
+'      "context": "Context sentence",\n' +
 '      "isKeyWord": true\n' +
 '    }\n' +
 '  ]\n' +
 '}\n\n' +
-'INPUT BLOCKS TO ANALYZE:\n' + inputChunkText;
+'INPUT BLOCKS:\n' + inputChunkText;
 
                 var chunkPayload = {
                     contents: [{ parts: [{ text: combinedPrompt }] }],
-                    generationConfig: { 
-                        responseMimeType: "application/json",
-                        maxOutputTokens: 8192
-                    }
+                    generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 }
                 };
 
                 try {
@@ -741,75 +825,50 @@
                             var wordForm = (v.indonesian || '').trim();
                             var base = (v.baseForm || wordForm).trim();
                             var key = base.toLowerCase();
-
-                            if (wordForm && key) {
-                                if (!accumulatedVocabMap.has(key)) {
-                                    accumulatedVocabMap.set(key, {
-                                        id: 'vocab-' + Date.now() + '-' + accumulatedVocabMap.size,
-                                        indonesian: wordForm,
-                                        baseForm: base,
-                                        japanese: v.japanese || '',
-                                        pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(v.pos) ? v.pos : 'other',
-                                        context: v.context || '',
-                                        isKeyWord: Boolean(v.isKeyWord),
-                                        mastered: false
-                                    });
-                                }
+                            if (wordForm && key && !accumulatedVocabMap.has(key)) {
+                                accumulatedVocabMap.set(key, {
+                                    id: 'vocab-' + Date.now() + '-' + accumulatedVocabMap.size,
+                                    indonesian: wordForm,
+                                    baseForm: base,
+                                    japanese: v.japanese || '',
+                                    pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(v.pos) ? v.pos : 'other',
+                                    context: v.context || '',
+                                    isKeyWord: Boolean(v.isKeyWord),
+                                    mastered: false
+                                });
                             }
                         });
                     }
-
-                    // 二重安全装置: 万が一AIの返答文字数が切れて単語が漏れた場合、JS抽出単語を100%自動補テン救済
-                    chunkWords.forEach(function(w) {
-                        var key = w.toLowerCase();
-                        if (!accumulatedVocabMap.has(key)) {
-                            accumulatedVocabMap.set(key, {
-                                id: 'vocab-rescued-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
-                                indonesian: w,
-                                baseForm: w,
-                                japanese: '（自動抽出語）',
-                                pos: 'other',
-                                context: '文中出現語句',
-                                isKeyWord: false,
-                                mastered: false
-                            });
-                        }
-                    });
-
                 } catch (chunkErr) {
-                    console.warn('[reanalyzeBlocksCore] チャンク解析警告 (Chunk ' + (chunkIdx + 1) + '):', chunkErr);
-                    
-                    // エラー時フォールバック: JS事前抽出単語を確実に補填
-                    chunkWords.forEach(function(w) {
-                        var key = w.toLowerCase();
-                        if (!accumulatedVocabMap.has(key)) {
-                            accumulatedVocabMap.set(key, {
-                                id: 'vocab-rescued-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
-                                indonesian: w,
-                                baseForm: w,
-                                japanese: '（自動抽出語）',
-                                pos: 'other',
-                                context: '文中出現語句',
-                                isKeyWord: false,
-                                mastered: false
-                            });
-                        }
-                    });
+                    console.warn('[reanalyzeBlocksCore] Chunk warning:', chunkErr);
                 }
+
+                chunkWords.forEach(function(w) {
+                    var key = w.toLowerCase();
+                    if (!accumulatedVocabMap.has(key)) {
+                        accumulatedVocabMap.set(key, {
+                            id: 'vocab-rescued-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
+                            indonesian: w,
+                            baseForm: w,
+                            japanese: '（自動抽出語）',
+                            pos: 'other',
+                            context: '文中出現語句',
+                            isKeyWord: false,
+                            mastered: false
+                        });
+                    }
+                });
 
                 chunkBlocks.forEach(function(cb) {
                     if (!cb.grammarExplanation || cb.grammarExplanation === '解析中...') {
-                        cb.grammarExplanation = '【語句対比】\n・' + cb.indonesian + ' = ' + cb.japanese + '\n【構文構造】\n・主語・動詞・目的語の標準配置構文\n【接辞解剖】\n・基本語形表現\n【解説・ニュアンス】\n・標準的な文脈表現です。';
+                        cb.grammarExplanation = '【語句対比】\n・' + cb.indonesian + ' = ' + cb.japanese + '\n【構文構造】\n・標準構文配置\n【接辞解剖】\n・基本語形\n【解説・ニュアンス】\n・標準的表現です。';
                     }
                 });
 
                 await sleep(1000);
             }
 
-            return {
-                blocks: blocks,
-                vocab: Array.from(accumulatedVocabMap.values())
-            };
+            return { blocks: blocks, vocab: Array.from(accumulatedVocabMap.values()) };
         }
 
         window.processAudioWithGemini = async function() {
@@ -840,270 +899,115 @@
 
                 item.status = 'processing';
                 renderQueueUI();
-
-                if (btnText) btnText.textContent = '解析中 (' + (i + 1) + '/' + window.fileQueue.length + ')';
+                if (btnText) btnText.textContent = '長尺分割・解析中 (' + (i + 1) + '/' + window.fileQueue.length + ')';
 
                 try {
-                    await processSingleFileInQueue(item, apiKey, i + 1, window.fileQueue.length);
+                    await processSingleFileWithLongAudioChunking(item, apiKey, i + 1, window.fileQueue.length);
                     item.status = 'completed';
                     renderQueueUI();
                 } catch (err) {
-                    console.error('Single File Queue Process Error:', err);
+                    console.error('Queue Error:', err);
                     item.status = 'error';
                     renderQueueUI();
-                    showToast('「' + item.file.name + '」のエラー: ' + err.message, 'error');
-                    
-                    if (err.message.includes('Spend Cap') || err.message.includes('予算制限')) {
+                    showToast('エラー: ' + translateErrorMessage(err.message), 'error');
+                    if (err.message.includes('Spend Cap') || err.message.includes('prepayment')) {
                         openModal('apiKeyModal', true);
                         break;
                     }
-                } finally {
-                    window.currentAudioBase64 = null;
                 }
             }
 
             window.isQueueProcessing = false;
             if (btn) btn.disabled = false;
-            if (btnText) btnText.textContent = "高精度マルチパス解析開始";
+            if (btnText) btnText.textContent = "長尺事前分割 ＆ マルチパス解析";
             showToast('すべてのキューファイルの解析処理が終了しました', 'info');
             setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
         };
 
-        window.reanalyzeSelectedHistories = async function() {
-            if (!window.selectedHistoryIds || window.selectedHistoryIds.length === 0) return;
-
-            var apiKey = getApiKey();
-            if (!apiKey) {
-                showToast('Gemini API Key が設定されていません。', 'error');
-                openModal('apiKeyModal');
-                return;
-            }
-
-            var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
-            var selectedItems = window.selectedHistoryIds.map(function(id) {
-                return history.find(function(h) { return h.id === id; });
-            }).filter(Boolean);
-
-            if (selectedItems.length === 0) return;
-
-            var btnRe = document.getElementById('btnReanalyzeSelected');
-            var btnMerge = document.getElementById('btnMergeSelected');
-            var progressContainer = document.getElementById('chunkProgressContainer');
-            var progressLabel = document.getElementById('chunkProgressLabel');
-            var progressPercent = document.getElementById('chunkProgressPercent');
-            var progressBar = document.getElementById('chunkProgressBar');
-
-            if (btnRe) btnRe.disabled = true;
-            if (btnMerge) btnMerge.disabled = true;
-            if (progressContainer) progressContainer.classList.remove('hidden');
-
-            try {
-                for (var i = 0; i < selectedItems.length; i++) {
-                    var item = selectedItems[i];
-                    var baseName = formatOutputFileName(item.fileName);
-
-                    var res = await reanalyzeBlocksCore(
-                        item.blocks || [],
-                        apiKey,
-                        '[' + (i + 1) + '/' + selectedItems.length + '] ' + baseName,
-                        function(cIdx, totalC, pct, label) {
-                            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-rotate-right fa-spin text-amber-500"></i> <span class="truncate">' + label + ' (' + cIdx + '/' + totalC + ')</span>';
-                            if (progressBar) progressBar.style.width = pct + '%';
-                            if (progressPercent) progressPercent.textContent = pct + '%';
-                        }
-                    );
-
-                    item.fileName = baseName;
-                    item.blocks = res.blocks;
-                    item.vocab = res.vocab;
-                    item.date = new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-
-                    window.transcriptBlocks = res.blocks;
-                    window.vocabList = res.vocab;
-                    renderTranscriptContainer();
-                    renderGrammarContainer();
-                    renderVocabContainer();
-
-                    exportDataToFile({
-                        id: item.id,
-                        fileName: baseName,
-                        date: item.date,
-                        blocks: item.blocks,
-                        vocab: item.vocab
-                    }, baseName + '.json');
-
-                    var freshHistory = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
-                    var idxInFresh = freshHistory.findIndex(function(h) { return h.id === item.id; });
-                    if (idxInFresh !== -1) {
-                        freshHistory[idxInFresh] = item;
-                    } else {
-                        freshHistory.unshift(item);
-                    }
-                    localStorage.setItem('suarateks_history', JSON.stringify(freshHistory));
-                    renderHistoryList(freshHistory);
-                }
-
-                showToast(selectedItems.length + ' 件のテキスト再解析が完了しました！', 'info');
-                window.selectedHistoryIds = [];
-                updateMergeButtonState();
-
-            } catch (err) {
-                console.error('Batch Re-analyze Error:', err);
-                showToast('一括再解析エラー: ' + err.message, 'error');
-                if (err.message.includes('Spend Cap') || err.message.includes('予算制限')) {
-                    openModal('apiKeyModal', true);
-                }
-            } finally {
-                updateMergeButtonState();
-                setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
-            }
-        };
-
-        window.reanalyzeCurrentTranscript = async function() {
-            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
-                showToast('再解析対象のテキストデータ（JSON）が読み込まれていません', 'error');
-                return;
-            }
-
-            var apiKey = getApiKey();
-            if (!apiKey) {
-                showToast('Gemini API Key が設定されていません。', 'error');
-                openModal('apiKeyModal');
-                return;
-            }
-
-            var btn = document.getElementById('btnReanalyzeText');
-            var progressContainer = document.getElementById('chunkProgressContainer');
-            var progressLabel = document.getElementById('chunkProgressLabel');
-            var progressPercent = document.getElementById('chunkProgressPercent');
-            var progressBar = document.getElementById('chunkProgressBar');
-
-            if (btn) btn.disabled = true;
-            if (progressContainer) progressContainer.classList.remove('hidden');
-
-            try {
-                var rawName = window.currentLoadedFileName || (window.currentLoadedFile ? window.currentLoadedFile.name : '解析データ');
-                var targetName = formatOutputFileName(rawName);
-
-                var res = await reanalyzeBlocksCore(
-                    window.transcriptBlocks,
-                    apiKey,
-                    targetName,
-                    function(cIdx, totalC, pct, label) {
-                        if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-amber-500"></i> <span class="truncate">【再解析】' + label + ' (' + cIdx + '/' + totalC + ')...</span>';
-                        if (progressBar) progressBar.style.width = pct + '%';
-                        if (progressPercent) progressPercent.textContent = pct + '%';
-                    }
-                );
-
-                window.transcriptBlocks = res.blocks;
-                window.vocabList = res.vocab;
-
-                renderGrammarContainer();
-                renderVocabContainer();
-
-                var singleDataObj = {
-                    id: 'hist-' + Date.now(),
-                    fileName: targetName,
-                    date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                    blocks: window.transcriptBlocks,
-                    vocab: window.vocabList
-                };
-                exportDataToFile(singleDataObj, targetName + '.json');
-                saveCurrentToHistory(targetName, false);
-
-                showToast('単一テキスト再解析が完了しました！', 'info');
-
-            } catch (err) {
-                console.error('Re-analyze Error:', err);
-                showToast('再解析エラー: ' + err.message, 'error');
-                if (err.message.includes('Spend Cap') || err.message.includes('予算制限')) {
-                    openModal('apiKeyModal', true);
-                }
-            } finally {
-                if (btn) btn.disabled = false;
-                setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
-            }
-        };
-
-        async function processSingleFileInQueue(queueItem, apiKey, currentIdx, totalIdx) {
+        async function processSingleFileWithLongAudioChunking(queueItem, apiKey, currentIdx, totalIdx) {
             var file = queueItem.file;
             window.currentLoadedFile = file;
 
-            var base64Data = await new Promise(function(resolve, reject) {
-                var reader = new FileReader();
-                reader.onload = function(e) { resolve(e.target.result.split(',')[1]); };
-                reader.onerror = function(err) { reject(err); };
-                reader.readAsDataURL(file);
-            });
-
-            window.currentAudioBase64 = base64Data;
-            var mimeType = file.type || 'audio/mp3';
-
             var progressLabel = document.getElementById('chunkProgressLabel');
             var progressPercent = document.getElementById('chunkProgressPercent');
             var progressBar = document.getElementById('chunkProgressBar');
 
-            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 【Pass 1】文字起こし＆和訳中...</span>';
-            if (progressBar) progressBar.style.width = '15%';
-            if (progressPercent) progressPercent.textContent = '15%';
+            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-scissors text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 長音声を2分ごとに事前分割中...</span>';
+            if (progressBar) progressBar.style.width = '10%';
+            if (progressPercent) progressPercent.textContent = '10%';
 
-            var transcribePrompt = 'You are a professional Indonesian verbatim transcription specialist and linguist.\n' +
-'Transcribe the audio accurately from start to finish without omission. Break the transcript into natural clause/sentence blocks.\n\n' +
-'Return ONLY a valid JSON array:\n' +
-'[\n' +
-'  {\n' +
-'    "speaker": "Pembicara 1",\n' +
-'    "indonesian": "exact verbatim spoken Indonesian",\n' +
-'    "japanese": "Natural, accurate Japanese translation"\n' +
-'  }\n' +
-']';
+            // 1. クライアント側で長音声を2分(120秒)ごとに分割
+            var wavChunks = await splitAudioFileIntoWavChunks(file, 120);
+            var allCombinedBlocks = [];
 
-            var transcribePayload = {
-                contents: [{ role: 'user', parts: [{ text: transcribePrompt }, { inlineData: { mimeType: mimeType, data: base64Data } }] }],
-                generationConfig: { 
-                    responseMimeType: "application/json",
-                    maxOutputTokens: 8192
-                }
-            };
+            for (var c = 0; c < wavChunks.length; c++) {
+                var chunkObj = wavChunks[c];
+                var subPct = Math.floor(10 + ((c / wavChunks.length) * 40));
+                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> <span>パート ' + (c + 1) + '/' + wavChunks.length + ' を文字起こし中...</span>';
+                if (progressBar) progressBar.style.width = subPct + '%';
+                if (progressPercent) progressPercent.textContent = subPct + '%';
 
-            var transcribeData = await fetchGeminiApi(apiKey, transcribePayload);
-            var transcriptRaw = extractGeminiText(transcribeData);
-            var parsedTranscript = safeParseTruncatedJson(transcriptRaw);
-            var rawBlocks = Array.isArray(parsedTranscript) ? parsedTranscript : (parsedTranscript.transcript || []);
+                var chunkBase64 = await new Promise(function(resolve, reject) {
+                    var reader = new FileReader();
+                    reader.onload = function(e) { resolve(e.target.result.split(',')[1]); };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(chunkObj.blob);
+                });
 
-            if (!rawBlocks || rawBlocks.length === 0) throw new Error('音声からテキストが読み取れませんでした');
+                var transcribePrompt = 'You are a professional Indonesian verbatim transcription specialist. Transcribe this audio chunk accurately.\n' +
+                'Return ONLY a valid JSON array:\n' +
+                '[\n' +
+                '  {\n' +
+                '    "speaker": "Pembicara 1",\n' +
+                '    "indonesian": "spoken text",\n' +
+                '    "japanese": "Japanese translation"\n' +
+                '  }\n' +
+                ']';
 
-            window.transcriptBlocks = rawBlocks.map(function(item, index) {
-                return {
-                    id: 'block-' + Date.now() + '-' + index,
-                    blockIndex: index,
-                    speaker: item.speaker || 'Pembicara 1',
-                    indonesian: item.indonesian || '',
-                    japanese: item.japanese || '',
-                    grammarExplanation: '解析中...'
+                var payload = {
+                    contents: [{ role: 'user', parts: [{ text: transcribePrompt }, { inlineData: { mimeType: 'audio/wav', data: chunkBase64 } }] }],
+                    generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 }
                 };
-            });
 
+                var resData = await fetchGeminiApi(apiKey, payload);
+                var rawText = extractGeminiText(resData);
+                var parsed = safeParseTruncatedJson(rawText);
+                var subBlocks = Array.isArray(parsed) ? parsed : (parsed.transcript || []);
+
+                subBlocks.forEach(function(sb) {
+                    allCombinedBlocks.push({
+                        id: 'block-' + Date.now() + '-' + allCombinedBlocks.length,
+                        blockIndex: allCombinedBlocks.length,
+                        speaker: sb.speaker || 'Pembicara 1',
+                        indonesian: sb.indonesian || '',
+                        japanese: sb.japanese || '',
+                        grammarExplanation: '解析中...'
+                    });
+                });
+                await sleep(500);
+            }
+
+            if (allCombinedBlocks.length === 0) throw new Error('音声からテキストが読み取れませんでした');
+
+            window.transcriptBlocks = allCombinedBlocks;
             renderTranscriptContainer();
             if (window.innerWidth < 768) switchMobileTab('transcript');
-            await sleep(300);
 
             var cleanFileName = formatOutputFileName(file.name);
-
-            var res = await reanalyzeBlocksCore(
+            var finalRes = await reanalyzeBlocksCore(
                 window.transcriptBlocks,
                 apiKey,
-                '[' + currentIdx + '/' + totalIdx + '] ' + cleanFileName,
+                cleanFileName,
                 function(chunkIdx, totalChunks, currentPct, label) {
-                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-blue-500"></i> <span class="truncate">' + label + ' (' + chunkIdx + '/' + totalChunks + ')...</span>';
-                    if (progressBar) progressBar.style.width = currentPct + '%';
-                    if (progressPercent) progressPercent.textContent = currentPct + '%';
+                    var mappedPct = Math.floor(50 + (currentPct * 0.5));
+                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-blue-500"></i> <span class="truncate">【文法・単語再解析】' + chunkIdx + '/' + totalChunks + '</span>';
+                    if (progressBar) progressBar.style.width = mappedPct + '%';
+                    if (progressPercent) progressPercent.textContent = mappedPct + '%';
                 }
             );
 
-            window.transcriptBlocks = res.blocks;
-            window.vocabList = res.vocab;
+            window.transcriptBlocks = finalRes.blocks;
+            window.vocabList = finalRes.vocab;
 
             if (progressBar) progressBar.style.width = '100%';
             if (progressPercent) progressPercent.textContent = '100%';
@@ -1119,7 +1023,74 @@
             saveCurrentToHistory(cleanFileName, false);
         }
 
-        function openModal(id, isQuotaError) { 
+        window.reanalyzeSelectedHistories = async function() {
+            if (!window.selectedHistoryIds || window.selectedHistoryIds.length === 0) return;
+            var apiKey = getApiKey();
+            if (!apiKey) { openModal('apiKeyModal'); return; }
+
+            var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
+            var selectedItems = window.selectedHistoryIds.map(function(id) {
+                return history.find(function(h) { return h.id === id; });
+            }).filter(Boolean);
+
+            if (selectedItems.length === 0) return;
+
+            var progressContainer = document.getElementById('chunkProgressContainer');
+            if (progressContainer) progressContainer.classList.remove('hidden');
+
+            try {
+                for (var i = 0; i < selectedItems.length; i++) {
+                    var item = selectedItems[i];
+                    var baseName = formatOutputFileName(item.fileName);
+                    var res = await reanalyzeBlocksCore(item.blocks || [], apiKey, baseName, function(cIdx, totalC, pct) {
+                        var bar = document.getElementById('chunkProgressBar');
+                        if (bar) bar.style.width = pct + '%';
+                    });
+                    item.blocks = res.blocks;
+                    item.vocab = res.vocab;
+                    window.transcriptBlocks = res.blocks;
+                    window.vocabList = res.vocab;
+                    renderTranscriptContainer();
+                    renderGrammarContainer();
+                    renderVocabContainer();
+                    exportDataToFile(item, baseName + '.json');
+                }
+                showToast('一括再解析が完了しました！', 'info');
+                window.selectedHistoryIds = [];
+                updateMergeButtonState();
+            } catch (err) {
+                showToast('エラー: ' + translateErrorMessage(err.message), 'error');
+            } finally {
+                setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
+            }
+        };
+
+        window.reanalyzeCurrentTranscript = async function() {
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
+            var apiKey = getApiKey();
+            if (!apiKey) { openModal('apiKeyModal'); return; }
+
+            var progressContainer = document.getElementById('chunkProgressContainer');
+            if (progressContainer) progressContainer.classList.remove('hidden');
+            try {
+                var targetName = formatOutputFileName(window.currentLoadedFileName || '解析データ');
+                var res = await reanalyzeBlocksCore(window.transcriptBlocks, apiKey, targetName, function(c, t, p) {
+                    var bar = document.getElementById('chunkProgressBar');
+                    if (bar) bar.style.width = p + '%';
+                });
+                window.transcriptBlocks = res.blocks;
+                window.vocabList = res.vocab;
+                renderGrammarContainer();
+                renderVocabContainer();
+                showToast('再解析が完了しました！', 'info');
+            } catch (err) {
+                showToast('エラー: ' + translateErrorMessage(err.message), 'error');
+            } finally {
+                setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
+            }
+        };
+
+        function openModal(id, isQuotaError) {
             var input = document.getElementById('apiKeyInput');
             var notice = document.getElementById('apiKeyNotice');
             if (input) input.value = getApiKey();
@@ -1128,36 +1099,27 @@
                 else notice.classList.add('hidden');
             }
             var modal = document.getElementById(id);
-            if (modal) modal.classList.remove('hidden'); 
+            if (modal) modal.classList.remove('hidden');
         }
 
-        function closeModal(id) { 
+        function closeModal(id) {
             var modal = document.getElementById(id);
-            if (modal) modal.classList.add('hidden'); 
-            var notice = document.getElementById('apiKeyNotice');
-            if (notice) notice.classList.add('hidden');
+            if (modal) modal.classList.add('hidden');
         }
 
         function saveApiKeyFromModal() {
             var input = document.getElementById('apiKeyInput');
-            var val = input ? input.value : '';
-            var clean = String(val).trim();
+            var clean = String(input ? input.value : '').trim();
             if (clean && clean.length > 5) {
                 localStorage.setItem('suarateks_gemini_key', clean);
-                showToast('API Keyを保存しました！解析を再開できます。', 'info');
+                showToast('API Keyを保存しました！', 'info');
                 closeModal('apiKeyModal');
-                
-                var hasWaitingOrError = window.fileQueue.some(function(q) { return q.status === 'waiting' || q.status === 'error'; });
-                if (hasWaitingOrError && !window.isQueueProcessing) {
-                    window.fileQueue.forEach(function(q) { if (q.status === 'error') q.status = 'waiting'; });
-                    renderQueueUI();
-                    window.processAudioWithGemini();
-                }
             } else {
                 showToast('有効なAPI Keyを入力してください', 'error');
             }
         }
 
+        // --- 4. Web Speech API (音声合成 - オフライン完全対応) ---
         function speakIndonesian(text) {
             if (!('speechSynthesis' in window) || !text) return;
             window.speechSynthesis.cancel();
@@ -1235,11 +1197,6 @@
                 updateBlockToggleUI(blockId, 'stopped');
                 window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
             };
-            utterance.onerror = function() {
-                updateBlockToggleUI(blockId, 'stopped');
-                window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
-            };
-
             window.speechSynthesis.speak(utterance);
         }
 
@@ -1271,11 +1228,10 @@
             var html = '';
             window.transcriptBlocks.forEach(function(block, idx) {
                 var clickableIndo = renderClickableIndonesianWords(block.indonesian, 't-' + block.id);
-                var blockNo = idx + 1;
-                html += '<div id="card-t-' + block.id + '" class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">' +
+                html += '<div class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">' +
                     '<div class="flex items-center justify-between text-xs text-slate-500 pb-1 border-b border-slate-100 dark:border-slate-700">' +
                         '<div class="flex items-center gap-1.5">' +
-                            '<span class="font-extrabold text-white bg-red-600 px-2 py-0.5 rounded-md text-[10px] shadow-xs">#' + blockNo + '</span>' +
+                            '<span class="font-extrabold text-white bg-red-600 px-2 py-0.5 rounded-md text-[10px]">#' + (idx + 1) + '</span>' +
                             '<span class="font-bold text-red-600 bg-red-50 dark:bg-red-950/60 px-2 py-0.5 rounded-full text-[10px]">' + escapeHtml(block.speaker) + '</span>' +
                         '</div>' +
                         '<button id="btn-toggle-t-' + block.id + '" onclick="toggleSpeechBlock(\'t-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1 hover:bg-slate-200">' +
@@ -1283,7 +1239,7 @@
                         '</button>' +
                     '</div>' +
                     '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + clickableIndo + '</p>' +
-                    '<div class="bg-amber-50/70 dark:bg-slate-900/60 p-2.5 rounded-lg border border-amber-200/50 dark:border-amber-900/30">' +
+                    '<div class="bg-amber-50/70 dark:bg-slate-900/60 p-2.5 rounded-lg border border-amber-200/50">' +
                         '<p class="dynamic-text-ja font-semibold text-amber-950 dark:text-amber-200">' + escapeHtml(block.japanese) + '</p>' +
                     '</div>' +
                 '</div>';
@@ -1303,11 +1259,10 @@
             var html = '';
             window.transcriptBlocks.forEach(function(block, idx) {
                 var clickableIndo = renderClickableIndonesianWords(block.indonesian, 'g-' + block.id);
-                var blockNo = idx + 1;
-                html += '<div id="card-g-' + block.id + '" class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2.5">' +
+                html += '<div class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2.5">' +
                     '<div class="flex items-center justify-between text-xs pb-1 border-b border-slate-100 dark:border-slate-700">' +
-                        '<span class="font-extrabold text-blue-700 bg-blue-100 dark:bg-blue-950/80 px-2.5 py-0.5 rounded-full text-[11px]"><i class="fa-solid fa-bookmark mr-1"></i> 該当文節 #' + blockNo + '</span>' +
-                        '<button id="btn-toggle-g-' + block.id + '" onclick="toggleSpeechBlock(\'g-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-xs font-bold hover:bg-slate-200">' +
+                        '<span class="font-extrabold text-blue-700 bg-blue-100 dark:bg-blue-950/80 px-2.5 py-0.5 rounded-full text-[11px]">文節 #' + (idx + 1) + '</span>' +
+                        '<button id="btn-toggle-g-' + block.id + '" onclick="toggleSpeechBlock(\'g-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-xs font-bold">' +
                             '<i class="fa-solid fa-play text-[9px]"></i><span>再生</span>' +
                         '</button>' +
                     '</div>' +
@@ -1315,7 +1270,7 @@
                         '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + clickableIndo + '</p>' +
                         '<p class="dynamic-text-ja text-slate-500 dark:text-slate-400 font-medium">' + escapeHtml(block.japanese) + '</p>' +
                     '</div>' +
-                    '<div class="bg-blue-50/60 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200/60 dark:border-blue-900/40 text-xs leading-relaxed text-blue-950 dark:text-blue-200 space-y-1.5">' +
+                    '<div class="bg-blue-50/60 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200/60 text-xs leading-relaxed text-blue-950 dark:text-blue-200 space-y-1.5">' +
                         '<h5 class="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1 text-[10px] uppercase tracking-wider"><i class="fa-solid fa-diagram-project"></i> 4段階精密構文解剖・応用解説</h5>' +
                         '<div class="dynamic-text-ja whitespace-pre-line font-medium pt-0.5 leading-relaxed">' + escapeHtml(block.grammarExplanation) + '</div>' +
                     '</div>' +
@@ -1330,8 +1285,7 @@
             if (!q) return safeStr;
             try {
                 var escQuery = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                var regex = new RegExp('(' + escQuery + ')', 'gi');
-                return safeStr.replace(regex, '<mark class="search-highlight">$1</mark>');
+                return safeStr.replace(new RegExp('(' + escQuery + ')', 'gi'), '<mark class="search-highlight">$1</mark>');
             } catch (e) { return safeStr; }
         }
 
@@ -1357,7 +1311,6 @@
 
             var filtered = getFilteredVocabList();
             if (vocabBadge) vocabBadge.textContent = (window.vocabList || []).length;
-
             updatePosFilterUI();
             updateModeBtnUI();
 
@@ -1369,13 +1322,11 @@
             }
 
             if (emptyState) emptyState.classList.add('hidden');
-
             if (window.activeVocabMode === 'list') {
                 if (cardContainer) cardContainer.classList.add('hidden');
                 if (listContainer) listContainer.classList.remove('hidden');
 
-                var html = '';
-                var q = window.activeVocabSearchQuery;
+                var html = '', q = window.activeVocabSearchQuery;
                 filtered.forEach(function(v) {
                     var hIndo = highlightMatch(v.indonesian, q);
                     var hJap = highlightMatch(v.japanese, q);
@@ -1387,24 +1338,17 @@
                                 '<span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0">' + getPosLabel(v.pos) + '</span>' +
                                 keyTag +
                                 '<h4 class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100 truncate">' + hIndo + '</h4>' +
-                                '<button onclick="speakIndonesian(\'' + escapeHtml(v.indonesian) + '\')" class="text-slate-400 hover:text-emerald-500 p-1 shrink-0">' +
-                                    '<i class="fa-solid fa-volume-high text-xs"></i>' +
-                                '</button>' +
+                                '<button onclick="speakIndonesian(\'' + escapeHtml(v.indonesian) + '\')" class="text-slate-400 hover:text-emerald-500 p-1 shrink-0"><i class="fa-solid fa-volume-high text-xs"></i></button>' +
                             '</div>' +
                             '<p class="dynamic-text-ja text-emerald-700 dark:text-emerald-400 font-bold">' + hJap + '</p>' +
                         '</div>' +
-                        '<button onclick="toggleVocabMastered(\'' + v.id + '\')" class="px-2 py-1 rounded ' + (v.mastered ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400') + ' text-[10px] font-bold shrink-0">' +
-                            (v.mastered ? '習得' : '未修') +
-                        '</button>' +
+                        '<button onclick="toggleVocabMastered(\'' + v.id + '\')" class="px-2 py-1 rounded ' + (v.mastered ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400') + ' text-[10px] font-bold shrink-0">' + (v.mastered ? '習得' : '未修') + '</button>' +
                     '</div>';
                 });
                 if (listContainer) listContainer.innerHTML = html;
             } else {
                 if (listContainer) listContainer.classList.add('hidden');
-                if (cardContainer) {
-                    cardContainer.classList.remove('hidden');
-                    cardContainer.classList.add('flex');
-                }
+                if (cardContainer) { cardContainer.classList.remove('hidden'); cardContainer.classList.add('flex'); }
                 updateFlashcardUI();
             }
         }
@@ -1420,8 +1364,7 @@
         }
 
         function updateModeBtnUI() {
-            var btnCard = document.getElementById('btnModeCard');
-            var btnList = document.getElementById('btnModeList');
+            var btnCard = document.getElementById('btnModeCard'), btnList = document.getElementById('btnModeList');
             if (btnCard && btnList) {
                 if (window.activeVocabMode === 'card') {
                     btnCard.className = "px-3 py-1.5 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition";
@@ -1462,8 +1405,6 @@
             if (window.currentCardIndex >= filtered.length) window.currentCardIndex = 0;
 
             var item = filtered[window.currentCardIndex];
-            if (!item) return;
-
             var q = window.activeVocabSearchQuery;
             var cardIndo = document.getElementById('cardIndoText');
             var cardJap = document.getElementById('cardJapText');
@@ -1475,8 +1416,8 @@
             if (cardIndo) cardIndo.innerHTML = highlightMatch(item.indonesian, q);
             if (cardJap) cardJap.innerHTML = highlightMatch(item.japanese, q);
             if (cardContext) cardContext.innerHTML = item.context ? ('文脈: "' + highlightMatch(item.context, q) + '"') : '文脈なし';
-            if (cardPosFront) cardPosFront.innerHTML = getPosLabel(item.pos) + (item.isKeyWord ? ' <span class="ml-1 px-1.5 py-0.5 bg-amber-500 text-white rounded text-[9px] font-extrabold shadow-xs"><i class="fa-solid fa-star text-[8px]"></i> 重要語</span>' : '');
-            if (cardPosBack) cardPosBack.innerHTML = '品詞: ' + getPosLabel(item.pos) + (item.baseForm ? (' (原形: ' + item.baseForm + ')') : '') + (item.isKeyWord ? ' <span class="ml-1 text-amber-600 font-bold">★ 重要単語</span>' : '');
+            if (cardPosFront) cardPosFront.innerHTML = getPosLabel(item.pos) + (item.isKeyWord ? ' <span class="ml-1 px-1.5 py-0.5 bg-amber-500 text-white rounded text-[9px] font-extrabold"><i class="fa-solid fa-star text-[8px]"></i> 重要語</span>' : '');
+            if (cardPosBack) cardPosBack.innerHTML = '品詞: ' + getPosLabel(item.pos) + (item.baseForm ? (' (原形: ' + item.baseForm + ')') : '');
             if (progressLabel) progressLabel.textContent = (window.currentCardIndex + 1) + ' / ' + filtered.length;
 
             window.isCardFlipped = false;
@@ -1487,11 +1428,8 @@
         function flipFlashcard() {
             window.isCardFlipped = !window.isCardFlipped;
             var inner = document.getElementById('flashcardInner');
-            if (window.isCardFlipped) {
-                if (inner) inner.classList.add('rotate-y-180');
-            } else {
-                if (inner) inner.classList.remove('rotate-y-180');
-            }
+            if (window.isCardFlipped) inner.classList.add('rotate-y-180');
+            else inner.classList.remove('rotate-y-180');
         }
 
         function nextFlashcard(mastered) {
@@ -1559,17 +1497,15 @@
             var html = '';
             history.forEach(function(item) {
                 var isChecked = window.selectedHistoryIds.includes(item.id);
-                html += '<div onclick="loadHistoryItem(\'' + item.id + '\')" class="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer flex justify-between items-center text-xs transition mb-1">' +
+                html += '<div onclick="loadHistoryItem(\'' + item.id + '\')" class="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-red-50 cursor-pointer flex justify-between items-center text-xs transition mb-1">' +
                     '<div class="flex items-center gap-1.5 min-w-0 flex-1">' +
-                        '<input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onclick="toggleHistorySelect(\'' + item.id + '\', event)" class="rounded text-red-600 focus:ring-0 cursor-pointer shrink-0 w-3.5 h-3.5">' +
+                        '<input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onclick="toggleHistorySelect(\'' + item.id + '\', event)" class="rounded text-red-600 cursor-pointer shrink-0 w-3.5 h-3.5">' +
                         '<div class="min-w-0 flex-1">' +
                             '<p class="font-bold text-slate-800 dark:text-slate-100 truncate leading-tight text-[11px]">' + escapeHtml(item.fileName) + '</p>' +
                             '<p class="text-[8px] text-slate-400 font-mono">' + escapeHtml(item.date) + '</p>' +
                         '</div>' +
                     '</div>' +
-                    '<button onclick="deleteHistoryItem(\'' + item.id + '\', event)" class="text-slate-400 hover:text-rose-500 p-1 shrink-0 ml-1" title="削除">' +
-                        '<i class="fa-solid fa-trash-can text-[10px]"></i>' +
-                    '</button>' +
+                    '<button onclick="deleteHistoryItem(\'' + item.id + '\', event)" class="text-slate-400 hover:text-rose-500 p-1 shrink-0 ml-1"><i class="fa-solid fa-trash-can text-[10px]"></i></button>' +
                 '</div>';
             });
             container.innerHTML = html;
@@ -1577,129 +1513,69 @@
         }
 
         function manualSaveHistory() {
-            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
-                showToast('保存する解析データがありません', 'error');
-                return;
-            }
-            var baseName = window.currentLoadedFile ? window.currentLoadedFile.name : '解析データ';
-            var formattedName = formatOutputFileName(baseName);
-
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
+            var baseName = formatOutputFileName(window.currentLoadedFile ? window.currentLoadedFile.name : '解析データ');
             var singleDataObj = {
                 id: 'hist-' + Date.now(),
-                fileName: formattedName,
+                fileName: baseName,
                 date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
                 blocks: window.transcriptBlocks,
                 vocab: window.vocabList
             };
-            exportDataToFile(singleDataObj, formattedName + '.json');
-            saveCurrentToHistory(formattedName, false);
-            showToast('「' + formattedName + '」を個別JSONとして保存しました！', 'info');
+            exportDataToFile(singleDataObj, baseName + '.json');
+            saveCurrentToHistory(baseName, false);
+            showToast('JSONファイルを保存しました！', 'info');
         }
 
         function saveCurrentToHistory(fileName, showToastNotification) {
             if (showToastNotification === undefined) showToastNotification = true;
             if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
-
             try {
                 var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
-                var rawName = fileName || (window.currentLoadedFile ? window.currentLoadedFile.name : '音源解析データ');
-                var formattedName = formatOutputFileName(rawName);
-
-                history = history.filter(function(h) { return h.fileName !== formattedName && h.fileName !== rawName; });
-
-                var item = {
+                var formattedName = formatOutputFileName(fileName);
+                history = history.filter(function(h) { return h.fileName !== formattedName; });
+                history.unshift({
                     id: 'hist-' + Date.now(),
                     fileName: formattedName,
                     date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
                     blocks: window.transcriptBlocks,
                     vocab: window.vocabList
-                };
-
-                history.unshift(item);
-
-                if (history.length >= 15) {
-                    history = [];
-                    localStorage.removeItem('suarateks_history');
-                    renderHistoryList([]);
-                    if (showToastNotification) showToast('履歴が15件に達したため履歴を自動リセットしました', 'info');
-                } else {
-                    localStorage.setItem('suarateks_history', JSON.stringify(history));
-                    renderHistoryList(history);
-                    if (showToastNotification) showToast('履歴に保存しました (' + history.length + '/15件)', 'info');
-                }
-            } catch (e) { console.warn('LocalStorage Save Error:', e); }
+                });
+                if (history.length > 15) history = history.slice(0, 15);
+                localStorage.setItem('suarateks_history', JSON.stringify(history));
+                renderHistoryList(history);
+            } catch (e) {}
         }
-
-        window.addEventListener('beforeunload', function() {
-            if (window.transcriptBlocks && window.transcriptBlocks.length > 0) {
-                try {
-                    var rawName = window.currentLoadedFile ? window.currentLoadedFile.name : '自動一時保存';
-                    var formattedName = formatOutputFileName(rawName);
-                    var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
-                    history = history.filter(function(h) { return h.fileName !== formattedName && h.fileName !== rawName; });
-                    history.unshift({
-                        id: 'hist-' + Date.now(),
-                        fileName: formattedName,
-                        date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                        blocks: window.transcriptBlocks,
-                        vocab: window.vocabList
-                    });
-                    if (history.length > 15) history = history.slice(0, 15);
-                    localStorage.setItem('suarateks_history', JSON.stringify(history));
-                } catch(e) {}
-            }
-        });
 
         function mergeSelectedHistories() {
             if (window.selectedHistoryIds.length < 2) return;
             var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
-            
             var selectedItems = window.selectedHistoryIds.map(function(id) {
                 return history.find(function(h) { return h.id === id; });
             }).filter(Boolean);
 
-            if (selectedItems.length < 2) return;
-
-            var mergedBlocks = [];
-            var mergedVocabMap = new Map();
-            var titleParts = [];
-
+            var mergedBlocks = [], mergedVocabMap = new Map(), titleParts = [];
             var globalBlockIdx = 0;
+
             selectedItems.forEach(function(item) {
-                var cleanTitle = item.fileName.replace(/\.[^/.]+$/, "");
-                titleParts.push(cleanTitle);
-                
+                titleParts.push(item.fileName.replace(/\.[^/.]+$/, ""));
                 if (Array.isArray(item.blocks)) {
                     item.blocks.forEach(function(b) {
-                        mergedBlocks.push({
-                            id: 'block-merged-' + Date.now() + '-' + globalBlockIdx,
-                            blockIndex: globalBlockIdx,
-                            speaker: b.speaker || 'Pembicara',
-                            indonesian: b.indonesian || '',
-                            japanese: b.japanese || '',
-                            grammarExplanation: b.grammarExplanation || ''
-                        });
+                        mergedBlocks.push(Object.assign({}, b, { id: 'block-merged-' + Date.now() + '-' + globalBlockIdx, blockIndex: globalBlockIdx }));
                         globalBlockIdx++;
                     });
                 }
-
                 if (Array.isArray(item.vocab)) {
                     item.vocab.forEach(function(v) {
                         var key = (v.indonesian || '').trim().toLowerCase();
-                        if (key && !mergedVocabMap.has(key)) {
-                            var itemCopy = Object.assign({}, v, { id: 'vocab-merged-' + Date.now() + '-' + mergedVocabMap.size });
-                            mergedVocabMap.set(key, itemCopy);
-                        }
+                        if (key && !mergedVocabMap.has(key)) mergedVocabMap.set(key, v);
                     });
                 }
             });
 
-            var rawTitle = '結合_' + titleParts.join('_').substring(0, 20);
-            var mergedTitle = formatOutputFileName(rawTitle);
-
+            var mergedTitle = formatOutputFileName('結合_' + titleParts.join('_').substring(0, 20));
             window.transcriptBlocks = mergedBlocks;
             window.vocabList = Array.from(mergedVocabMap.values());
-
             renderTranscriptContainer();
             renderGrammarContainer();
             renderVocabContainer();
@@ -1711,19 +1587,17 @@
                 blocks: window.transcriptBlocks,
                 vocab: window.vocabList
             };
-
             exportDataToFile(mergedDataObj, mergedTitle + '.json');
             saveCurrentToHistory(mergedTitle, false);
             window.selectedHistoryIds = [];
-            showToast('選択した ' + selectedItems.length + ' 件を1つの統合ファイルに結合・保存しました！', 'info');
-            if (window.innerWidth < 768) switchMobileTab('transcript');
+            showToast('選択した履歴を結合しました！', 'info');
         }
 
         function clearHistory() {
             localStorage.removeItem('suarateks_history');
             window.selectedHistoryIds = [];
             renderHistoryList([]);
-            showToast('すべての解析履歴を消去しました', 'info');
+            showToast('履歴を消去しました', 'info');
         }
 
         function loadHistoryItem(id) {
@@ -1736,8 +1610,7 @@
                 renderTranscriptContainer();
                 renderGrammarContainer();
                 renderVocabContainer();
-                
-                showToast('「' + found.fileName + '」を復元読み込みしました', 'info');
+                showToast('「' + found.fileName + '」を読み込みました', 'info');
                 if (window.innerWidth < 768) switchMobileTab('transcript');
             }
         }
@@ -1749,16 +1622,14 @@
             window.selectedHistoryIds = window.selectedHistoryIds.filter(function(sid) { return sid !== id; });
             localStorage.setItem('suarateks_history', JSON.stringify(history));
             renderHistoryList(history);
-            showToast('削除しました', 'info');
         }
 
         function exportDataToFile(dataObj, customFilename) {
-            var dataStr = JSON.stringify(dataObj, null, 2);
-            var blob = new Blob([dataStr], { type: 'application/json' });
+            var blob = new Blob([JSON.stringify(dataObj, null, 2)], { type: 'application/json' });
             var url = URL.createObjectURL(blob);
             var a = document.createElement('a');
             a.href = url;
-            a.download = customFilename || (formatOutputFileName('suarateks_backup_' + new Date().toISOString().slice(0,10).replace(/-/g, '')) + '.json');
+            a.download = customFilename || 'suarateks_backup.json';
             a.click();
             URL.revokeObjectURL(url);
         }
@@ -1767,51 +1638,37 @@
             var files = event.target.files ? Array.from(event.target.files) : [];
             if (files.length === 0) return;
 
-            var targetFiles = files.slice(0, 15);
-            var successCount = 0;
             var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
-            var lastLoadedData = null;
+            var lastLoadedData = null, successCount = 0;
 
-            for (var i = 0; i < targetFiles.length; i++) {
-                var file = targetFiles[i];
+            for (var i = 0; i < files.length; i++) {
                 try {
                     var content = await new Promise(function(resolve, reject) {
                         var reader = new FileReader();
                         reader.onload = function(e) { resolve(e.target.result); };
-                        reader.onerror = function(err) { reject(err); };
-                        reader.readAsText(file);
+                        reader.onerror = reject;
+                        reader.readAsText(files[i]);
                     });
-
                     var importedData = JSON.parse(content);
                     var singleObj = Array.isArray(importedData) ? importedData[0] : importedData;
-
                     if (!singleObj || !singleObj.blocks) continue;
 
-                    var rawName = singleObj.fileName || file.name;
-                    var formattedName = formatOutputFileName(rawName);
-                    
-                    history = history.filter(function(h) { return h.fileName !== formattedName && h.fileName !== rawName; });
-
+                    var formattedName = formatOutputFileName(singleObj.fileName || files[i].name);
+                    history = history.filter(function(h) { return h.fileName !== formattedName; });
                     var item = {
                         id: 'hist-' + Date.now() + '-' + i,
                         fileName: formattedName,
                         date: singleObj.date || new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                        blocks: singleObj.blocks || [],
+                        blocks: singleObj.blocks,
                         vocab: singleObj.vocab || []
                     };
-
                     history.unshift(item);
                     lastLoadedData = item;
                     successCount++;
-                } catch (err) {
-                    console.warn('Import error for file:', file.name, err);
-                }
+                } catch (e) {}
             }
 
-            if (history.length > 15) {
-                history = history.slice(0, 15);
-            }
-
+            if (history.length > 15) history = history.slice(0, 15);
             localStorage.setItem('suarateks_history', JSON.stringify(history));
             renderHistoryList(history);
 
@@ -1822,14 +1679,7 @@
                 renderGrammarContainer();
                 renderVocabContainer();
             }
-
-            if (successCount > 0) {
-                showToast(successCount + ' 件のJSONを復元読み込みしました！', 'info');
-                if (window.innerWidth < 768) switchMobileTab('transcript');
-            } else {
-                showToast('有効なJSONファイルを読み込めませんでした', 'error');
-            }
-
+            showToast(successCount + ' 件のJSONを復元しました！', 'info');
             event.target.value = '';
         }
 
@@ -1838,23 +1688,15 @@
             var container = document.getElementById('toastContainer');
             if (!container) return;
             var toast = document.createElement('div');
-            var bgColor = type === 'error' ? 'bg-rose-600' : 'bg-slate-800';
-            var icon = type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check';
-
-            toast.className = bgColor + ' text-white px-3 py-2 rounded-xl shadow-xl text-xs font-bold flex items-center gap-2 transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto border border-white/10';
-            toast.innerHTML = '<i class="fa-solid ' + icon + ' text-amber-400 text-sm shrink-0"></i> <span>' + escapeHtml(message) + '</span>';
-
+            toast.className = (type === 'error' ? 'bg-rose-600' : 'bg-slate-800') + ' text-white px-3.5 py-2.5 rounded-xl shadow-xl text-xs font-bold flex items-center justify-between gap-2 transition-all duration-300 pointer-events-auto border border-white/10';
+            toast.innerHTML = '<span>' + escapeHtml(message) + '</span>';
             container.appendChild(toast);
-            setTimeout(function() { toast.classList.remove('translate-y-2', 'opacity-0'); }, 10);
-            setTimeout(function() {
-                toast.classList.add('opacity-0', 'translate-y-[-8px]');
-                setTimeout(function() { toast.remove(); }, 300);
-            }, 4500);
+            setTimeout(function() { if (toast.parentElement) toast.remove(); }, 4000);
         }
 
         function escapeHtml(str) {
             if (!str) return '';
-            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
         function switchMobileTab(tab) {
@@ -1890,10 +1732,7 @@
 
             if (viewTranscript) viewTranscript.classList.add('hidden');
             if (viewGrammar) viewGrammar.classList.add('hidden');
-            if (viewVocab) {
-                viewVocab.classList.add('hidden');
-                viewVocab.classList.remove('flex');
-            }
+            if (viewVocab) { viewVocab.classList.add('hidden'); viewVocab.classList.remove('flex'); }
 
             [btnTranscript, btnGrammar, btnVocab].forEach(function(btn) {
                 if (btn) btn.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0";
@@ -1907,10 +1746,7 @@
                 if (btnGrammar) btnGrammar.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
                 renderGrammarContainer();
             } else if (subView === 'vocab') {
-                if (viewVocab) {
-                    viewVocab.classList.remove('hidden');
-                    viewVocab.classList.add('flex');
-                }
+                if (viewVocab) { viewVocab.classList.remove('hidden'); viewVocab.classList.add('flex'); }
                 if (btnVocab) btnVocab.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
                 renderVocabContainer();
             }
