@@ -43,7 +43,7 @@
         .search-highlight { background-color: #fef08a; color: #854d0e; font-weight: bold; padding: 0 2px; border-radius: 2px; }
 
         .dropzone-active { border-color: #e70011 !important; background-color: rgba(231, 0, 17, 0.05) !important; }
-        .no-wrap-tab { whitespace: nowrap !important; word-break: keep-all !important; flex-shrink: 0 !important; }
+        .no-wrap-tab { white-space: nowrap !important; word-break: keep-all !important; flex-shrink: 0 !important; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -307,7 +307,7 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 var swCode = `
-                    const CACHE_NAME = 'suarateks-pro-v2';
+                    const CACHE_NAME = 'suarateks-pro-v4';
                     const ASSETS = [
                         '/',
                         'https://cdn.tailwindcss.com',
@@ -349,10 +349,31 @@
             if (!badge) return;
             if (!navigator.onLine) {
                 badge.classList.remove('hidden');
-                showToast('ネットワークがオフラインです（保存済み履歴・音声合成は完全に動作します）', 'info');
+                showToast('ネットワークがオフラインです（保存済み履歴・単語帳は完全に動作します）', 'info');
             } else {
                 badge.classList.add('hidden');
             }
+        }
+
+        // ==========================================
+        // STABLE SPEECH SYNTHESIS VOICE MANAGEMENT
+        // ==========================================
+        window.availableIndoVoices = [];
+
+        function initSpeechSynthesisVoices() {
+            if (!('speechSynthesis' in window)) return;
+            var voices = window.speechSynthesis.getVoices();
+            if (voices && voices.length > 0) {
+                window.availableIndoVoices = voices.filter(function(v) {
+                    var lang = (v.lang || '').toLowerCase();
+                    return lang.startsWith('id') || lang.includes('id-id') || lang.includes('indonesian');
+                });
+            }
+        }
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = initSpeechSynthesisVoices;
+            initSpeechSynthesisVoices();
         }
 
         async function splitAudioFileIntoWavChunks(file, maxDurationSeconds = 120) {
@@ -809,7 +830,6 @@
                     console.warn('[reanalyzeBlocksCore] Chunk error:', chunkErr);
                 }
 
-                // Rescue missing words with dictionary fallback batch
                 var missingWords = [];
                 chunkWords.forEach(function(w) {
                     var key = w.toLowerCase();
@@ -1159,12 +1179,27 @@
         function speakIndonesian(text) {
             if (!('speechSynthesis' in window) || !text) return;
             window.speechSynthesis.cancel();
+            
+            // Ensure voices are loaded
+            if (window.availableIndoVoices.length === 0) {
+                initSpeechSynthesisVoices();
+            }
+
             var utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'id-ID';
             utterance.rate = window.speechRate || 0.85;
-            var voices = window.speechSynthesis.getVoices();
-            var indoVoice = voices.find(function(v) { return v.lang.startsWith('id') || v.lang.includes('ID'); });
-            if (indoVoice) utterance.voice = indoVoice;
+
+            if (window.availableIndoVoices.length > 0) {
+                utterance.voice = window.availableIndoVoices[0];
+            } else {
+                var voices = window.speechSynthesis.getVoices();
+                var indoVoice = voices.find(function(v) { 
+                    var lang = (v.lang || '').toLowerCase();
+                    return lang.startsWith('id') || lang.includes('id'); 
+                });
+                if (indoVoice) utterance.voice = indoVoice;
+            }
+
             window.speechSynthesis.speak(utterance);
         }
 
@@ -1212,13 +1247,25 @@
             if (!block) return;
 
             var textToSpeak = customText || block.indonesian;
+            
+            if (window.availableIndoVoices.length === 0) {
+                initSpeechSynthesisVoices();
+            }
+
             var utterance = new SpeechSynthesisUtterance(textToSpeak);
             utterance.lang = 'id-ID';
             utterance.rate = window.speechRate || 0.85;
 
-            var voices = window.speechSynthesis.getVoices();
-            var indoVoice = voices.find(function(v) { return v.lang.startsWith('id') || v.lang.includes('ID'); });
-            if (indoVoice) utterance.voice = indoVoice;
+            if (window.availableIndoVoices.length > 0) {
+                utterance.voice = window.availableIndoVoices[0];
+            } else {
+                var voices = window.speechSynthesis.getVoices();
+                var indoVoice = voices.find(function(v) { 
+                    var lang = (v.lang || '').toLowerCase();
+                    return lang.startsWith('id') || lang.includes('id'); 
+                });
+                if (indoVoice) utterance.voice = indoVoice;
+            }
 
             utterance.onstart = function() {
                 window.activeSpeechState = { blockId: blockId, utterance: utterance, isPlaying: true, isPaused: false };
@@ -1793,7 +1840,9 @@
             setSpeechRate(0.85);
             loadHistoryFromStorage();
             initDropzoneEvents();
-            if ('speechSynthesis' in window) window.speechSynthesis.getVoices();
+            if ('speechSynthesis' in window) {
+                initSpeechSynthesisVoices();
+            }
         });
     </script>
 </body>
