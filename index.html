@@ -44,14 +44,14 @@
     <h1 class="font-extrabold text-sm flex items-center gap-2">
         <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block"></span>
         SuaraTeks<span class="text-red-600">ID</span> Pro
-        <span class="text-[10px] text-slate-400 font-normal">v6.0 Frontend</span>
+        <span class="text-[10px] text-slate-400 font-normal">v6.0 Frontend-Direct</span>
         <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1.5 py-0.5 rounded font-bold">
             <i class="fa-solid fa-wifi-slash"></i> オフライン
         </span>
     </h1>
     <div class="flex items-center gap-2">
         <span id="activeSessionBadge" class="hidden text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 px-2 py-0.5 rounded-full font-extrabold border border-blue-200/50 truncate max-w-[150px]"></span>
-        <button onclick="openApiKeyModal()" class="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-900 rounded-lg text-xs font-bold transition flex items-center gap-1">
+        <button onclick="openApiKeyModal()" class="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-900 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm">
             <i class="fa-solid fa-key text-[10px]"></i> APIキー設定
         </button>
     </div>
@@ -100,13 +100,13 @@
                     <div class="text-slate-700 dark:text-slate-200">音声=minimal / 文法=low</div>
                 </div>
             </div>
-            <div class="text-[9px] text-slate-400 leading-snug">APIキーはブラウザのlocalStorageに安全に保存され直接Googleへ通信します。</div>
+            <div class="text-[9px] text-slate-400 leading-snug">APIキーはブラウザにのみ保存され、直接Google APIへ通信します。</div>
         </div>
 
         <div id="playerCard" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
             <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
                 <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音源キュー選択</span>
-                <span class="text-[9px] text-slate-400">1音源 最大2音声リクエスト</span>
+                <span class="text-[9px] text-slate-400">最大2分割・最適化処理</span>
             </h3>
 
             <label id="fileDropLabel" for="audioFileInput" class="relative group cursor-pointer block">
@@ -147,9 +147,9 @@
                 <div class="bg-slate-50 dark:bg-slate-900/70 rounded-lg p-1.5 border border-slate-200/60 dark:border-slate-700/60"><div class="text-slate-400">Thinking</div><div id="thinkingDisplay">0</div></div>
             </div>
             <div class="flex items-center gap-1">
-                <label class="text-[9px] text-slate-400 font-bold shrink-0">USD/IDR</label>
-                <input id="usdIdrRateInput" type="number" min="1" step="1" value="17900" oninput="saveUsdIdrRate(this.value); updateUsageUI()" class="w-20 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-[9px] font-bold">
-                <span id="costDisplayIdr" class="text-[9px] font-extrabold text-emerald-600">≈ Rp0</span>
+                <label class="text-[9px] text-slate-400 font-bold shrink-0">USD/JPY</label>
+                <input id="usdJpyRateInput" type="number" min="1" step="0.1" value="158.0" oninput="saveUsdJpyRate(this.value); updateUsageUI()" class="w-20 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-[9px] font-bold">
+                <span id="costDisplayJpy" class="text-[9px] font-extrabold text-emerald-600">≈ ¥0.00</span>
             </div>
             <div id="usageBreakdownText" class="text-[9px] text-slate-400 leading-snug"></div>
         </div>
@@ -252,7 +252,6 @@
     </div>
 </div>
 
-<!-- API Key Modal -->
 <div id="apiKeyModal" class="fixed inset-0 bg-slate-900/60 hidden flex items-center justify-center p-4 z-50">
     <div class="bg-white dark:bg-slate-800 rounded-xl p-5 max-w-md w-full space-y-3 shadow-xl border border-slate-200 dark:border-slate-700">
         <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-1.5"><i class="fa-solid fa-key text-red-600"></i> Gemini APIキーの設定</h3>
@@ -269,7 +268,7 @@
 
 <script>
     const GEMINI_MODEL = 'gemini-3-flash-preview';
-    const DEFAULT_USD_IDR = 17900;
+    const DEFAULT_USD_JPY = 158.0;
     const DB_NAME = 'SuaraTeksIDProDB';
     const DB_VERSION = 2;
     const STORE_NAME = 'sessions';
@@ -328,21 +327,21 @@
         };
     }
 
-    function getUsdIdrRate() {
-        const el = document.getElementById('usdIdrRateInput');
+    function getUsdJpyRate() {
+        const el = document.getElementById('usdJpyRateInput');
         const v = Number(el && el.value);
-        return Number.isFinite(v) && v > 0 ? v : DEFAULT_USD_IDR;
+        return Number.isFinite(v) && v > 0 ? v : DEFAULT_USD_JPY;
     }
 
-    function saveUsdIdrRate(v) {
+    function saveUsdJpyRate(v) {
         const n = Number(v);
-        if (Number.isFinite(n) && n > 0) localStorage.setItem('suarateks_usd_idr_rate', String(n));
+        if (Number.isFinite(n) && n > 0) localStorage.setItem('suarateks_usd_jpy_rate', String(n));
     }
 
-    function loadUsdIdrRate() {
-        const saved = Number(localStorage.getItem('suarateks_usd_idr_rate'));
-        const el = document.getElementById('usdIdrRateInput');
-        if (el) el.value = Number.isFinite(saved) && saved > 0 ? saved : DEFAULT_USD_IDR;
+    function loadUsdJpyRate() {
+        const saved = Number(localStorage.getItem('suarateks_usd_jpy_rate'));
+        const el = document.getElementById('usdJpyRateInput');
+        if (el) el.value = Number.isFinite(saved) && saved > 0 ? saved : DEFAULT_USD_JPY;
     }
 
     function resetUsage() {
@@ -413,16 +412,16 @@
     function updateUsageUI() {
         const u = window.apiUsage;
         const usd = u.totalCostUsd || 0;
-        const idr = usd * getUsdIdrRate();
+        const jpy = usd * getUsdJpyRate();
         const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
         set('apiRequestCountDisplay', u.requests.toLocaleString());
         set('totalTokenDisplay', u.totalTokenCount.toLocaleString());
         set('audioTokenDisplay', u.audioInputTokens.toLocaleString());
         set('costDisplayUsd', '$' + usd.toFixed(6));
-        set('costDisplayIdr', '≈ Rp' + Math.round(idr).toLocaleString('id-ID'));
+        set('costDisplayJpy', '≈ ¥' + jpy.toFixed(2));
         set('inputOutputDisplay', u.promptTokenCount.toLocaleString() + ' / ' + u.candidatesTokenCount.toLocaleString());
         set('thinkingDisplay', u.thoughtsTokenCount.toLocaleString());
-        set('usageBreakdownText', '入力コスト $' + u.inputCostUsd.toFixed(6) + ' / 出力+Thinking $' + u.outputCostUsd.toFixed(6) + ' / 為替は参考値です。');
+        set('usageBreakdownText', '入力コスト $' + u.inputCostUsd.toFixed(6) + ' / 出力+Thinking $' + u.outputCostUsd.toFixed(6) + ' / 為替は設定より算出。');
     }
 
     function openIndexedDB() {
@@ -1012,7 +1011,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
-        setFontSize(20); setSpeechRate(0.85); loadUsdIdrRate(); updateUsageUI(); loadHistoryFromStorage(); initDropzoneEvents(); updateOnlineStatus();
+        setFontSize(20); setSpeechRate(0.85); loadUsdJpyRate(); updateUsageUI(); loadHistoryFromStorage(); initDropzoneEvents(); updateOnlineStatus();
         if (!getApiKey()) {
             setTimeout(() => openApiKeyModal(), 500);
         }
