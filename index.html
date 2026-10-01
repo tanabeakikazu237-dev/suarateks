@@ -1,837 +1,723 @@
 <!DOCTYPE html>
 <html lang="id" class="h-full">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SuaraTeks ID Pro</title>
-
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="SuaraTeks">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎙️</text></svg>">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2991/2991148.png">
-
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
-                    colors: { indoRed: { 500: '#E70011', 600: '#C8000F', 700: '#A0000C' } }
-                }
-            }
-        };
-    </script>
-
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <style>
-        :root { --transcript-font-size: 20px; }
-        .dynamic-text-indo { font-size: var(--transcript-font-size, 20px); line-height: 1.4; }
-        .dynamic-text-ja { font-size: calc(var(--transcript-font-size, 20px) * 0.85); line-height: 1.4; }
-        
-        .perspective-1000 { perspective: 1000px; }
-        .transform-style-3d { transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
-        .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-        .rotate-y-180 { transform: rotateY(180deg); }
-
-        .word-clickable { cursor: pointer; border-bottom: 1.5px dotted #94a3b8; transition: all 0.15s; display: inline-block; }
-        .word-clickable:hover { color: #e70011; border-bottom-color: #e70011; background-color: rgba(231, 0, 17, 0.08); border-radius: 2px; }
-        .search-highlight { background-color: #fef08a; color: #854d0e; font-weight: bold; padding: 0 2px; border-radius: 2px; }
-
-        .dropzone-active { border-color: #e70011 !important; background-color: rgba(231, 0, 17, 0.05) !important; }
-        .no-wrap-tab { whitespace: nowrap !important; word-break: keep-all !important; flex-shrink: 0 !important; }
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SuaraTeks ID Pro</title>
+​<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SuaraTeks">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎙️</text></svg>">
+<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2991/2991148.png">
+​<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+darkMode: 'class',
+theme: {
+extend: {
+fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+colors: { indoRed: { 500: '#E70011', 600: '#C8000F', 700: '#A0000C' } }
+}
+}
+};
+</script>
+​<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+​<style>
+:root { --transcript-font-size: 20px; }
+.dynamic-text-indo { font-size: var(--transcript-font-size, 20px); line-height: 1.4; }
+.dynamic-text-ja { font-size: calc(var(--transcript-font-size, 20px) * 0.85); line-height: 1.4; }
+​.perspective-1000 { perspective: 1000px; }
+.transform-style-3d { transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+.backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.rotate-y-180 { transform: rotateY(180deg); }
+​.word-clickable { cursor: pointer; border-bottom: 1.5px dotted #94a3b8; transition: all 0.15s; display: inline-block; }
+.word-clickable:hover { color: #e70011; border-bottom-color: #e70011; background-color: rgba(231, 0, 17, 0.08); border-radius: 2px; }
+.search-highlight { background-color: #fef08a; color: #854d0e; font-weight: bold; padding: 0 2px; border-radius: 2px; }
+​.dropzone-active { border-color: #e70011 !important; background-color: rgba(231, 0, 17, 0.05) !important; }
+.no-wrap-tab { whitespace: nowrap !important; word-break: keep-all !important; flex-shrink: 0 !important; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 h-[100dvh] flex flex-col font-sans overflow-hidden">
-
-    <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-sm"></div>
-
-    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center justify-between shrink-0">
-        <h1 class="font-extrabold text-xs flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block"></span>
-            SuaraTeks<span class="text-red-600">ID</span> Pro
-            <span id="sessionBadge" class="text-[9px] bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200 px-1.5 py-0.5 rounded font-bold">セッション: 独立型</span>
-            <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-wifi-slash"></i> オフライン動作中</span>
-        </h1>
-        <button onclick="openModal('apiKeyModal')" class="px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-xs font-bold transition flex items-center gap-1">
-            <i class="fa-solid fa-key text-[10px]"></i> API Key
-        </button>
-    </header>
-
-    <div class="md:hidden bg-slate-200 dark:bg-slate-800 p-1 flex items-center gap-1 shrink-0 border-b border-slate-300 dark:border-slate-700 text-xs font-bold">
-        <button id="btnMobSetup" onclick="switchMobileTab('setup')" class="flex-1 py-1.5 text-center bg-white dark:bg-slate-700 rounded shadow-sm text-slate-800 dark:text-slate-100">設定・音源</button>
-        <button id="btnMobTranscript" onclick="switchMobileTab('transcript')" class="flex-1 py-1.5 text-center text-slate-600 dark:text-slate-400">本文</button>
-        <button id="btnMobVocab" onclick="switchMobileTab('vocab')" class="flex-1 py-1.5 text-center text-slate-600 dark:text-slate-400">単語帳</button>
-    </div>
-
-    <div class="flex-1 flex overflow-hidden p-2 sm:p-3 gap-3 max-w-7xl mx-auto w-full">
-
-        <div id="panelSetup" class="w-full md:w-80 flex flex-col gap-2.5 shrink-0 overflow-y-auto">
-            
-            <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
-                <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-                    <i class="fa-solid fa-sliders text-red-600"></i> 表示・音声調整
-                </h3>
-                
-                <div class="space-y-1 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
-                    <div class="flex items-center justify-between text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                        <span><i class="fa-solid fa-font text-slate-400 mr-1"></i>文字サイズ</span>
-                        <span class="fontSizeDisplayPt text-red-600 font-extrabold">20pt</span>
-                    </div>
-                    <div class="flex items-center gap-1.5">
-                        <span class="text-[9px] text-slate-400 font-bold">20</span>
-                        <input type="range" min="20" max="30" value="20" oninput="setFontSize(this.value)" class="fontSizeSlider w-full accent-red-600 cursor-pointer h-1.5 rounded-lg bg-slate-200 dark:bg-slate-700">
-                        <span class="text-[9px] text-slate-400 font-bold">30</span>
-                    </div>
-                </div>
-
-                <div class="space-y-1 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
-                    <div class="flex items-center justify-between text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                        <span><i class="fa-solid fa-gauge-high text-slate-400 mr-1"></i>音声再生速度</span>
-                        <span id="speechRateDisplay" class="text-red-600 font-extrabold">0.85x</span>
-                    </div>
-                    <div class="flex items-center gap-1.5">
-                        <span class="text-[9px] text-slate-400 font-bold">0.6</span>
-                        <input type="range" id="speechRateSlider" min="0.6" max="1.3" step="0.05" value="0.85" oninput="setSpeechRate(this.value)" class="w-full accent-red-600 cursor-pointer h-1.5 rounded-lg bg-slate-200 dark:bg-slate-700">
-                        <span class="text-[9px] text-slate-400 font-bold">1.3</span>
-                    </div>
-                </div>
-            </div>
-
-            <div id="playerCard" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
-                <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音源キュー選択</span>
-                    <span class="text-[9px] text-slate-400">ダイレクト解析対応</span>
-                </h3>
-                
-                <label id="fileDropLabel" for="audioFileInput" class="relative group cursor-pointer block">
-                    <input type="file" id="audioFileInput" accept="audio/*" multiple onchange="window.handleFileChange(event)" class="hidden">
-                    
-                    <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-red-500 rounded-lg p-2 text-center bg-slate-50 dark:bg-slate-900 transition-all duration-200 group-hover:bg-red-50/30">
-                        <div id="dropzoneDefault" class="space-y-0.5">
-                            <div class="w-6 h-6 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
-                                <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
-                            </div>
-                            <p class="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">音声ファイルを選択（ダイレクト解析）</p>
-                        </div>
-
-                        <div id="dropzoneSelected" class="hidden space-y-1 text-left">
-                            <div class="flex items-center justify-between text-emerald-600 mb-0.5">
-                                <span class="text-[9px] font-extrabold"><i class="fa-solid fa-list-check"></i> キューセット完了</span>
-                                <span class="text-[8px] text-slate-400">タップで再選択</span>
-                            </div>
-                            <div id="queueListContainer" class="max-h-24 overflow-y-auto pr-1"></div>
-                        </div>
-                    </div>
-                </label>
-
-                <button id="startTranscribeBtn" onclick="window.processAudioWithGemini()" class="w-full py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition flex items-center justify-center gap-1.5">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    <span id="transcribeBtnText">ダイレクト ＆ マルチパス解析</span>
-                </button>
-            </div>
-
-            <!-- エラー詳細表示ボックス -->
-            <div id="errorBoxContainer" class="hidden bg-rose-50 dark:bg-rose-950/40 p-2.5 rounded-xl border border-rose-200 dark:border-rose-800/60 shadow-sm space-y-1 shrink-0">
-                <div class="flex items-center justify-between text-xs font-extrabold text-rose-700 dark:text-rose-300">
-                    <span class="flex items-center gap-1"><i class="fa-solid fa-triangle-exclamation"></i> エラー詳細</span>
-                    <button onclick="document.getElementById('errorBoxContainer').classList.add('hidden')" class="text-[10px] text-rose-500 hover:text-rose-700">閉じる</button>
-                </div>
-                <p id="errorBoxText" class="text-[11px] font-mono text-rose-900 dark:text-rose-200 break-all leading-tight">エラーなし</p>
-            </div>
-
-            <div id="chunkProgressContainer" class="hidden bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-1.5 shrink-0">
-                <div class="flex justify-between text-xs font-bold">
-                    <span id="chunkProgressLabel" class="flex items-center gap-1 text-[10px] truncate max-w-[80%]">解析実行中...</span>
-                    <span id="chunkProgressPercent" class="text-red-600 text-[10px]">0%</span>
-                </div>
-                <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
-                    <div id="chunkProgressBar" class="bg-red-600 h-1.5 rounded-full w-0 transition-all duration-300"></div>
-                </div>
-            </div>
-
-            <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[220px]">
-                <div class="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-700 mb-1.5 gap-1 shrink-0 overflow-x-hidden">
-                    <h4 class="font-extrabold text-[11px] text-slate-700 dark:text-slate-200 flex items-center gap-1 shrink-0 truncate">
-                        <i class="fa-solid fa-clock-rotate-left text-amber-500"></i> DB履歴
-                    </h4>
-                    <div class="flex items-center gap-1 shrink-0">
-                        <button id="btnReanalyzeSelected" disabled onclick="reanalyzeSelectedHistories()" class="px-1 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-0.5 opacity-60 shrink-0 cursor-not-allowed">
-                            <i class="fa-solid fa-rotate-right"></i> 再解析
-                        </button>
-                        <button id="btnMergeSelected" disabled onclick="mergeSelectedHistories()" class="px-1 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-0.5 opacity-60 shrink-0 cursor-not-allowed">
-                            <i class="fa-solid fa-code-merge"></i> 結合
-                        </button>
-                        <button id="btnSaveSelected" disabled onclick="saveSelectedHistories()" class="px-1 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-0.5 opacity-60 shrink-0 cursor-not-allowed" title="個別保存">
-                            <i class="fa-solid fa-download"></i> 保存
-                        </button>
-                        <button onclick="clearHistory()" class="px-1 py-0.5 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded text-[9px] font-bold transition shrink-0">消去</button>
-                    </div>
-                </div>
-
-                <div id="historyList" class="space-y-1 flex-1 overflow-y-auto max-h-[280px] pr-0.5"></div>
-
-                <div class="pt-1.5 border-t border-slate-100 dark:border-slate-700 mt-1 shrink-0">
-                    <label class="w-full py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition">
-                        <i class="fa-solid fa-file-import"></i> JSON復元（オフライン対応）
-                        <input type="file" accept=".json" multiple onchange="importHistoryBackup(event)" class="hidden">
-                    </label>
-                </div>
-            </div>
-        </div>
-
-        <div id="panelTranscript" class="hidden md:flex flex-1 flex-col bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-            
-            <div class="bg-white dark:bg-slate-800 px-2 sm:px-3 py-1.5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-1 shrink-0 overflow-x-auto hide-scrollbar">
-                <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl shrink-0 overflow-x-auto hide-scrollbar max-w-full">
-                    <button id="navTabTranscript" onclick="setStudioSubView('transcript')" class="no-wrap-tab px-2 sm:px-3 py-1 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0">
-                        <i class="fa-solid fa-align-left text-[10px]"></i> 本文
-                    </button>
-                    <button id="navTabGrammar" onclick="setStudioSubView('grammar')" class="no-wrap-tab px-2 sm:px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
-                        <i class="fa-solid fa-diagram-project text-[10px]"></i> 文法解剖
-                    </button>
-                    <button id="navTabVocab" onclick="setStudioSubView('vocab')" class="no-wrap-tab px-2 sm:px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
-                        <i class="fa-solid fa-book-open text-[10px]"></i> 単語帳 (<span id="vocabCountBadge">0</span>)
-                    </button>
-                    <button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-1.5 sm:px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] sm:text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-0.5 whitespace-nowrap" title="再解析">
-                        <i class="fa-solid fa-rotate-right text-[9px]"></i> 再解析
-                    </button>
-                </div>
-
-                <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
-                    <span class="text-[9px] font-extrabold text-slate-500 shrink-0">文字</span>
-                    <button onclick="adjustFontSize(-1)" class="w-4 h-4 flex items-center justify-center rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-200 text-xs shrink-0">-</button>
-                    <input type="range" min="20" max="30" value="20" oninput="setFontSize(this.value)" class="fontSizeSlider w-8 sm:w-10 accent-red-600 cursor-pointer shrink-0">
-                    <button onclick="adjustFontSize(1)" class="w-4 h-4 flex items-center justify-center rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-200 text-xs shrink-0">+</button>
-                    <span class="fontSizeDisplayPt text-[9px] font-black text-red-600 w-6 text-right shrink-0">20pt</span>
-                </div>
-            </div>
-
-            <div id="transcriptView" class="flex-1 p-3 overflow-y-auto space-y-3">
-                <div id="emptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
-                    <i class="fa-solid fa-file-audio text-3xl text-slate-300 dark:text-slate-700"></i>
-                    <span>音声ファイルを選択して「ダイレクト ＆ マルチパス解析」を押してください</span>
-                </div>
-                <div id="transcriptContainer" class="space-y-3"></div>
-            </div>
-
-            <div id="grammarView" class="hidden flex-1 p-3 overflow-y-auto space-y-3">
-                <div id="grammarEmptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
-                    <i class="fa-solid fa-diagram-project text-3xl text-slate-300 dark:text-slate-700"></i>
-                    <span>文法解剖データがありません</span>
-                </div>
-                <div id="grammarContainer" class="space-y-3"></div>
-            </div>
-
-            <div id="vocabView" class="hidden flex-1 flex-col overflow-hidden p-3 space-y-3">
-                <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 shrink-0">
-                    <div class="flex items-center gap-2">
-                        <input type="text" id="vocabSearchInput" oninput="window.activeVocabSearchQuery=this.value; renderVocabContainer();" placeholder="単語・訳・原形を検索..." class="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold focus:outline-none focus:border-red-500">
-                        <button id="btnModeCard" onclick="setVocabMode('card')" class="px-3 py-1.5 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition">カード</button>
-                        <button id="btnModeList" onclick="setVocabMode('list')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">一覧</button>
-                    </div>
-                    <div class="flex items-center gap-1 flex-wrap text-[10px] font-bold">
-                        <button data-pos="all" onclick="setVocabPosFilter('all')" class="btn-pos-filter px-2.5 py-1 rounded-lg bg-red-600 text-white">すべて</button>
-                        <button data-pos="noun" onclick="setVocabPosFilter('noun')" class="btn-pos-filter px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">名詞</button>
-                        <button data-pos="verb" onclick="setVocabPosFilter('verb')" class="btn-pos-filter px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">動詞</button>
-                        <button data-pos="adjective" onclick="setVocabPosFilter('adjective')" class="btn-pos-filter px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">形容詞</button>
-                        <button data-pos="adverb" onclick="setVocabPosFilter('adverb')" class="btn-pos-filter px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">副詞</button>
-                    </div>
-                </div>
-
-                <div id="vocabEmptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
-                    <i class="fa-solid fa-book-bookmark text-3xl text-slate-300 dark:text-slate-700"></i>
-                    <span>単語データがありません</span>
-                </div>
-                <div id="vocabListContainer" class="hidden flex-1 overflow-y-auto space-y-2"></div>
-                
-                <div id="vocabCardContainer" class="hidden flex-1 flex-col items-center justify-center p-2">
-                    <div class="w-full max-w-sm flex justify-between text-xs font-bold text-slate-500 mb-2">
-                        <span id="flashcardProgressLabel">1 / 1</span>
-                        <button onclick="toggleShuffleCards()" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] hover:bg-slate-200"><i class="fa-solid fa-shuffle"></i> シャッフル</button>
-                    </div>
-
-                    <div onclick="flipFlashcard()" class="w-full max-w-sm h-60 perspective-1000 cursor-pointer">
-                        <div id="flashcardInner" class="relative w-full h-full transform-style-3d shadow-lg rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-                            <div class="absolute inset-0 w-full h-full backface-hidden p-5 flex flex-col justify-between rounded-2xl bg-white dark:bg-slate-800">
-                                <span id="cardBadgeFront" class="self-start text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300">品詞</span>
-                                <div class="text-center space-y-2">
-                                    <h2 id="cardIndoText" class="dynamic-text-indo font-black text-slate-800 dark:text-slate-100">---</h2>
-                                    <p class="text-xs text-slate-400">タップして裏面を表示</p>
-                                </div>
-                                <div class="text-right">
-                                    <button onclick="event.stopPropagation(); speakIndonesian(document.getElementById('cardIndoText').innerText)" class="p-2 text-slate-400 hover:text-emerald-500">
-                                        <i class="fa-solid fa-volume-high text-base"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="absolute inset-0 w-full h-full backface-hidden rotate-y-180 p-5 flex flex-col justify-between rounded-2xl bg-emerald-50 dark:bg-slate-800 border-2 border-emerald-500">
-                                <span id="cardPosBack" class="self-start text-[10px] font-bold text-emerald-800 dark:text-emerald-300">品詞詳細</span>
-                                <div class="text-center space-y-2">
-                                    <h3 id="cardJapText" class="dynamic-text-ja font-extrabold text-emerald-800 dark:text-emerald-300">---</h3>
-                                    <p id="cardContextFull" class="text-xs text-slate-600 dark:text-slate-400 italic">---</p>
-                                </div>
-                                <div class="text-right">
-                                    <button onclick="event.stopPropagation(); speakIndonesian(document.getElementById('cardIndoText').innerText)" class="p-2 text-slate-400 hover:text-emerald-500">
-                                        <i class="fa-solid fa-volume-high text-base"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-3 mt-4 w-full max-w-sm">
-                        <button onclick="nextFlashcard(false)" class="flex-1 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold hover:bg-slate-300">要復習</button>
-                        <button onclick="nextFlashcard(true)" class="flex-1 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow hover:bg-emerald-700">習得済み</button>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-
-    </div>
-
-    <div id="apiKeyModal" class="fixed inset-0 bg-slate-900/60 hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-white dark:bg-slate-800 rounded-xl p-4 max-w-sm w-full space-y-3 shadow-xl border border-slate-200 dark:border-slate-700">
-            <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-                <i class="fa-solid fa-key text-amber-500"></i> Gemini API Key 設定
-            </h3>
-            <div id="apiKeyNotice" class="hidden p-2 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded text-[11px] text-amber-800 dark:text-amber-200 font-medium leading-snug">
-                <i class="fa-solid fa-triangle-exclamation mr-1 text-amber-600"></i> API利用上限に達しました。新しいAPI Keyを入力して保存してください。
-            </div>
-            <p class="text-[10px] text-slate-400">Google AI Studio で取得した API Key を入力してください</p>
-            <input type="password" id="apiKeyInput" placeholder="API Key を貼り付け" class="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 text-xs dark:bg-slate-900 font-mono text-slate-800 dark:text-slate-100 focus:outline-none focus:border-red-500">
-            <div class="flex justify-end gap-2">
-                <button onclick="closeModal('apiKeyModal')" class="px-3 py-1 text-xs text-slate-500 hover:text-slate-700">キャンセル</button>
-                <button onclick="saveApiKeyFromModal()" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold">保存して再開</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // ==========================================
-        // INDEXEDDB STORAGE SYSTEM (PHASE 2)
-        // ==========================================
-        var dbInstance = null;
-
-        function openIndexedDB() {
-            return new Promise(function(resolve, reject) {
-                if (dbInstance) { resolve(dbInstance); return; }
-                var request = indexedDB.open('SuaraTeksIDProDB', 1);
-                request.onerror = function(e) { reject(e.target.error); };
-                request.onsuccess = function(e) { dbInstance = e.target.result; resolve(dbInstance); };
-                request.onupgradeneeded = function(e) {
-                    var db = e.target.result;
-                    if (!db.objectStoreNames.contains('history')) {
-                        db.createObjectStore('history', { keyPath: 'id' });
-                    }
-                };
-            });
-        }
-
-        async function dbGetAllHistory() {
-            try {
-                var db = await openIndexedDB();
-                return await new Promise(function(resolve, reject) {
-                    var tx = db.transaction('history', 'readonly');
-                    var store = tx.objectStore('history');
-                    var req = store.getAll();
-                    req.onsuccess = function() {
-                        var res = req.result || [];
-                        res.sort(function(a, b) { return (b.timestamp || 0) - (a.timestamp || 0); });
-                        resolve(res);
-                    };
-                    req.onerror = function() { reject(req.error); };
-                });
-            } catch (e) {
-                console.warn('IndexedDB read failed, falling back to localStorage:', e);
-                try {
-                    return JSON.parse(localStorage.getItem('suarateks_history') || '[]');
-                } catch(err) { return []; }
-            }
-        }
-
-        async function dbSaveHistoryItem(item) {
-            try {
-                var db = await openIndexedDB();
-                await new Promise(function(resolve, reject) {
-                    var tx = db.transaction('history', 'readwrite');
-                    var store = tx.objectStore('history');
-                    item.timestamp = item.timestamp || Date.now();
-                    var req = store.put(item);
-                    req.onsuccess = function() { resolve(); };
-                    req.onerror = function() { reject(req.error); };
-                });
-                var all = await dbGetAllHistory();
-                if (all.length > 50) {
-                    var oldest = all.slice(50);
-                    var db2 = await openIndexedDB();
-                    var tx2 = db2.transaction('history', 'readwrite');
-                    var store2 = tx2.objectStore('history');
-                    oldest.forEach(function(o) { store2.delete(o.id); });
-                }
-            } catch (e) {
-                console.warn('IndexedDB save failed, falling back to localStorage:', e);
-                var hist = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
-                hist = hist.filter(function(h) { return h.id !== item.id; });
-                hist.unshift(item);
-                if (hist.length > 20) hist = hist.slice(0, 20);
-                localStorage.setItem('suarateks_history', JSON.stringify(hist));
-            }
-        }
-
-        async function dbDeleteHistoryItem(id) {
-            try {
-                var db = await openIndexedDB();
-                await new Promise(function(resolve, reject) {
-                    var tx = db.transaction('history', 'readwrite');
-                    var store = tx.objectStore('history');
-                    var req = store.delete(id);
-                    req.onsuccess = function() { resolve(); };
-                    req.onerror = function() { reject(req.error); };
-                });
-            } catch (e) {
-                var hist = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
-                hist = hist.filter(function(h) { return h.id !== id; });
-                localStorage.setItem('suarateks_history', JSON.stringify(hist));
-            }
-        }
-
-        async function dbClearHistory() {
-            try {
-                var db = await openIndexedDB();
-                await new Promise(function(resolve, reject) {
-                    var tx = db.transaction('history', 'readwrite');
-                    var store = tx.objectStore('history');
-                    var req = store.clear();
-                    req.onsuccess = function() { resolve(); };
-                    req.onerror = function() { reject(req.error); };
-                });
-            } catch (e) {
-                localStorage.removeItem('suarateks_history');
-            }
-        }
-
-        // ==========================================
-        // SESSION STATE ISOLATION (PHASE 1)
-        // ==========================================
-        function resetActiveSessionState() {
-            window.transcriptBlocks = [];
-            window.vocabList = [];
-            window.currentLoadedFile = null;
-            window.currentLoadedFileName = '';
-            window.activeVocabSearchQuery = '';
-            window.currentCardIndex = 0;
-            window.isCardFlipped = false;
-            window.isShuffled = false;
-            window.shuffledVocabList = [];
-            
-            var badge = document.getElementById('sessionBadge');
-            if (badge) {
-                badge.textContent = 'セッション: 新規作成';
-                badge.className = "text-[9px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 px-1.5 py-0.5 rounded font-bold";
-            }
-
-            renderTranscriptContainer();
-            renderGrammarContainer();
-            renderVocabContainer();
-        }
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                var swCode = `
-                    const CACHE_NAME = 'suarateks-pro-v7';
-                    const ASSETS = [
-                        '/',
-                        'https://cdn.tailwindcss.com',
-                        'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-                        'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap'
-                    ];
-                    self.addEventListener('install', event => {
-                        event.waitUntil(
-                            caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())
-                        );
-                    });
-                    self.addEventListener('activate', event => {
-                        event.waitUntil(self.clients.claim());
-                    });
-                    self.addEventListener('fetch', event => {
-                        event.respondWith(
-                            caches.match(event.request).then(response => {
-                                return response || fetch(event.request).catch(() => {
-                                    if (event.request.mode === 'navigate') {
-                                        return caches.match('/');
-                                    }
-                                });
-                            })
-                        );
-                    });
-                `;
-                var blob = new Blob([swCode], { type: 'application/javascript' });
-                var swUrl = URL.createObjectURL(blob);
-                navigator.serviceWorker.register(swUrl).catch(function(err) {
-                    console.warn('ServiceWorker registration failed:', err);
-                });
-            });
-        }
-
-        window.addEventListener('online', updateOnlineStatus);
-        window.addEventListener('offline', updateOnlineStatus);
-        function updateOnlineStatus() {
-            var badge = document.getElementById('offlineBadge');
-            if (!badge) return;
-            if (!navigator.onLine) {
-                badge.classList.remove('hidden');
-                showToast('ネットワークがオフラインです（IndexedDB履歴・単語帳は完全に動作します）', 'info');
-            } else {
-                badge.classList.add('hidden');
-            }
-        }
-
-        window.availableIndoVoices = [];
-
-        function initSpeechSynthesisVoices() {
-            if (!('speechSynthesis' in window)) return;
-            var voices = window.speechSynthesis.getVoices();
-            if (voices && voices.length > 0) {
-                window.availableIndoVoices = voices.filter(function(v) {
-                    var lang = (v.lang || '').toLowerCase();
-                    return lang.startsWith('id') || lang.includes('id-id') || lang.includes('indonesian');
-                });
-            }
-        }
-
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.onvoiceschanged = initSpeechSynthesisVoices;
-            initSpeechSynthesisVoices();
-        }
-
-        window.fileQueue = [];
-        window.isQueueProcessing = false;
-        window.currentLoadedFile = null;
-        window.currentLoadedFileName = '';
-        window.transcriptBlocks = [];
-        window.vocabList = [];
-        window.activeMobileTab = 'setup';
-        window.activeStudioSubView = 'transcript';
-        window.activeVocabMode = 'card';
-        window.activeVocabPosFilter = 'all';
-        window.activeVocabSearchQuery = '';
-        window.currentCardIndex = 0;
-        window.isCardFlipped = false;
-        window.isShuffled = false;
-        window.shuffledVocabList = [];
-        window.selectedHistoryIds = [];
-        window.speechRate = 0.85;
-
-        window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
-
-        var sleep = function(ms) { return new Promise(function(resolve) { setTimeout(resolve, ms); }); };
-
-        function displayErrorBox(errMessage) {
-            var errorBox = document.getElementById('errorBoxContainer');
-            var errorText = document.getElementById('errorBoxText');
-            if (errorBox && errorText) {
-                errorText.textContent = errMessage;
-                errorBox.classList.remove('hidden');
-            }
-            showToast(errMessage, 'error');
-        }
-
-        function translateErrorMessage(rawMessage) {
-            var str = String(rawMessage || '').toLowerCase();
-            if (str.includes('prepayment credits are depleted') || str.includes('billing#prepay') || str.includes('credit depleted')) {
-                return 'API前払いクレジットがなくなりました。Google AI Studioでチャージしてください。';
-            }
-            if (str.includes('spend cap breached') || str.includes('quota exceeded') || str.includes('resourcehasexhausted')) {
-                return 'API利用上限に達しました。時間をおくかGoogle AI Studioで設定をご確認ください。';
-            }
-            if (str.includes('invalid authentication credentials') || str.includes('api_key_invalid') || str.includes('unauthorized')) {
-                return 'API Key認証エラーです。新しいAPI Keyを発行し、設定し直してください。';
-            }
-            if (str.includes('network') || str.includes('failed to fetch')) {
-                return 'ネットワーク通信エラーが発生しました。接続状況をご確認の上、再度お試しください。';
-            }
-            return rawMessage;
-        }
-
-        function formatOutputFileName(baseName) {
-            var clean = String(baseName || '解析データ').trim().replace(/\.[^/.]+$/, "");
-            clean = clean.replace(/^®️\s*/, '');
-            return clean || '解析データ';
-        }
-
-        function setSpeechRate(val) {
-            var num = parseFloat(val);
-            if (isNaN(num)) num = 0.85;
-            window.speechRate = Math.max(0.6, Math.min(1.3, num));
-            var display = document.getElementById('speechRateDisplay');
-            if (display) display.textContent = window.speechRate.toFixed(2) + 'x';
-            var slider = document.getElementById('speechRateSlider');
-            if (slider) slider.value = window.speechRate;
-        }
-
-        function setFontSize(val) {
-            var num = parseInt(val);
-            if (isNaN(num)) num = 20;
-            num = Math.max(20, Math.min(30, num));
-            document.documentElement.style.setProperty('--transcript-font-size', num + 'px');
-            document.querySelectorAll('.fontSizeDisplayPt').forEach(function(el) { el.textContent = num + 'pt'; });
-            document.querySelectorAll('.fontSizeSlider').forEach(function(el) { el.value = num; });
-        }
-
-        function adjustFontSize(delta) {
-            var current = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--transcript-font-size')) || 20;
-            setFontSize(current + delta);
-        }
-
-        function getApiKey() { 
-            var key = localStorage.getItem('suarateks_gemini_key') || '';
-            return String(key).trim();
-        }
-
-        function stripJsonCodeFence(text) {
-            return String(text || '').trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
-        }
-
-        function safeParseTruncatedJson(jsonString) {
-            var raw = stripJsonCodeFence(jsonString);
-            if (!raw) throw new Error('Geminiから応答が返されませんでした');
-            try { return JSON.parse(raw); } catch (e) {}
-
-            var sanitized = raw.replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, function(match) {
-                return match.replace(/\r?\n/g, '\\n').replace(/\t/g, '\\t');
-            });
-            try { return JSON.parse(sanitized); } catch (e2) {}
-
-            var textToRepair = sanitized;
-            var firstBrace = textToRepair.indexOf('{');
-            var firstBracket = textToRepair.indexOf('[');
-            var startIdx = -1;
-
-            if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
-                startIdx = firstBrace;
-            } else if (firstBracket !== -1) {
-                startIdx = firstBracket;
-            }
-
-            if (startIdx !== -1) {
-                var sub = textToRepair.substring(startIdx).replace(/,\s*$/, '').replace(/,\s*([}\]])/g, '$1');
-                var openQuotes = false, stack = [], repaired = '';
-                for (var i = 0; i < sub.length; i++) {
-                    var ch = sub[i], prevCh = i > 0 ? sub[i - 1] : '';
-                    if (ch === '"' && prevCh !== '\\') openQuotes = !openQuotes;
-                    if (!openQuotes) {
-                        if (ch === '{' || ch === '[') stack.push(ch);
-                        else if (ch === '}' || ch === ']') { if (stack.length > 0) stack.pop(); }
-                    }
-                    repaired += ch;
-                }
-                if (openQuotes) repaired += '"';
-                while (stack.length > 0) {
-                    var top = stack.pop();
-                    repaired += (top === '{' ? '}' : ']');
-                }
-                try { return JSON.parse(repaired); } catch (e3) {}
-            }
-            throw new Error('GeminiのJSON応答構造を正常に解釈できませんでした');
-        }
-
-        function formatBytes(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            var k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            var i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-        }
-
-        window.handleFileChange = function(event) {
-            var input = (event && event.target) ? event.target : document.getElementById('audioFileInput');
-            var files = input ? input.files : null;
-            if (!files || files.length === 0) return;
-            processSelectedFiles(Array.from(files));
-        };
-
-        function processSelectedFiles(files) {
-            var validFiles = files.filter(function(f) { return f.type.startsWith('audio/') || f.name.match(/\.(mp3|wav|m4a|aac|ogg|flac)$/i); }).slice(0, 10);
-            if (validFiles.length === 0) {
-                showToast('音声ファイルが選択されていません', 'error');
-                return;
-            }
-            window.fileQueue = validFiles.map(function(f, idx) {
-                return { id: 'queue-' + Date.now() + '-' + idx, file: f, status: 'waiting', progress: 0 };
-            });
-            renderQueueUI();
-            showToast(window.fileQueue.length + ' 件の音源をキューに追加しました！', 'info');
-        }
-
-        function renderQueueUI() {
-            var dropzoneDefault = document.getElementById('dropzoneDefault');
-            var dropzoneSelected = document.getElementById('dropzoneSelected');
-            var queueListContainer = document.getElementById('queueListContainer');
-
-            if (!window.fileQueue || window.fileQueue.length === 0) {
-                if (dropzoneDefault) dropzoneDefault.classList.remove('hidden');
-                if (dropzoneSelected) dropzoneSelected.classList.add('hidden');
-                return;
-            }
-
-            if (dropzoneDefault) dropzoneDefault.classList.add('hidden');
-            if (dropzoneSelected) dropzoneSelected.classList.remove('hidden');
-
-            var html = '';
-            window.fileQueue.forEach(function(q, idx) {
-                var statusBadge = '';
-                if (q.status === 'waiting') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 font-bold">待機中</span>';
-                else if (q.status === 'processing') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500 text-white font-bold"><i class="fa-solid fa-spinner fa-spin"></i> 解析中</span>';
-                else if (q.status === 'completed') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500 text-white font-bold"><i class="fa-solid fa-check"></i> 完了</span>';
-                else if (q.status === 'error') statusBadge = '<button onclick="retryQueueItem(\'' + q.id + '\', event)" class="text-[9px] px-1.5 py-0.5 rounded bg-rose-600 hover:bg-rose-700 text-white font-bold transition flex items-center gap-1">再試行</button>';
-
-                html += '<div class="flex items-center justify-between gap-1 text-xs p-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 mb-1">' +
-                    '<div class="min-w-0 flex-1">' +
-                        '<p class="font-bold text-slate-800 dark:text-slate-100 truncate text-[10px]">' + (idx + 1) + '. ' + escapeHtml(q.file.name) + '</p>' +
-                        '<p class="text-[8px] text-slate-400 font-mono">' + formatBytes(q.file.size) + '</p>' +
-                    '</div>' +
-                    '<div class="shrink-0">' + statusBadge + '</div>' +
-                '</div>';
-            });
-            if (queueListContainer) queueListContainer.innerHTML = html;
-        }
-
-        window.retryQueueItem = function(itemId, event) {
-            if (event) event.stopPropagation();
-            var item = window.fileQueue.find(function(q) { return q.id === itemId; });
-            if (item) { item.status = 'waiting'; renderQueueUI(); window.processAudioWithGemini(); }
-        };
-
-        function initDropzoneEvents() {
-            var label = document.getElementById('fileDropLabel');
-            if (!label) return;
-            ['dragenter', 'dragover'].forEach(function(eventName) {
-                label.addEventListener(eventName, function(e) { e.preventDefault(); e.stopPropagation(); label.classList.add('dropzone-active'); }, false);
-            });
-            ['dragleave', 'drop'].forEach(function(eventName) {
-                label.addEventListener(eventName, function(e) { e.preventDefault(); e.stopPropagation(); label.classList.remove('dropzone-active'); }, false);
-            });
-            label.addEventListener('drop', function(e) {
-                var files = e.dataTransfer.files;
-                if (files && files.length > 0) processSelectedFiles(Array.from(files));
-            }, false);
-        }
-
-        async function fetchGeminiApi(apiKey, payload) {
-            var cleanKey = String(apiKey || getApiKey() || '').trim();
-            if (!cleanKey || cleanKey.length < 10) {
-                throw new Error('API Keyが正しく設定されていません。「API Key」ボタンから設定してください。');
-            }
-
-            if (!payload.generationConfig) payload.generationConfig = {};
-            payload.generationConfig.temperature = 0.1;
-            payload.generationConfig.maxOutputTokens = 8192;
-
-            var targetUrl = '[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=)' + cleanKey;
-
-            var response;
-            var maxAttempts = 5;
-            for (var attempt = 1; attempt <= maxAttempts; attempt++) {
-                try {
-                    response = await fetch(targetUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (response.status === 429 || response.status === 503) {
-                        var errText = await response.text();
-                        var waitMs = attempt * 6000;
-                        var retryMatch = errText.match(/retry in ([0-9.]+)s/i);
-                        if (retryMatch && retryMatch[1]) waitMs = Math.ceil(parseFloat(retryMatch[1]) * 1000) + 2000;
-                        await sleep(waitMs);
-                        continue;
-                    }
-                    break;
-                } catch (netErr) {
-                    if (attempt === maxAttempts) throw new Error('ネットワーク通信エラーが発生しました: ' + netErr.message);
-                    await sleep(2000);
-                }
-            }
-
-            if (!response) throw new Error('Gemini APIへの通信に失敗しました');
-            var responseText = await response.text();
-            
-            var data;
-            try {
-                data = JSON.parse(responseText);
-            } catch (parseErr) {
-                throw new Error('Geminiからの応答が正しいJSONではありません (HTMLエラー等の可能性): ' + responseText.substring(0, 100));
-            }
-
-            if (!response.ok || data.error) {
-                var errDetail = (data.error && data.error.message) ? data.error.message : ('HTTP Error ' + response.status);
-                if (response.status === 400 || response.status === 401) {
-                    openModal('apiKeyModal');
-                    throw new Error('API Key認証エラーです。有効なAPI Keyを再入力してください。');
-                }
-                throw new Error(translateErrorMessage(errDetail));
-            }
-            return data;
-        }
-
-        function extractGeminiText(data) {
-            var parts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) ? data.candidates[0].content.parts : null;
-            if (!Array.isArray(parts)) throw new Error('応答にテキストデータが含まれていません');
-            return parts.map(function(p) { return p.text || ''; }).join('').trim();
-        }
-
-        async function reanalyzeBlocksCore(blocks, apiKey, fileNameLabel, onProgress) {
-            var totalBlocks = blocks.length;
-            var maxAnalysisPasses = 5;
-            var chunkSize = Math.max(2, Math.ceil(totalBlocks / maxAnalysisPasses));
-            var totalChunks = Math.min(maxAnalysisPasses, Math.ceil(totalBlocks / chunkSize));
-            var accumulatedVocabMap = new Map();
-
-            blocks.forEach(function(b) { if (!b.grammarExplanation || b.grammarExplanation === '解析中...') b.grammarExplanation = '解析中...'; });
-
-            for (var chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
-                var start = chunkIdx * chunkSize;
-                var end = Math.min(totalBlocks, start + chunkSize);
-                if (start >= totalBlocks) break;
-
-                var currentPct = Math.floor(((chunkIdx + 1) / totalChunks) * 100);
-                if (onProgress) onProgress(chunkIdx + 1, totalChunks, currentPct, fileNameLabel);
-
-                var chunkBlocks = blocks.slice(start, end);
-                var inputChunkText = chunkBlocks.map(function(b) {
-                    return '[BLOCK_ID:' + b.blockIndex + '] ' + b.indonesian + '\n(Japanese: ' + b.japanese + ')';
-                }).join('\n\n');
-
-                var chunkWords = new Set();
-                chunkBlocks.forEach(function(b) {
-                    var words = (b.indonesian || '').toLowerCase().match(/[a-zA-Z-']+/g) || [];
-                    words.forEach(function(w) { if (w.length >= 1) chunkWords.add(w); });
-                });
-
-                var wordListStr = Array.from(chunkWords).join(', ');
-
-                var combinedPrompt = 'Analyze the given Indonesian text blocks in detail for Japanese learners.\n\n' +
+​<div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-sm"></div>
+​<header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center justify-between shrink-0">
+<h1 class="font-extrabold text-sm flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block"></span>
+SuaraTeks<span class="text-red-600">ID</span> Pro <span class="text-[10px] text-slate-400 font-normal">v5.1 (Direct API)</span>
+<span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-wifi-slash"></i> オフライン動作中</span>
+</h1>
+<div class="flex items-center gap-2">
+<span id="activeSessionBadge" class="hidden text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 px-2 py-0.5 rounded-full font-extrabold border border-blue-200/50 truncate max-w-[150px]"></span>
+<button onclick="openModal('apiKeyModal')" class="px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-xs font-bold transition flex items-center gap-1">
+<i class="fa-solid fa-key text-[10px]"></i> API Key
+</button>
+</div>
+</header>
+​<div class="md:hidden bg-slate-200 dark:bg-slate-800 p-1 flex items-center gap-1 shrink-0 border-b border-slate-300 dark:border-slate-700 text-xs font-bold">
+<button id="btnMobSetup" onclick="switchMobileTab('setup')" class="flex-1 py-1.5 text-center bg-white dark:bg-slate-700 rounded shadow-sm text-slate-800 dark:text-slate-100">設定・音源</button>
+<button id="btnMobTranscript" onclick="switchMobileTab('transcript')" class="flex-1 py-1.5 text-center text-slate-600 dark:text-slate-400">本文</button>
+<button id="btnMobVocab" onclick="switchMobileTab('vocab')" class="flex-1 py-1.5 text-center text-slate-600 dark:text-slate-400">単語帳</button>
+</div>
+​<div class="flex-1 flex overflow-hidden p-2 sm:p-3 gap-3 max-w-7xl mx-auto w-full">
+​<!-- Left Setup Panel -->
+<div id="panelSetup" class="w-full md:w-80 flex flex-col gap-2.5 shrink-0 overflow-y-auto">
+​<div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
+<h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+<i class="fa-solid fa-sliders text-red-600"></i> 表示・音声調整
+</h3>
+​<div class="space-y-1 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
+<div class="flex items-center justify-between text-[10px] font-bold text-slate-600 dark:text-slate-300">
+<span><i class="fa-solid fa-font text-slate-400 mr-1"></i>文字サイズ</span>
+<span class="fontSizeDisplayPt text-red-600 font-extrabold">20pt</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="text-[9px] text-slate-400 font-bold">20</span>
+<input type="range" min="20" max="30" value="20" oninput="setFontSize(this.value)" class="fontSizeSlider w-full accent-red-600 cursor-pointer h-1.5 rounded-lg bg-slate-200 dark:bg-slate-700">
+<span class="text-[9px] text-slate-400 font-bold">30</span>
+</div>
+</div>
+​<div class="space-y-1 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
+<div class="flex items-center justify-between text-[10px] font-bold text-slate-600 dark:text-slate-300">
+<span><i class="fa-solid fa-gauge-high text-slate-400 mr-1"></i>音声再生速度</span>
+<span id="speechRateDisplay" class="text-red-600 font-extrabold">0.85x</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="text-[9px] text-slate-400 font-bold">0.6</span>
+<input type="range" id="speechRateSlider" min="0.6" max="1.3" step="0.05" value="0.85" oninput="setSpeechRate(this.value)" class="w-full accent-red-600 cursor-pointer h-1.5 rounded-lg bg-slate-200 dark:bg-slate-700">
+<span class="text-[9px] text-slate-400 font-bold">1.3</span>
+</div>
+</div>
+</div>
+​<!-- Audio Queue Selection -->
+<div id="playerCard" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
+<h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
+<span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音源キュー選択</span>
+<span class="text-[9px] text-slate-400">一括ダイレクト送信対応</span>
+</h3>
+​<label id="fileDropLabel" for="audioFileInput" class="relative group cursor-pointer block">
+<input type="file" id="audioFileInput" accept="audio/*" multiple onchange="window.handleFileChange(event)" class="hidden">
+​<div class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-red-500 rounded-lg p-2 text-center bg-slate-50 dark:bg-slate-900 transition-all duration-200 group-hover:bg-red-50/30">
+<div id="dropzoneDefault" class="space-y-0.5">
+<div class="w-6 h-6 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
+<i class="fa-solid fa-cloud-arrow-up text-xs"></i>
+</div>
+<p class="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">音声ファイルを選択（複数可）</p>
+</div>
+​<div id="dropzoneSelected" class="hidden space-y-1 text-left">
+<div class="flex items-center justify-between text-emerald-600 mb-0.5">
+<span class="text-[9px] font-extrabold"><i class="fa-solid fa-list-check"></i> キューセット完了</span>
+<span class="text-[8px] text-slate-400">タップで再選択</span>
+</div>
+<div id="queueListContainer" class="max-h-24 overflow-y-auto pr-1"></div>
+</div>
+</div>
+</label>
+​<button id="startTranscribeBtn" onclick="window.processAudioWithGemini()" class="w-full py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition flex items-center justify-center gap-1.5">
+<i class="fa-solid fa-wand-magic-sparkles"></i>
+<span id="transcribeBtnText">ダイレクト解析スタート</span>
+</button>
+</div>
+​<!-- Progress Bar -->
+<div id="chunkProgressContainer" class="hidden bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-1.5 shrink-0">
+<div class="flex justify-between text-xs font-bold">
+<span id="chunkProgressLabel" class="flex items-center gap-1 text-[10px] truncate max-w-[80%]">解析実行中...</span>
+<span id="chunkProgressPercent" class="text-red-600 text-[10px]">0%</span>
+</div>
+<div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
+<div id="chunkProgressBar" class="bg-red-600 h-1.5 rounded-full w-0 transition-all duration-300"></div>
+</div>
+</div>
+​<!-- IndexedDB Unlimited History Panel -->
+<div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[220px]">
+<div class="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-700 mb-1.5 gap-1 shrink-0">
+<h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1 shrink-0 truncate">
+<i class="fa-solid fa-database text-blue-500"></i> 履歴<span class="hidden sm:inline">(無制限)</span>
+</h4>
+<div class="flex items-center gap-0.5 sm:gap-1 shrink-0">
+<button id="btnReanalyzeSelected" disabled onclick="reanalyzeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-0.5 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed">
+<i class="fa-solid fa-rotate-right"></i> 再解析
+</button>
+<button id="btnMergeSelected" disabled onclick="mergeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-0.5 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed">
+<i class="fa-solid fa-code-merge"></i> 結合
+</button>
+<button id="btnSaveSelected" disabled onclick="saveSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-0.5 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed">
+<i class="fa-solid fa-download"></i> 保存
+</button>
+<button onclick="clearHistory()" class="px-1.5 py-0.5 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded text-[9px] font-bold transition shrink-0 whitespace-nowrap">消去</button>
+</div>
+</div>
+​<div id="historyList" class="space-y-1 flex-1 overflow-y-auto max-h-[280px] pr-0.5">
+<p class="text-xs text-slate-400 py-1.5 text-center">読み込み中...</p>
+</div>
+​<div class="pt-1.5 border-t border-slate-100 dark:border-slate-700 mt-1 shrink-0">
+<label class="w-full py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition">
+<i class="fa-solid fa-file-import"></i> JSONインポート
+<input type="file" accept=".json" multiple onchange="importHistoryBackup(event)" class="hidden">
+</label>
+</div>
+</div>
+</div>
+​<!-- Right Studio Panel (Transcript, Grammar, Vocab) -->
+<div id="panelTranscript" class="hidden md:flex flex-1 flex-col bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+​<div class="bg-white dark:bg-slate-800 px-2 sm:px-3 py-1.5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-1 shrink-0 overflow-x-auto hide-scrollbar">
+<div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl shrink-0 overflow-x-auto hide-scrollbar max-w-full">
+<button id="navTabTranscript" onclick="setStudioSubView('transcript')" class="no-wrap-tab px-2 sm:px-3 py-1 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0">
+<i class="fa-solid fa-align-left text-[10px]"></i> 本文
+</button>
+<button id="navTabGrammar" onclick="setStudioSubView('grammar')" class="no-wrap-tab px-2 sm:px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
+<i class="fa-solid fa-diagram-project text-[10px]"></i> 文法解剖
+</button>
+<button id="navTabVocab" onclick="setStudioSubView('vocab')" class="no-wrap-tab px-2 sm:px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
+<i class="fa-solid fa-book-open text-[10px]"></i> 単語帳 (<span id="vocabCountBadge">0</span>)
+</button>
+<button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-1.5 sm:px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] sm:text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-0.5 whitespace-nowrap" title="現在のセッションを再解析">
+<i class="fa-solid fa-rotate-right text-[9px]"></i> 再解析
+</button>
+</div>
+​<div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
+<span class="text-[9px] font-extrabold text-slate-500 shrink-0">文字</span>
+<button onclick="adjustFontSize(-1)" class="w-4 h-4 flex items-center justify-center rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-200 text-xs shrink-0">-</button>
+<input type="range" min="20" max="30" value="20" oninput="setFontSize(this.value)" class="fontSizeSlider w-8 sm:w-10 accent-red-600 cursor-pointer shrink-0">
+<button onclick="adjustFontSize(1)" class="w-4 h-4 flex items-center justify-center rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-200 text-xs shrink-0">+</button>
+<span class="fontSizeDisplayPt text-[9px] font-black text-red-600 w-6 text-right shrink-0">20pt</span>
+</div>
+</div>
+​<!-- Transcript Subview -->
+<div id="transcriptView" class="flex-1 p-3 overflow-y-auto space-y-3">
+<div id="emptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
+<i class="fa-solid fa-file-audio text-3xl text-slate-300 dark:text-slate-700"></i>
+<span>音声ファイルを選択して「ダイレクト解析スタート」を押してください</span>
+</div>
+<div id="transcriptContainer" class="space-y-3"></div>
+</div>
+​<!-- Grammar Subview -->
+<div id="grammarView" class="hidden flex-1 p-3 overflow-y-auto space-y-3">
+<div id="grammarEmptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
+<i class="fa-solid fa-diagram-project text-3xl text-slate-300 dark:text-slate-700"></i>
+<span>文法解剖データがありません</span>
+</div>
+<div id="grammarContainer" class="space-y-3"></div>
+</div>
+​<!-- Vocab Subview -->
+<div id="vocabView" class="hidden flex-1 flex-col overflow-hidden p-3 space-y-3">
+<div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 shrink-0">
+<div class="flex items-center gap-2">
+<input type="text" id="vocabSearchInput" oninput="window.activeVocabSearchQuery=this.value; renderVocabContainer();" placeholder="単語・訳・原形を検索..." class="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold focus:outline-none focus:border-red-500">
+<button id="btnModeCard" onclick="setVocabMode('card')" class="px-3 py-1.5 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition">カード</button>
+<button id="btnModeList" onclick="setVocabMode('list')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">一覧</button>
+</div>
+<div class="flex items-center gap-1 flex-wrap text-[10px] font-bold">
+<button data-pos="all" onclick="setVocabPosFilter('all')" class="btn-pos-filter px-2.5 py-1 rounded-lg bg-red-600 text-white">すべて</button>
+<button data-pos="noun" onclick="setVocabPosFilter('noun')" class="btn-pos-filter px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">名詞</button>
+<button data-pos="verb" onclick="setVocabPosFilter('verb')" class="btn-pos-filter px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">動詞</button>
+<button data-pos="adjective" onclick="setVocabPosFilter('adjective')" class="btn-pos-filter px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">形容詞</button>
+<button data-pos="adverb" onclick="setVocabPosFilter('adverb')" class="btn-pos-filter px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">副詞</button>
+</div>
+</div>
+​<div id="vocabEmptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
+<i class="fa-solid fa-book-bookmark text-3xl text-slate-300 dark:text-slate-700"></i>
+<span>単語データがありません</span>
+</div>
+<div id="vocabListContainer" class="hidden flex-1 overflow-y-auto space-y-2"></div>
+​<div id="vocabCardContainer" class="hidden flex-1 flex-col items-center justify-center p-2">
+<div class="w-full max-w-sm flex justify-between text-xs font-bold text-slate-500 mb-2">
+<span id="flashcardProgressLabel">1 / 1</span>
+<button onclick="toggleShuffleCards()" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] hover:bg-slate-200"><i class="fa-solid fa-shuffle"></i> シャッフル</button>
+</div>
+​<div onclick="flipFlashcard()" class="w-full max-w-sm h-60 perspective-1000 cursor-pointer">
+<div id="flashcardInner" class="relative w-full h-full transform-style-3d shadow-lg rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+<div class="absolute inset-0 w-full h-full backface-hidden p-5 flex flex-col justify-between rounded-2xl bg-white dark:bg-slate-800">
+<span id="cardBadgeFront" class="self-start text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300">品詞</span>
+<div class="text-center space-y-2">
+<h2 id="cardIndoText" class="dynamic-text-indo font-black text-slate-800 dark:text-slate-100">---</h2>
+<p class="text-xs text-slate-400">タップして裏面を表示</p>
+</div>
+<div class="text-right">
+<button onclick="event.stopPropagation(); speakIndonesian(document.getElementById('cardIndoText').innerText)" class="p-2 text-slate-400 hover:text-emerald-500">
+<i class="fa-solid fa-volume-high text-base"></i>
+</button>
+</div>
+</div>
+​<div class="absolute inset-0 w-full h-full backface-hidden rotate-y-180 p-5 flex flex-col justify-between rounded-2xl bg-emerald-50 dark:bg-slate-800 border-2 border-emerald-500">
+<span id="cardPosBack" class="self-start text-[10px] font-bold text-emerald-800 dark:text-emerald-300">品詞詳細</span>
+<div class="text-center space-y-2">
+<h3 id="cardJapText" class="dynamic-text-ja font-extrabold text-emerald-800 dark:text-emerald-300">---</h3>
+<p id="cardContextFull" class="text-xs text-slate-600 dark:text-slate-400 italic">---</p>
+</div>
+<div class="text-right">
+<button onclick="event.stopPropagation(); speakIndonesian(document.getElementById('cardIndoText').innerText)" class="p-2 text-slate-400 hover:text-emerald-500">
+<i class="fa-solid fa-volume-high text-base"></i>
+</button>
+</div>
+</div>
+</div>
+</div>
+​<div class="flex gap-3 mt-4 w-full max-w-sm">
+<button onclick="nextFlashcard(false)" class="flex-1 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold hover:bg-slate-300">要復習</button>
+<button onclick="nextFlashcard(true)" class="flex-1 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow hover:bg-emerald-700">習得済み</button>
+</div>
+</div>
+</div>
+​</div>
+​</div>
+​<!-- API Key Modal -->
+<div id="apiKeyModal" class="fixed inset-0 bg-slate-900/60 hidden flex items-center justify-center p-4 z-50">
+<div class="bg-white dark:bg-slate-800 rounded-xl p-4 max-w-sm w-full space-y-3 shadow-xl border border-slate-200 dark:border-slate-700">
+<h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+<i class="fa-solid fa-key text-amber-500"></i> Gemini API Key 設定
+</h3>
+<div id="apiKeyNotice" class="hidden p-2 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded text-[11px] text-amber-800 dark:text-amber-200 font-medium leading-snug">
+<i class="fa-solid fa-triangle-exclamation mr-1 text-amber-600"></i> API利用上限に達しました。新しいAPI Keyを入力して保存してください。
+</div>
+<p class="text-[10px] text-slate-400">Google AI Studio で取得した API Key を入力してください</p>
+<input type="password" id="apiKeyInput" placeholder="API Key を貼り付け" class="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 text-xs dark:bg-slate-900 font-mono text-slate-800 dark:text-slate-100 focus:outline-none focus:border-red-500">
+<div class="flex justify-end gap-2">
+<button onclick="closeModal('apiKeyModal')" class="px-3 py-1 text-xs text-slate-500 hover:text-slate-700">キャンセル</button>
+<button onclick="saveApiKeyFromModal()" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold">保存して再開</button>
+</div>
+</div>
+</div>
+​<script>
+// ==========================================
+// INDEXEDDB HYBRID STORAGE LAYER
+// ==========================================
+const DB_NAME = 'SuaraTeksIDProDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'sessions';
+​function openIndexedDB() {
+return new Promise((resolve, reject) => {
+var request = indexedDB.open(DB_NAME, DB_VERSION);
+request.onerror = () => reject(request.error);
+request.onsuccess = () => resolve(request.result);
+request.onupgradeneeded = (event) => {
+var db = event.target.result;
+if (!db.objectStoreNames.contains(STORE_NAME)) {
+db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+}
+};
+});
+}
+​async function dbSaveSession(sessionObj) {
+try {
+var db = await openIndexedDB();
+return new Promise((resolve, reject) => {
+var transaction = db.transaction(STORE_NAME, 'readwrite');
+var store = transaction.objectStore(STORE_NAME);
+var request = store.put(sessionObj);
+request.onsuccess = () => resolve(true);
+request.onerror = () => reject(request.error);
+});
+} catch (e) {
+saveToLocalStorageFallback(sessionObj);
+}
+}
+​async function dbGetAllSessions() {
+try {
+var db = await openIndexedDB();
+return new Promise((resolve, reject) => {
+var transaction = db.transaction(STORE_NAME, 'readonly');
+var store = transaction.objectStore(STORE_NAME);
+var request = store.getAll();
+request.onsuccess = () => {
+var res = request.result || [];
+res.sort((a, b) => b.timestamp - a.timestamp);
+resolve(res);
+};
+request.onerror = () => reject(request.error);
+});
+} catch (e) {
+var local = localStorage.getItem('suarateks_history');
+return local ? JSON.parse(local) : [];
+}
+}
+​async function dbGetSession(id) {
+try {
+var db = await openIndexedDB();
+return new Promise((resolve, reject) => {
+var transaction = db.transaction(STORE_NAME, 'readonly');
+var store = transaction.objectStore(STORE_NAME);
+var request = store.get(id);
+request.onsuccess = () => resolve(request.result);
+request.onerror = () => reject(request.error);
+});
+} catch (e) {
+var local = localStorage.getItem('suarateks_history');
+var list = local ? JSON.parse(local) : [];
+return list.find(item => item.id === id) || null;
+}
+}
+​async function dbDeleteSession(id) {
+try {
+var db = await openIndexedDB();
+return new Promise((resolve, reject) => {
+var transaction = db.transaction(STORE_NAME, 'readwrite');
+var store = transaction.objectStore(STORE_NAME);
+var request = store.delete(id);
+request.onsuccess = () => resolve(true);
+request.onerror = () => reject(request.error);
+});
+} catch (e) {}
+}
+​async function dbClearAll() {
+try {
+var db = await openIndexedDB();
+return new Promise((resolve, reject) => {
+var transaction = db.transaction(STORE_NAME, 'readwrite');
+var store = transaction.objectStore(STORE_NAME);
+var request = store.clear();
+request.onsuccess = () => resolve(true);
+request.onerror = () => reject(request.error);
+});
+} catch (e) {
+localStorage.removeItem('suarateks_history');
+}
+}
+​function saveToLocalStorageFallback(sessionObj) {
+try {
+var history = JSON.parse(localStorage.getItem('suarateks_history') || '[]');
+history = history.filter(h => h.id !== sessionObj.id);
+history.unshift(sessionObj);
+if (history.length > 20) history = history.slice(0, 20);
+localStorage.setItem('suarateks_history', JSON.stringify(history));
+} catch (err) {}
+}
+​// ==========================================
+// SERVICE WORKER & OFFLINE SETUP
+// ==========================================
+if ('serviceWorker' in navigator) {
+window.addEventListener('load', function() {
+var swCode = const CACHE_NAME = 'suarateks-pro-v5'; const ASSETS = [ '/', 'https://cdn.tailwindcss.com', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css', 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap' ]; self.addEventListener('install', event => { event.waitUntil( caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()) ); }); self.addEventListener('activate', event => { event.waitUntil(self.clients.claim()); }); self.addEventListener('fetch', event => { event.respondWith( caches.match(event.request).then(response => { return response || fetch(event.request).catch(() => { if (event.request.mode === 'navigate') { return caches.match('/'); } }); }) ); });;
+var blob = new Blob([swCode], { type: 'application/javascript' });
+var swUrl = URL.createObjectURL(blob);
+navigator.serviceWorker.register(swUrl).catch(function(err) {});
+});
+}
+​window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+function updateOnlineStatus() {
+var badge = document.getElementById('offlineBadge');
+if (!badge) return;
+if (!navigator.onLine) {
+badge.classList.remove('hidden');
+showToast('ネットワークがオフラインです（IndexedDB履歴・単語帳は完全に動作します）', 'info');
+} else {
+badge.classList.add('hidden');
+}
+}
+​// ==========================================
+// SPEECH SYNTHESIS VOICE MANAGEMENT
+// ==========================================
+window.availableIndoVoices = [];
+​function initSpeechSynthesisVoices() {
+if (!('speechSynthesis' in window)) return;
+var voices = window.speechSynthesis.getVoices();
+if (voices && voices.length > 0) {
+window.availableIndoVoices = voices.filter(function(v) {
+var lang = (v.lang || '').toLowerCase();
+return lang.startsWith('id') || lang.includes('id-id') || lang.includes('indonesian');
+});
+}
+}
+​if ('speechSynthesis' in window) {
+window.speechSynthesis.onvoiceschanged = initSpeechSynthesisVoices;
+initSpeechSynthesisVoices();
+}
+​// ==========================================
+// APP STATE & SESSION ISOLATION
+// ==========================================
+window.fileQueue = [];
+window.isQueueProcessing = false;
+window.currentLoadedSessionId = null;
+window.currentLoadedFileName = '';
+window.transcriptBlocks = [];
+window.vocabList = [];
+window.activeMobileTab = 'setup';
+window.activeStudioSubView = 'transcript';
+window.activeVocabMode = 'card';
+window.activeVocabPosFilter = 'all';
+window.activeVocabSearchQuery = '';
+window.currentCardIndex = 0;
+window.isCardFlipped = false;
+window.isShuffled = false;
+window.shuffledVocabList = [];
+window.selectedHistoryIds = [];
+window.speechRate = 0.85;
+​window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
+​var sleep = function(ms) { return new Promise(function(resolve) { setTimeout(resolve, ms); }); };
+​function translateErrorMessage(rawMessage) {
+var str = String(rawMessage || '').toLowerCase();
+if (str.includes('prepayment credits are depleted') || str.includes('billing#prepay') || str.includes('credit depleted')) {
+return 'API前払いクレジットがなくなりました。Google AI Studioでチャージしてください。';
+}
+if (str.includes('spend cap breached') || str.includes('quota exceeded') || str.includes('resourcehasexhausted')) {
+return 'API利用上限に達しました。時間をおくかGoogle AI Studioで設定をご確認ください。';
+}
+if (str.includes('invalid authentication credentials') || str.includes('api_key_invalid') || str.includes('unauthorized')) {
+return 'API Key認証エラーです。新しいAPI Keyを発行し、設定し直してください。';
+}
+if (str.includes('network') || str.includes('failed to fetch')) {
+return 'ネットワーク通信エラーが発生しました。接続状況をご確認の上、再度お試しください。';
+}
+return rawMessage;
+}
+​function formatOutputFileName(baseName) {
+var clean = String(baseName || '解析データ').trim().replace(/.[^/.]+$/, "");
+clean = clean.replace(/^®️️\s*/, '');
+return clean || '解析データ';
+}
+​function setSpeechRate(val) {
+var num = parseFloat(val);
+if (isNaN(num)) num = 0.85;
+window.speechRate = Math.max(0.6, Math.min(1.3, num));
+var display = document.getElementById('speechRateDisplay');
+if (display) display.textContent = window.speechRate.toFixed(2) + 'x';
+var slider = document.getElementById('speechRateSlider');
+if (slider) slider.value = window.speechRate;
+}
+​function setFontSize(val) {
+var num = parseInt(val);
+if (isNaN(num)) num = 20;
+num = Math.max(20, Math.min(30, num));
+document.documentElement.style.setProperty('--transcript-font-size', num + 'px');
+document.querySelectorAll('.fontSizeDisplayPt').forEach(function(el) { el.textContent = num + 'pt'; });
+document.querySelectorAll('.fontSizeSlider').forEach(function(el) { el.value = num; });
+}
+​function adjustFontSize(delta) {
+var current = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--transcript-font-size')) || 20;
+setFontSize(current + delta);
+}
+​function getApiKey() {
+var key = localStorage.getItem('suarateks_gemini_key') || '';
+return String(key).trim();
+}
+​function stripJsonCodeFence(text) {
+return String(text || '').trim().replace(/^json\s*/i, '').replace(/^\s*/i, '').replace(/\s*```$/i, '').trim();
+}
+​function safeParseTruncatedJson(jsonString) {
+var raw = stripJsonCodeFence(jsonString);
+if (!raw) throw new Error('Geminiから応答が返されませんでした');
+try { return JSON.parse(raw); } catch (e) {}
+​var sanitized = raw.replace(/"([^"\](\.[^"\])*)"/g, function(match) {
+return match.replace(/\r?\n/g, '\n').replace(/\t/g, '\t');
+});
+try { return JSON.parse(sanitized); } catch (e2) {}
+​var textToRepair = sanitized;
+var firstBrace = textToRepair.indexOf('{');
+var firstBracket = textToRepair.indexOf('[');
+var startIdx = -1;
+​if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+startIdx = firstBrace;
+} else if (firstBracket !== -1) {
+startIdx = firstBracket;
+}
+​if (startIdx !== -1) {
+var sub = textToRepair.substring(startIdx).replace(/,\s*$/, '').replace(/,\s*([}]])/g, '$1');
+var openQuotes = false, stack = [], repaired = '';
+for (var i = 0; i < sub.length; i++) {
+var ch = sub[i], prevCh = i > 0 ? sub[i - 1] : '';
+if (ch === '"' && prevCh !== '\') openQuotes = !openQuotes;
+if (!openQuotes) {
+if (ch === '{' || ch === '[') stack.push(ch);
+else if (ch === '}' || ch === ']') { if (stack.length > 0) stack.pop(); }
+}
+repaired += ch;
+}
+if (openQuotes) repaired += '"';
+while (stack.length > 0) {
+var top = stack.pop();
+repaired += (top === '{' ? '}' : ']');
+}
+try { return JSON.parse(repaired); } catch (e3) {}
+}
+throw new Error('GeminiのJSON応答構造を正常に解釈できませんでした');
+}
+​function formatBytes(bytes) {
+if (bytes === 0) return '0 Bytes';
+var k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'];
+var i = Math.floor(Math.log(bytes) / Math.log(k));
+return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+​function resetActiveSessionState(newFileName) {
+window.currentLoadedSessionId = 'session-' + Date.now();
+window.currentLoadedFileName = newFileName || '新規セッション';
+window.transcriptBlocks = [];
+window.vocabList = [];
+window.activeVocabSearchQuery = '';
+window.currentCardIndex = 0;
+window.isCardFlipped = false;
+window.isShuffled = false;
+window.shuffledVocabList = [];
+​var searchInput = document.getElementById('vocabSearchInput');
+if (searchInput) searchInput.value = '';
+​updateActiveSessionBadge();
+renderTranscriptContainer();
+renderGrammarContainer();
+renderVocabContainer();
+}
+​function updateActiveSessionBadge() {
+var badge = document.getElementById('activeSessionBadge');
+if (!badge) return;
+if (window.currentLoadedFileName) {
+badge.textContent = '表示中: ' + window.currentLoadedFileName;
+badge.classList.remove('hidden');
+} else {
+badge.classList.add('hidden');
+}
+}
+​window.handleFileChange = function(event) {
+var input = (event && event.target) ? event.target : document.getElementById('audioFileInput');
+var files = input ? input.files : null;
+if (!files || files.length === 0) return;
+processSelectedFiles(Array.from(files));
+};
+​function processSelectedFiles(files) {
+var validFiles = files.filter(function(f) { return f.type.startsWith('audio/') || f.name.match(/.(mp3|wav|m4a|aac|ogg|flac)$/i); }).slice(0, 10);
+if (validFiles.length === 0) {
+showToast('音声ファイルが選択されていません', 'error');
+return;
+}
+window.fileQueue = validFiles.map(function(f, idx) {
+return { id: 'queue-' + Date.now() + '-' + idx, file: f, status: 'waiting', progress: 0 };
+});
+renderQueueUI();
+showToast(window.fileQueue.length + ' 件の音源をキューにセットしました！', 'info');
+}
+​function renderQueueUI() {
+var dropzoneDefault = document.getElementById('dropzoneDefault');
+var dropzoneSelected = document.getElementById('dropzoneSelected');
+var queueListContainer = document.getElementById('queueListContainer');
+​if (!window.fileQueue || window.fileQueue.length === 0) {
+if (dropzoneDefault) dropzoneDefault.classList.remove('hidden');
+if (dropzoneSelected) dropzoneSelected.classList.add('hidden');
+return;
+}
+​if (dropzoneDefault) dropzoneDefault.classList.add('hidden');
+if (dropzoneSelected) dropzoneSelected.classList.remove('hidden');
+​var html = '';
+window.fileQueue.forEach(function(q, idx) {
+var statusBadge = '';
+if (q.status === 'waiting') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 font-bold">待機中</span>';
+else if (q.status === 'processing') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500 text-white font-bold"><i class="fa-solid fa-spinner fa-spin"></i> 解析中</span>';
+else if (q.status === 'completed') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500 text-white font-bold"><i class="fa-solid fa-check"></i> 完了</span>';
+else if (q.status === 'error') statusBadge = '<button onclick="retryQueueItem(\'' + q.id + '\', event)" class="text-[9px] px-1.5 py-0.5 rounded bg-rose-600 hover:bg-rose-700 text-white font-bold transition flex items-center gap-1">再試行</button>';
+​html += '<div class="flex items-center justify-between gap-1 text-xs p-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 mb-1">' +
+'<div class="min-w-0 flex-1">' +
+'<p class="font-bold text-slate-800 dark:text-slate-100 truncate text-[10px]">' + (idx + 1) + '. ' + escapeHtml(q.file.name) + '</p>' +
+'<p class="text-[8px] text-slate-400 font-mono">' + formatBytes(q.file.size) + '</p>' +
+'</div>' +
+'<div class="shrink-0">' + statusBadge + '</div>' +
+'</div>';
+});
+if (queueListContainer) queueListContainer.innerHTML = html;
+}
+​window.retryQueueItem = function(itemId, event) {
+if (event) event.stopPropagation();
+var item = window.fileQueue.find(function(q) { return q.id === itemId; });
+if (item) { item.status = 'waiting'; renderQueueUI(); window.processAudioWithGemini(); }
+};
+​function initDropzoneEvents() {
+var label = document.getElementById('fileDropLabel');
+if (!label) return;
+['dragenter', 'dragover'].forEach(function(eventName) {
+label.addEventListener(eventName, function(e) { e.preventDefault(); e.stopPropagation(); label.classList.add('dropzone-active'); }, false);
+});
+['dragleave', 'drop'].forEach(function(eventName) {
+label.addEventListener(eventName, function(e) { e.preventDefault(); e.stopPropagation(); label.classList.remove('dropzone-active'); }, false);
+});
+label.addEventListener('drop', function(e) {
+var files = e.dataTransfer.files;
+if (files && files.length > 0) processSelectedFiles(Array.from(files));
+}, false);
+}
+​async function fetchGeminiApi(apiKey, payload) {
+var cleanKey = String(apiKey || getApiKey() || '').trim();
+if (!cleanKey || cleanKey.length < 10) {
+throw new Error('API Keyが正しく設定されていません。「API Key」ボタンから設定してください。');
+}
+​if (!payload.generationConfig) payload.generationConfig = {};
+payload.generationConfig.temperature = 0.1;
+payload.generationConfig.maxOutputTokens = 8192;
+​var targetUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=' + cleanKey;
+​var response;
+var maxAttempts = 10;
+for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+try {
+response = await fetch(targetUrl, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify(payload)
+});
+​if (response.status === 429 || response.status === 503) {
+var errText = await response.text();
+var waitMs = attempt * 6000;
+var retryMatch = errText.match(/retry in ([0-9.]+)s/i);
+if (retryMatch && retryMatch[1]) waitMs = Math.ceil(parseFloat(retryMatch[1]) * 1000) + 2000;
+await sleep(waitMs);
+continue;
+}
+break;
+} catch (netErr) {
+if (attempt === maxAttempts) throw new Error('ネットワーク通信エラーが発生しました: ' + netErr.message);
+await sleep(2000);
+}
+}
+​if (!response) throw new Error('Gemini APIへの通信に失敗しました');
+var responseText = await response.text();
+var data = JSON.parse(responseText);
+​if (!response.ok || data.error) {
+var errDetail = (data.error && data.error.message) ? data.error.message : ('HTTP Error ' + response.status);
+if (response.status === 400 || response.status === 401) {
+openModal('apiKeyModal');
+throw new Error('API Key認証エラーです。有効なAPI Keyを再入力してください。');
+}
+throw new Error(translateErrorMessage(errDetail));
+}
+return data;
+}
+​function extractGeminiText(data) {
+var parts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) ? data.candidates[0].content.parts : null;
+if (!Array.isArray(parts)) throw new Error('応答にテキストデータが含まれていません');
+return parts.map(function(p) { return p.text || ''; }).join('').trim();
+}
+​async function reanalyzeBlocksCore(blocks, apiKey, fileNameLabel, onProgress) {
+var totalBlocks = blocks.length;
+var maxAnalysisPasses = 5;
+var chunkSize = Math.max(2, Math.ceil(totalBlocks / maxAnalysisPasses));
+var totalChunks = Math.min(maxAnalysisPasses, Math.ceil(totalBlocks / chunkSize));
+var accumulatedVocabMap = new Map();
+​blocks.forEach(function(b) { if (!b.grammarExplanation || b.grammarExplanation === '解析中...') b.grammarExplanation = '解析中...'; });
+​for (var chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
+var start = chunkIdx * chunkSize;
+var end = Math.min(totalBlocks, start + chunkSize);
+if (start >= totalBlocks) break;
+​var currentPct = Math.floor(((chunkIdx + 1) / totalChunks) * 100);
+if (onProgress) onProgress(chunkIdx + 1, totalChunks, currentPct, fileNameLabel);
+​var chunkBlocks = blocks.slice(start, end);
+var inputChunkText = chunkBlocks.map(function(b) {
+return '[BLOCK_ID:' + b.blockIndex + '] ' + b.indonesian + '\n(Japanese: ' + b.japanese + ')';
+}).join('\n\n');
+​var chunkWords = new Set();
+chunkBlocks.forEach(function(b) {
+var words = (b.indonesian || '').toLowerCase().match(/[a-zA-Z-']+/g) || [];
+words.forEach(function(w) { if (w.length >= 1) chunkWords.add(w); });
+});
+​var wordListStr = Array.from(chunkWords).join(', ');
+​var combinedPrompt = 'Analyze the given Indonesian text blocks in detail for Japanese learners.\n\n' +
 'REQUIREMENTS:\n' +
 '1. "grammar": Provide exhaustive 4-part grammatical analysis for each block index using exact headings: 【語句対比】, 【構文構造】, 【接辞解剖】, 【解説・ニュアンス】.\n' +
 '2. "vocab": Process ALL of the target words listed below without omission. For EVERY single word, provide precise Japanese translation ("japanese"), dictionary base form ("baseForm"), part of speech ("pos"), and context sentence.\n' +
 '3. "isKeyWord": true if essential, false otherwise.\n' +
-'4. CRITICAL: Escape all literal newlines using \\n. Output strictly valid JSON.\n\n' +
+'4. CRITICAL: Escape all literal newlines using \n. Output strictly valid JSON.\n\n' +
 'TARGET WORDS TO PROCESS:\n' + wordListStr + '\n\n' +
 'Return ONLY a JSON object:\n' +
 '{\n' +
 '  "grammar": [\n' +
 '    {\n' +
 '      "blockIndex": 0,\n' +
-'      "grammarExplanation": "【語句対比】\\n...\\n【構文構造】\\n...\\n【接辞解剖】\\n...\\n【解説・ニュアンス】\\n..."\n' +
+'      "grammarExplanation": "【語句対比】\n...\n【構文構造】\n...\n【接辞解剖】\n...\n【解説・ニュアンス】\n..."\n' +
 '    }\n' +
 '  ],\n' +
 '  "vocab": [\n' +
@@ -846,1066 +732,973 @@
 '  ]\n' +
 '}\n\n' +
 'INPUT BLOCKS:\n' + inputChunkText;
-
-                var chunkPayload = {
-                    contents: [{ parts: [{ text: combinedPrompt }] }],
-                    generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 }
-                };
-
-                try {
-                    var chunkResponseData = await fetchGeminiApi(apiKey, chunkPayload);
-                    var chunkRawText = extractGeminiText(chunkResponseData);
-                    var chunkParsed = safeParseTruncatedJson(chunkRawText);
-
-                    if (chunkParsed.grammar && Array.isArray(chunkParsed.grammar)) {
-                        chunkParsed.grammar.forEach(function(gItem, gIdx) {
-                            var bIdx = (gItem.blockIndex !== undefined && gItem.blockIndex !== null) ? Number(gItem.blockIndex) : (start + gIdx);
-                            var targetBlock = blocks.find(function(b) { return b.blockIndex === bIdx; }) || chunkBlocks[gIdx];
-                            if (targetBlock && gItem.grammarExplanation) {
-                                targetBlock.grammarExplanation = String(gItem.grammarExplanation).trim();
-                            }
-                        });
-                    }
-
-                    if (chunkParsed.vocab && Array.isArray(chunkParsed.vocab)) {
-                        chunkParsed.vocab.forEach(function(v) {
-                            var wordForm = (v.indonesian || '').trim();
-                            var base = (v.baseForm || wordForm).trim();
-                            var key = base.toLowerCase();
-                            var japMeaning = (v.japanese || '').trim();
-
-                            if (wordForm && key) {
-                                if (!accumulatedVocabMap.has(key) || accumulatedVocabMap.get(key).japanese === '（自動抽出語）') {
-                                    accumulatedVocabMap.set(key, {
-                                        id: 'vocab-' + Date.now() + '-' + accumulatedVocabMap.size,
-                                        indonesian: wordForm,
-                                        baseForm: base,
-                                        japanese: japMeaning || '（意味取得中）',
-                                        pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(v.pos) ? v.pos : 'other',
-                                        context: v.context || '',
-                                        isKeyWord: Boolean(v.isKeyWord),
-                                        mastered: false
-                                    });
-                                }
-                            }
-                        });
-                    }
-                } catch (chunkErr) {
-                    console.warn('[reanalyzeBlocksCore] Chunk error:', chunkErr);
-                }
-
-                await sleep(500);
-            }
-
-            return {
-                blocks: blocks,
-                vocab: Array.from(accumulatedVocabMap.values())
-            };
-        }
-
-        window.processAudioWithGemini = async function() {
-            if (!window.fileQueue || window.fileQueue.length === 0) {
-                showToast('音源ファイルがキューに追加されていません', 'error');
-                return;
-            }
-
-            var apiKey = getApiKey();
-            if (!apiKey) {
-                showToast('Gemini API Key が設定されていません。', 'error');
-                openModal('apiKeyModal');
-                return;
-            }
-
-            if (window.isQueueProcessing) return;
-            window.isQueueProcessing = true;
-
-            var btn = document.getElementById('startTranscribeBtn');
-            var btnText = document.getElementById('transcribeBtnText');
-            var progressContainer = document.getElementById('chunkProgressContainer');
-            if (btn) btn.disabled = true;
-            if (progressContainer) progressContainer.classList.remove('hidden');
-
-            for (var i = 0; i < window.fileQueue.length; i++) {
-                var item = window.fileQueue[i];
-                if (item.status === 'completed') continue;
-
-                // フェーズ1: 処理直前にセッション状態を完全に初期化して隔離
-                resetActiveSessionState();
-
-                item.status = 'processing';
-                renderQueueUI();
-                if (btnText) btnText.textContent = 'ダイレクト解析中 (' + (i + 1) + '/' + window.fileQueue.length + ')';
-
-                try {
-                    await processSingleFileDirectly(item, apiKey, i + 1, window.fileQueue.length);
-                    item.status = 'completed';
-                    renderQueueUI();
-                } catch (err) {
-                    console.error('Queue Error:', err);
-                    item.status = 'error';
-                    renderQueueUI();
-                    var translated = translateErrorMessage(err.message);
-                    displayErrorBox(translated);
-                    if (err.message.includes('Spend Cap') || err.message.includes('prepayment')) {
-                        openModal('apiKeyModal', true);
-                        break;
-                    }
-                }
-            }
-
-            window.isQueueProcessing = false;
-            if (btn) btn.disabled = false;
-            if (btnText) btnText.textContent = "ダイレクト ＆ マルチパス解析";
-            showToast('すべてのキューファイルの解析処理が終了しました', 'info');
-            setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
-        };
-
-        // 分割処理を完全にバイパスしてファイルをそのままダイレクト送信する仕様
-        async function processSingleFileDirectly(queueItem, apiKey, currentIdx, totalIdx) {
-            var file = queueItem.file;
-            window.currentLoadedFile = file;
-            window.currentLoadedFileName = file.name;
-
-            var progressLabel = document.getElementById('chunkProgressLabel');
-            var progressPercent = document.getElementById('chunkProgressPercent');
-            var progressBar = document.getElementById('chunkProgressBar');
-
-            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 音声ファイルをダイレクト読み込み中...</span>';
-            if (progressBar) progressBar.style.width = '20%';
-            if (progressPercent) progressPercent.textContent = '20%';
-
-            var base64Data = await new Promise(function(resolve, reject) {
-                var reader = new FileReader();
-                reader.onload = function(e) { resolve(e.target.result.split(',')[1]); };
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-
-            var mimeType = file.type || 'audio/mp3';
-            if (!mimeType.startsWith('audio/')) { mimeType = 'audio/mp3'; }
-
-            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-amber-500"></i> <span>Gemini APIで一括文字起こし・解析中...</span>';
-            if (progressBar) progressBar.style.width = '45%';
-            if (progressPercent) progressPercent.textContent = '45%';
-
-            var transcribePrompt = 'You are a professional Indonesian verbatim transcription specialist. Transcribe this audio accurately and thoroughly.\nReturn ONLY a valid JSON array:\n[\n  {\n    "speaker": "Pembicara 1",\n    "indonesian": "spoken text",\n    "japanese": "Japanese translation"\n  }\n]';
-
-            var payload = {
-                contents: [{ role: 'user', parts: [{ text: transcribePrompt }, { inlineData: { mimeType: mimeType, data: base64Data } }] }],
-                generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 }
-            };
-
-            var resData = await fetchGeminiApi(apiKey, payload);
-            var rawText = extractGeminiText(resData);
-            var parsed = safeParseTruncatedJson(rawText);
-            var subBlocks = Array.isArray(parsed) ? parsed : (parsed.transcript || []);
-
-            var allCombinedBlocks = [];
-            subBlocks.forEach(function(sb) {
-                allCombinedBlocks.push({
-                    id: 'block-' + Date.now() + '-' + allCombinedBlocks.length,
-                    blockIndex: allCombinedBlocks.length,
-                    speaker: sb.speaker || 'Pembicara 1',
-                    indonesian: sb.indonesian || '',
-                    japanese: sb.japanese || '',
-                    grammarExplanation: '解析中...'
-                });
-            });
-
-            if (allCombinedBlocks.length === 0) throw new Error('音声からテキストが読み取れませんでした');
-
-            window.transcriptBlocks = allCombinedBlocks;
-            renderTranscriptContainer();
-            if (window.innerWidth < 768) switchMobileTab('transcript');
-
-            var cleanFileName = formatOutputFileName(file.name);
-            var finalRes = await reanalyzeBlocksCore(
-                window.transcriptBlocks,
-                apiKey,
-                cleanFileName,
-                function(chunkIdx, totalChunks, currentPct, label) {
-                    var mappedPct = Math.floor(50 + (currentPct * 0.5));
-                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-blue-500"></i> <span class="truncate">【文法・単語再解析】' + chunkIdx + '/' + totalChunks + '</span>';
-                    if (progressBar) progressBar.style.width = mappedPct + '%';
-                    if (progressPercent) progressPercent.textContent = mappedPct + '%';
-                }
-            );
-
-            window.transcriptBlocks = finalRes.blocks;
-            window.vocabList = finalRes.vocab;
-
-            if (progressBar) progressBar.style.width = '100%';
-            if (progressPercent) progressPercent.textContent = '100%';
-
-            var singleDataObj = {
-                id: 'hist-' + Date.now(),
-                fileName: cleanFileName,
-                date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                timestamp: Date.now(),
-                blocks: window.transcriptBlocks,
-                vocab: window.vocabList
-            };
-
-            exportDataToFile(singleDataObj, cleanFileName + '.json');
-            await dbSaveHistoryItem(singleDataObj);
-            loadHistoryFromStorage();
-        }
-
-        window.reanalyzeSelectedHistories = async function() {
-            if (!window.selectedHistoryIds || window.selectedHistoryIds.length === 0) return;
-
-            var apiKey = getApiKey();
-            if (!apiKey) {
-                showToast('Gemini API Key が設定されていません。', 'error');
-                openModal('apiKeyModal');
-                return;
-            }
-
-            var history = await dbGetAllHistory();
-            var selectedItems = window.selectedHistoryIds.map(function(id) {
-                return history.find(function(h) { return h.id === id; });
-            }).filter(Boolean);
-
-            if (selectedItems.length === 0) return;
-
-            var btnRe = document.getElementById('btnReanalyzeSelected');
-            var btnMerge = document.getElementById('btnMergeSelected');
-            var btnSave = document.getElementById('btnSaveSelected');
-            var progressContainer = document.getElementById('chunkProgressContainer');
-            var progressLabel = document.getElementById('chunkProgressLabel');
-            var progressPercent = document.getElementById('chunkProgressPercent');
-            var progressBar = document.getElementById('chunkProgressBar');
-
-            if (btnRe) btnRe.disabled = true;
-            if (btnMerge) btnMerge.disabled = true;
-            if (btnSave) btnSave.disabled = true;
-            if (progressContainer) progressContainer.classList.remove('hidden');
-
-            try {
-                for (var i = 0; i < selectedItems.length; i++) {
-                    var item = selectedItems[i];
-                    var baseName = formatOutputFileName(item.fileName);
-
-                    var res = await reanalyzeBlocksCore(
-                        item.blocks || [],
-                        apiKey,
-                        '[' + (i + 1) + '/' + selectedItems.length + '] ' + baseName,
-                        function(cIdx, totalC, pct, label) {
-                            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-rotate-right fa-spin text-amber-500"></i> <span class="truncate">' + label + ' (' + cIdx + '/' + totalC + ')</span>';
-                            if (progressBar) progressBar.style.width = pct + '%';
-                            if (progressPercent) progressPercent.textContent = pct + '%';
-                        }
-                    );
-
-                    item.fileName = baseName;
-                    item.blocks = res.blocks;
-                    item.vocab = res.vocab;
-                    item.date = new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                    item.timestamp = Date.now();
-
-                    window.transcriptBlocks = res.blocks;
-                    window.vocabList = res.vocab;
-                    renderTranscriptContainer();
-                    renderGrammarContainer();
-                    renderVocabContainer();
-
-                    await dbSaveHistoryItem(item);
-                    loadHistoryFromStorage();
-                }
-                showToast(selectedItems.length + ' 件の選択再解析が完了しました！', 'info');
-                window.selectedHistoryIds = [];
-            } catch (err) {
-                var translated = translateErrorMessage(err.message);
-                displayErrorBox(translated);
-            } finally {
-                updateHistoryActionButtonsState();
-                setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
-            }
-        };
-
-        window.reanalyzeCurrentTranscript = async function() {
-            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
-                showToast('再解析対象のテキストデータがありません', 'error');
-                return;
-            }
-
-            var apiKey = getApiKey();
-            if (!apiKey) {
-                showToast('Gemini API Key が設定されていません。', 'error');
-                openModal('apiKeyModal');
-                return;
-            }
-
-            var btn = document.getElementById('btnReanalyzeText');
-            var progressContainer = document.getElementById('chunkProgressContainer');
-            var progressLabel = document.getElementById('chunkProgressLabel');
-            var progressPercent = document.getElementById('chunkProgressPercent');
-            var progressBar = document.getElementById('chunkProgressBar');
-
-            if (btn) btn.disabled = true;
-            if (progressContainer) progressContainer.classList.remove('hidden');
-
-            try {
-                var rawName = window.currentLoadedFileName || (window.currentLoadedFile ? window.currentLoadedFile.name : '解析データ');
-                var targetName = formatOutputFileName(rawName);
-
-                var res = await reanalyzeBlocksCore(
-                    window.transcriptBlocks,
-                    apiKey,
-                    targetName,
-                    function(cIdx, totalC, pct, label) {
-                        if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-amber-500"></i> <span class="truncate">【再解析】' + label + ' (' + cIdx + '/' + totalC + ')...</span>';
-                        if (progressBar) progressBar.style.width = pct + '%';
-                        if (progressPercent) progressPercent.textContent = pct + '%';
-                    }
-                );
-
-                window.transcriptBlocks = res.blocks;
-                window.vocabList = res.vocab;
-                renderGrammarContainer();
-                renderVocabContainer();
-
-                var item = {
-                    id: 'hist-' + Date.now(),
-                    fileName: targetName,
-                    date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                    timestamp: Date.now(),
-                    blocks: window.transcriptBlocks,
-                    vocab: window.vocabList
-                };
-                await dbSaveHistoryItem(item);
-                loadHistoryFromStorage();
-                showToast('テキスト再解析が完了しました！', 'info');
-            } catch (err) {
-                var translated = translateErrorMessage(err.message);
-                displayErrorBox(translated);
-            } finally {
-                if (btn) btn.disabled = false;
-                setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
-            }
-        };
-
-        function openModal(id, isQuotaError) {
-            var input = document.getElementById('apiKeyInput');
-            var notice = document.getElementById('apiKeyNotice');
-            if (input) input.value = getApiKey();
-            if (notice) {
-                if (isQuotaError) notice.classList.remove('hidden');
-                else notice.classList.add('hidden');
-            }
-            var modal = document.getElementById(id);
-            if (modal) modal.classList.remove('hidden');
-        }
-
-        function closeModal(id) {
-            var modal = document.getElementById(id);
-            if (modal) modal.classList.add('hidden');
-        }
-
-        function saveApiKeyFromModal() {
-            var input = document.getElementById('apiKeyInput');
-            var clean = String(input ? input.value : '').trim();
-            if (clean && clean.length > 5) {
-                localStorage.setItem('suarateks_gemini_key', clean);
-                showToast('API Keyを保存しました！', 'info');
-                closeModal('apiKeyModal');
-            } else {
-                showToast('有効なAPI Keyを入力してください', 'error');
-            }
-        }
-
-        function speakIndonesian(text) {
-            if (!('speechSynthesis' in window) || !text) return;
-            window.speechSynthesis.cancel();
-            
-            if (window.availableIndoVoices.length === 0) {
-                initSpeechSynthesisVoices();
-            }
-
-            var utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'id-ID';
-            utterance.rate = window.speechRate || 0.85;
-
-            if (window.availableIndoVoices.length > 0) {
-                utterance.voice = window.availableIndoVoices[0];
-            } else {
-                var voices = window.speechSynthesis.getVoices();
-                var indoVoice = voices.find(function(v) { 
-                    var lang = (v.lang || '').toLowerCase();
-                    return lang.startsWith('id') || lang.includes('id'); 
-                });
-                if (indoVoice) utterance.voice = indoVoice;
-            }
-
-            window.speechSynthesis.speak(utterance);
-        }
-
-        function stopAllSpeech() {
-            if (!('speechSynthesis' in window)) return;
-            window.speechSynthesis.cancel();
-            if (window.activeSpeechState.blockId) updateBlockToggleUI(window.activeSpeechState.blockId, 'stopped');
-            window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
-        }
-
-        function speakFromWord(blockId, wordIndex) {
-            var cleanId = blockId.replace(/^[tg]-/, '');
-            var block = window.transcriptBlocks.find(function(b) { return b.id === cleanId; });
-            if (!block || !block.indonesian) return;
-            var words = block.indonesian.split(/\s+/);
-            startSpeechBlock(blockId, words.slice(wordIndex).join(' '));
-        }
-
-        function toggleSpeechBlock(blockId) {
-            if (!('speechSynthesis' in window)) return;
-            if (window.activeSpeechState.blockId === blockId) {
-                if (window.speechSynthesis.paused || window.activeSpeechState.isPaused) {
-                    window.speechSynthesis.resume();
-                    window.activeSpeechState.isPaused = false;
-                    window.activeSpeechState.isPlaying = true;
-                    updateBlockToggleUI(blockId, 'playing');
-                } else if (window.speechSynthesis.speaking) {
-                    window.speechSynthesis.pause();
-                    window.activeSpeechState.isPaused = true;
-                    window.activeSpeechState.isPlaying = false;
-                    updateBlockToggleUI(blockId, 'paused');
-                } else {
-                    startSpeechBlock(blockId);
-                }
-            } else {
-                startSpeechBlock(blockId);
-            }
-        }
-
-        function startSpeechBlock(blockId, customText) {
-            if (!('speechSynthesis' in window)) return;
-            stopAllSpeech();
-            var cleanId = blockId.replace(/^[tg]-/, '');
-            var block = window.transcriptBlocks.find(function(b) { return b.id === cleanId; });
-            if (!block) return;
-
-            var textToSpeak = customText || block.indonesian;
-            
-            if (window.availableIndoVoices.length === 0) {
-                initSpeechSynthesisVoices();
-            }
-
-            var utterance = new SpeechSynthesisUtterance(textToSpeak);
-            utterance.lang = 'id-ID';
-            utterance.rate = window.speechRate || 0.85;
-
-            if (window.availableIndoVoices.length > 0) {
-                utterance.voice = window.availableIndoVoices[0];
-            } else {
-                var voices = window.speechSynthesis.getVoices();
-                var indoVoice = voices.find(function(v) { 
-                    var lang = (v.lang || '').toLowerCase();
-                    return lang.startsWith('id') || lang.includes('id'); 
-                });
-                if (indoVoice) utterance.voice = indoVoice;
-            }
-
-            utterance.onstart = function() {
-                window.activeSpeechState = { blockId: blockId, utterance: utterance, isPlaying: true, isPaused: false };
-                updateBlockToggleUI(blockId, 'playing');
-            };
-            utterance.onpause = function() {
-                window.activeSpeechState.isPaused = true;
-                window.activeSpeechState.isPlaying = false;
-                updateBlockToggleUI(blockId, 'paused');
-            };
-            utterance.onend = function() {
-                updateBlockToggleUI(blockId, 'stopped');
-                window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
-            };
-            window.speechSynthesis.speak(utterance);
-        }
-
-        function updateBlockToggleUI(blockId, state) {
-            var btn = document.getElementById('btn-toggle-' + blockId);
-            if (!btn) return;
-            if (state === 'playing') btn.innerHTML = '<i class="fa-solid fa-pause text-red-500"></i><span>一時停止</span>';
-            else if (state === 'paused') btn.innerHTML = '<i class="fa-solid fa-play text-amber-500"></i><span>再開</span>';
-            else btn.innerHTML = '<i class="fa-solid fa-play"></i><span>再生</span>';
-        }
-
-        function renderClickableIndonesianWords(text, blockId) {
-            if (!text) return '';
-            var words = text.split(/\s+/);
-            return words.map(function(w, idx) {
-                return '<span class="word-clickable" onclick="speakFromWord(\'' + blockId + '\', ' + idx + ')" title="ここから再生">' + escapeHtml(w) + '</span>';
-            }).join(' ');
-        }
-
-        function renderTranscriptContainer() {
-            var emptyState = document.getElementById('emptyState');
-            var container = document.getElementById('transcriptContainer');
-            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
-                if (emptyState) emptyState.classList.remove('hidden');
-                if (container) container.innerHTML = '';
-                return;
-            }
-            if (emptyState) emptyState.classList.add('hidden');
-            var html = '';
-            window.transcriptBlocks.forEach(function(block, idx) {
-                var clickableIndo = renderClickableIndonesianWords(block.indonesian, 't-' + block.id);
-                html += '<div class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">' +
-                    '<div class="flex items-center justify-between text-xs text-slate-500 pb-1 border-b border-slate-100 dark:border-slate-700">' +
-                        '<div class="flex items-center gap-1.5">' +
-                            '<span class="font-extrabold text-white bg-red-600 px-2 py-0.5 rounded-md text-[10px]">#' + (idx + 1) + '</span>' +
-                            '<span class="font-bold text-red-600 bg-red-50 dark:bg-red-950/60 px-2 py-0.5 rounded-full text-[10px]">' + escapeHtml(block.speaker) + '</span>' +
-                        '</div>' +
-                        '<button id="btn-toggle-t-' + block.id + '" onclick="toggleSpeechBlock(\'t-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1 hover:bg-slate-200">' +
-                            '<i class="fa-solid fa-play text-[10px]"></i><span>再生</span>' +
-                        '</button>' +
-                    '</div>' +
-                    '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + clickableIndo + '</p>' +
-                    '<div class="bg-amber-50/70 dark:bg-slate-900/60 p-2.5 rounded-lg border border-amber-200/50">' +
-                        '<p class="dynamic-text-ja font-semibold text-amber-950 dark:text-amber-200">' + escapeHtml(block.japanese) + '</p>' +
-                    '</div>' +
-                '</div>';
-            });
-            if (container) container.innerHTML = html;
-        }
-
-        function renderGrammarContainer() {
-            var emptyState = document.getElementById('grammarEmptyState');
-            var container = document.getElementById('grammarContainer');
-            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
-                if (emptyState) emptyState.classList.remove('hidden');
-                if (container) container.innerHTML = '';
-                return;
-            }
-            if (emptyState) emptyState.classList.add('hidden');
-            var html = '';
-            window.transcriptBlocks.forEach(function(block, idx) {
-                var clickableIndo = renderClickableIndonesianWords(block.indonesian, 'g-' + block.id);
-                html += '<div class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2.5">' +
-                    '<div class="flex items-center justify-between text-xs pb-1 border-b border-slate-100 dark:border-slate-700">' +
-                        '<span class="font-extrabold text-blue-700 bg-blue-100 dark:bg-blue-950/80 px-2.5 py-0.5 rounded-full text-[11px]">文節 #' + (idx + 1) + '</span>' +
-                        '<button id="btn-toggle-g-' + block.id + '" onclick="toggleSpeechBlock(\'g-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-xs font-bold">' +
-                            '<i class="fa-solid fa-play text-[9px]"></i><span>再生</span>' +
-                        '</button>' +
-                    '</div>' +
-                    '<div class="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border-l-4 border-blue-500 space-y-1">' +
-                        '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + clickableIndo + '</p>' +
-                        '<p class="dynamic-text-ja text-slate-500 dark:text-slate-400 font-medium">' + escapeHtml(block.japanese) + '</p>' +
-                    '</div>' +
-                    '<div class="bg-blue-50/60 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200/60 text-xs leading-relaxed text-blue-950 dark:text-blue-200 space-y-1.5">' +
-                        '<h5 class="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1 text-[10px] uppercase tracking-wider"><i class="fa-solid fa-diagram-project"></i> 4段階精密構文解剖・応用解説</h5>' +
-                        '<div class="dynamic-text-ja whitespace-pre-line font-medium pt-0.5 leading-relaxed">' + escapeHtml(block.grammarExplanation) + '</div>' +
-                    '</div>' +
-                '</div>';
-            });
-            if (container) container.innerHTML = html;
-        }
-
-        function highlightMatch(str, query) {
-            var safeStr = escapeHtml(str || '');
-            var q = (query || '').trim();
-            if (!q) return safeStr;
-            try {
-                var escQuery = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                return safeStr.replace(new RegExp('(' + escQuery + ')', 'gi'), '<mark class="search-highlight">$1</mark>');
-            } catch (e) { return safeStr; }
-        }
-
-        function getFilteredVocabList() {
-            var filtered = window.isShuffled ? Array.from(window.shuffledVocabList) : (window.vocabList || []);
-            if (window.activeVocabPosFilter !== 'all') {
-                filtered = filtered.filter(function(v) { return v.pos === window.activeVocabPosFilter; });
-            }
-            var query = (window.activeVocabSearchQuery || '').trim().toLowerCase();
-            if (query !== '') {
-                filtered = filtered.filter(function(v) {
-                    return (v.indonesian || '').toLowerCase().includes(query) || (v.japanese || '').toLowerCase().includes(query) || (v.baseForm || '').toLowerCase().includes(query);
-                });
-            }
-            return filtered;
-        }
-
-        function renderVocabContainer() {
-            var emptyState = document.getElementById('vocabEmptyState');
-            var listContainer = document.getElementById('vocabListContainer');
-            var cardContainer = document.getElementById('vocabCardContainer');
-            var vocabBadge = document.getElementById('vocabCountBadge');
-
-            var filtered = getFilteredVocabList();
-            if (vocabBadge) vocabBadge.textContent = (window.vocabList || []).length;
-            updatePosFilterUI();
-            updateModeBtnUI();
-
-            if (!filtered || filtered.length === 0) {
-                if (emptyState) emptyState.classList.remove('hidden');
-                if (listContainer) listContainer.innerHTML = '';
-                if (cardContainer) cardContainer.classList.add('hidden');
-                return;
-            }
-
-            if (emptyState) emptyState.classList.add('hidden');
-            if (window.activeVocabMode === 'list') {
-                if (cardContainer) cardContainer.classList.add('hidden');
-                if (listContainer) listContainer.classList.remove('hidden');
-
-                var html = '', q = window.activeVocabSearchQuery;
-                filtered.forEach(function(v) {
-                    var hIndo = highlightMatch(v.indonesian, q);
-                    var hJap = highlightMatch(v.japanese, q);
-                    var keyTag = v.isKeyWord ? '<span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/50 flex items-center gap-0.5 shrink-0"><i class="fa-solid fa-star text-[8px]"></i>重要</span>' : '';
-
-                    html += '<div class="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between gap-2">' +
-                        '<div class="space-y-0.5 flex-1 min-w-0">' +
-                            '<div class="flex items-center gap-1.5 flex-wrap">' +
-                                '<span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0">' + getPosLabel(v.pos) + '</span>' +
-                                keyTag +
-                                '<h4 class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100 truncate">' + hIndo + '</h4>' +
-                                '<button onclick="speakIndonesian(\'' + escapeHtml(v.indonesian) + '\')" class="text-slate-400 hover:text-emerald-500 p-1 shrink-0"><i class="fa-solid fa-volume-high text-xs"></i></button>' +
-                            '</div>' +
-                            '<p class="dynamic-text-ja text-emerald-700 dark:text-emerald-400 font-bold">' + hJap + '</p>' +
-                        '</div>' +
-                        '<button onclick="toggleVocabMastered(\'' + v.id + '\')" class="px-2 py-1 rounded ' + (v.mastered ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400') + ' text-[10px] font-bold shrink-0">' + (v.mastered ? '習得' : '未修') + '</button>' +
-                    '</div>';
-                });
-                if (listContainer) listContainer.innerHTML = html;
-            } else {
-                if (listContainer) listContainer.classList.add('hidden');
-                if (cardContainer) { cardContainer.classList.remove('hidden'); cardContainer.classList.add('flex'); }
-                updateFlashcardUI();
-            }
-        }
-
-        function getPosLabel(pos) {
-            switch(pos) {
-                case 'noun': return '名詞';
-                case 'verb': return '動詞';
-                case 'adjective': return '形容詞';
-                case 'adverb': return '副詞';
-                default: return 'その他';
-            }
-        }
-
-        function updateModeBtnUI() {
-            var btnCard = document.getElementById('btnModeCard'), btnList = document.getElementById('btnModeList');
-            if (btnCard && btnList) {
-                if (window.activeVocabMode === 'card') {
-                    btnCard.className = "px-3 py-1.5 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition";
-                    btnList.className = "px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
-                } else {
-                    btnList.className = "px-3 py-1.5 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition";
-                    btnCard.className = "px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
-                }
-            }
-        }
-
-        function updatePosFilterUI() {
-            document.querySelectorAll('.btn-pos-filter').forEach(function(btn) {
-                if (btn.dataset.pos === window.activeVocabPosFilter) {
-                    btn.className = "btn-pos-filter px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-red-600 text-white shadow-xs transition";
-                } else {
-                    btn.className = "btn-pos-filter px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
-                }
-            });
-        }
-
-        function setVocabMode(mode) { window.activeVocabMode = mode; renderVocabContainer(); }
-        function setVocabPosFilter(pos) { window.activeVocabPosFilter = pos; window.currentCardIndex = 0; renderVocabContainer(); }
-        function toggleShuffleCards() {
-            window.isShuffled = !window.isShuffled;
-            if (window.isShuffled) window.shuffledVocabList = Array.from(window.vocabList).sort(function() { return Math.random() - 0.5; });
-            window.currentCardIndex = 0;
-            renderVocabContainer();
-        }
-        function toggleVocabMastered(id) {
-            var item = window.vocabList.find(function(v) { return v.id === id; });
-            if (item) { item.mastered = !item.mastered; renderVocabContainer(); }
-        }
-
-        function updateFlashcardUI() {
-            var filtered = getFilteredVocabList();
-            if (!filtered || filtered.length === 0) return;
-            if (window.currentCardIndex >= filtered.length) window.currentCardIndex = 0;
-
-            var item = filtered[window.currentCardIndex];
-            var q = window.activeVocabSearchQuery;
-            var cardIndo = document.getElementById('cardIndoText');
-            var cardJap = document.getElementById('cardJapText');
-            var cardContext = document.getElementById('cardContextFull');
-            var cardPosFront = document.getElementById('cardBadgeFront');
-            var cardPosBack = document.getElementById('cardPosBack');
-            var progressLabel = document.getElementById('flashcardProgressLabel');
-
-            if (cardIndo) cardIndo.innerHTML = highlightMatch(item.indonesian, q);
-            if (cardJap) cardJap.innerHTML = highlightMatch(item.japanese, q);
-            if (cardContext) cardContext.innerHTML = item.context ? ('文脈: "' + highlightMatch(item.context, q) + '"') : '文脈なし';
-            if (cardPosFront) cardPosFront.innerHTML = getPosLabel(item.pos) + (item.isKeyWord ? ' <span class="ml-1 px-1.5 py-0.5 bg-amber-500 text-white rounded text-[9px] font-extrabold"><i class="fa-solid fa-star text-[8px]"></i> 重要語</span>' : '');
-            if (cardPosBack) cardPosBack.innerHTML = '品詞: ' + getPosLabel(item.pos) + (item.baseForm ? (' (原形: ' + item.baseForm + ')') : '');
-            if (progressLabel) progressLabel.textContent = (window.currentCardIndex + 1) + ' / ' + filtered.length;
-
-            window.isCardFlipped = false;
-            var flashcardInner = document.getElementById('flashcardInner');
-            if (flashcardInner) flashcardInner.classList.remove('rotate-y-180');
-        }
-
-        function flipFlashcard() {
-            window.isCardFlipped = !window.isCardFlipped;
-            var inner = document.getElementById('flashcardInner');
-            if (window.isCardFlipped) inner.classList.add('rotate-y-180');
-            else inner.classList.remove('rotate-y-180');
-        }
-
-        function nextFlashcard(mastered) {
-            var filtered = getFilteredVocabList();
-            if (filtered.length === 0) return;
-            if (mastered && filtered[window.currentCardIndex]) filtered[window.currentCardIndex].mastered = true;
-            window.currentCardIndex = (window.currentCardIndex + 1) % filtered.length;
-            updateFlashcardUI();
-        }
-
-        async function loadHistoryFromStorage() {
-            try {
-                var history = await dbGetAllHistory();
-                renderHistoryList(history);
-            } catch (e) { renderHistoryList([]); }
-        }
-
-        function toggleHistorySelect(id, event) {
-            if (event) event.stopPropagation();
-            var idx = window.selectedHistoryIds.indexOf(id);
-            if (idx > -1) window.selectedHistoryIds.splice(idx, 1);
-            else window.selectedHistoryIds.push(id);
-            updateHistoryActionButtonsState();
-        }
-
-        function updateHistoryActionButtonsState() {
-            var btnMerge = document.getElementById('btnMergeSelected');
-            var btnRe = document.getElementById('btnReanalyzeSelected');
-            var btnSave = document.getElementById('btnSaveSelected');
-            var count = window.selectedHistoryIds.length;
-
-            if (btnRe) {
-                if (count >= 1) {
-                    btnRe.disabled = false;
-                    btnRe.className = "px-1 py-0.5 bg-amber-500 hover:bg-amber-600 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-0.5 cursor-pointer shrink-0";
-                    btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 再解析 (' + count + ')';
-                } else {
-                    btnRe.disabled = true;
-                    btnRe.className = "px-1 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-0.5 cursor-not-allowed opacity-60 shrink-0";
-                    btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 再解析';
-                }
-            }
-
-            if (btnMerge) {
-                if (count >= 2) {
-                    btnMerge.disabled = false;
-                    btnMerge.className = "px-1 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-0.5 cursor-pointer shrink-0";
-                    btnMerge.innerHTML = '<i class="fa-solid fa-code-merge"></i> 結合 (' + count + ')';
-                } else {
-                    btnMerge.disabled = true;
-                    btnMerge.className = "px-1 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-0.5 cursor-not-allowed opacity-60 shrink-0";
-                    btnMerge.innerHTML = '<i class="fa-solid fa-code-merge"></i> 結合';
-                }
-            }
-
-            if (btnSave) {
-                if (count >= 1) {
-                    btnSave.disabled = false;
-                    btnSave.className = "px-1 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-0.5 cursor-pointer shrink-0";
-                    btnSave.innerHTML = '<i class="fa-solid fa-download"></i> 保存 (' + count + ')';
-                } else {
-                    btnSave.disabled = true;
-                    btnSave.className = "px-1 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-0.5 cursor-not-allowed opacity-60 shrink-0";
-                    btnSave.innerHTML = '<i class="fa-solid fa-download"></i> 保存';
-                }
-            }
-        }
-
-        function renderHistoryList(history) {
-            var container = document.getElementById('historyList');
-            if (!container) return;
-            if (!history || history.length === 0) {
-                container.innerHTML = '<p class="text-xs text-slate-400 py-1.5 text-center">履歴なし</p>';
-                window.selectedHistoryIds = [];
-                updateHistoryActionButtonsState();
-                return;
-            }
-            var html = '';
-            history.forEach(function(item) {
-                var isChecked = window.selectedHistoryIds.includes(item.id);
-                html += '<div onclick="loadHistoryItem(\'' + item.id + '\')" class="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-red-50 cursor-pointer flex justify-between items-center text-xs transition mb-1">' +
-                    '<div class="flex items-center gap-1.5 min-w-0 flex-1">' +
-                        '<input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onclick="toggleHistorySelect(\'' + item.id + '\', event)" class="rounded text-red-600 cursor-pointer shrink-0 w-3.5 h-3.5">' +
-                        '<div class="min-w-0 flex-1">' +
-                            '<p class="font-bold text-slate-800 dark:text-slate-100 truncate leading-tight text-[11px]">' + escapeHtml(item.fileName) + '</p>' +
-                            '<p class="text-[8px] text-slate-400 font-mono">' + escapeHtml(item.date) + '</p>' +
-                        '</div>' +
-                    '</div>' +
-                    '<button onclick="deleteHistoryItem(\'' + item.id + '\', event)" class="text-slate-400 hover:text-rose-500 p-1 shrink-0 ml-1"><i class="fa-solid fa-trash-can text-[10px]"></i></button>' +
-                '</div>';
-            });
-            container.innerHTML = html;
-            updateHistoryActionButtonsState();
-        }
-
-        async function saveSelectedHistories() {
-            if (!window.selectedHistoryIds || window.selectedHistoryIds.length === 0) return;
-            var history = await dbGetAllHistory();
-            var selectedItems = window.selectedHistoryIds.map(function(id) {
-                return history.find(function(h) { return h.id === id; });
-            }).filter(Boolean);
-
-            if (selectedItems.length === 0) return;
-
-            selectedItems.forEach(function(item, index) {
-                var cleanName = formatOutputFileName(item.fileName || '解析データ');
-                var exportObj = {
-                    id: item.id,
-                    fileName: cleanName,
-                    date: item.date,
-                    blocks: item.blocks || [],
-                    vocab: item.vocab || []
-                };
-                setTimeout(function() {
-                    exportDataToFile(exportObj, cleanName + '.json');
-                }, index * 300);
-            });
-
-            showToast(selectedItems.length + ' 件の履歴を個別JSONとして保存しました！', 'info');
-        }
-
-        function saveCurrentToHistory(fileName, showToastNotification) {
-            if (showToastNotification === undefined) showToastNotification = true;
-            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
-            var formattedName = formatOutputFileName(fileName);
-            var item = {
-                id: 'hist-' + Date.now(),
-                fileName: formattedName,
-                date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                timestamp: Date.now(),
-                blocks: window.transcriptBlocks,
-                vocab: window.vocabList
-            };
-            dbSaveHistoryItem(item).then(function() {
-                loadHistoryFromStorage();
-            });
-        }
-
-        async function mergeSelectedHistories() {
-            if (window.selectedHistoryIds.length < 2) return;
-            var history = await dbGetAllHistory();
-            var selectedItems = window.selectedHistoryIds.map(function(id) {
-                return history.find(function(h) { return h.id === id; });
-            }).filter(Boolean);
-
-            var mergedBlocks = [], mergedVocabMap = new Map(), titleParts = [];
-            var globalBlockIdx = 0;
-
-            selectedItems.forEach(function(item) {
-                titleParts.push(item.fileName.replace(/\.[^/.]+$/, ""));
-                if (Array.isArray(item.blocks)) {
-                    item.blocks.forEach(function(b) {
-                        mergedBlocks.push(Object.assign({}, b, { id: 'block-merged-' + Date.now() + '-' + globalBlockIdx, blockIndex: globalBlockIdx }));
-                        globalBlockIdx++;
-                    });
-                }
-                if (Array.isArray(item.vocab)) {
-                    item.vocab.forEach(function(v) {
-                        var key = (v.indonesian || '').trim().toLowerCase();
-                        if (key && !mergedVocabMap.has(key)) mergedVocabMap.set(key, v);
-                    });
-                }
-            });
-
-            var mergedTitle = formatOutputFileName('結合_' + titleParts.join('_').substring(0, 20));
-            window.transcriptBlocks = mergedBlocks;
-            window.vocabList = Array.from(mergedVocabMap.values());
-            renderTranscriptContainer();
-            renderGrammarContainer();
-            renderVocabContainer();
-
-            var mergedDataObj = {
-                id: 'hist-merged-' + Date.now(),
-                fileName: mergedTitle,
-                date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                timestamp: Date.now(),
-                blocks: window.transcriptBlocks,
-                vocab: window.vocabList
-            };
-            exportDataToFile(mergedDataObj, mergedTitle + '.json');
-            await dbSaveHistoryItem(mergedDataObj);
-            loadHistoryFromStorage();
-            window.selectedHistoryIds = [];
-            showToast('選択した履歴を結合しました！', 'info');
-        }
-
-        async function clearHistory() {
-            await dbClearHistory();
-            window.selectedHistoryIds = [];
-            loadHistoryFromStorage();
-            showToast('履歴を消去しました', 'info');
-        }
-
-        async function loadHistoryItem(id) {
-            var history = await dbGetAllHistory();
-            var found = history.find(function(h) { return h.id === id; });
-            if (found) {
-                window.transcriptBlocks = found.blocks || [];
-                window.vocabList = found.vocab || [];
-                window.currentLoadedFileName = found.fileName || '';
-                
-                var badge = document.getElementById('sessionBadge');
-                if (badge) {
-                    badge.textContent = 'セッション: ' + found.fileName;
-                    badge.className = "text-[9px] bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200 px-1.5 py-0.5 rounded font-bold";
-                }
-
-                renderTranscriptContainer();
-                renderGrammarContainer();
-                renderVocabContainer();
-                showToast('「' + found.fileName + '」を読み込みました', 'info');
-                if (window.innerWidth < 768) switchMobileTab('transcript');
-            }
-        }
-
-        async function deleteHistoryItem(id, event) {
-            if (event) event.stopPropagation();
-            await dbDeleteHistoryItem(id);
-            window.selectedHistoryIds = window.selectedHistoryIds.filter(function(sid) { return sid !== id; });
-            loadHistoryFromStorage();
-        }
-
-        function exportDataToFile(dataObj, customFilename) {
-            var blob = new Blob([JSON.stringify(dataObj, null, 2)], { type: 'application/json' });
-            var url = URL.createObjectURL(blob);
-            var a = document.createElement('a');
-            a.href = url;
-            a.download = customFilename || 'suarateks_backup.json';
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        async function importHistoryBackup(event) {
-            var files = event.target.files ? Array.from(event.target.files) : [];
-            if (files.length === 0) return;
-
-            var lastLoadedData = null, successCount = 0;
-
-            for (var i = 0; i < files.length; i++) {
-                try {
-                    var content = await new Promise(function(resolve, reject) {
-                        var reader = new FileReader();
-                        reader.onload = function(e) { resolve(e.target.result); };
-                        reader.onerror = reject;
-                        reader.readAsText(files[i]);
-                    });
-                    var importedData = JSON.parse(content);
-                    var singleObj = Array.isArray(importedData) ? importedData[0] : importedData;
-                    if (!singleObj || !singleObj.blocks) continue;
-
-                    var formattedName = formatOutputFileName(singleObj.fileName || files[i].name);
-                    var item = {
-                        id: 'hist-' + Date.now() + '-' + i,
-                        fileName: formattedName,
-                        date: singleObj.date || new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                        timestamp: Date.now() + i,
-                        blocks: singleObj.blocks,
-                        vocab: singleObj.vocab || []
-                    };
-                    await dbSaveHistoryItem(item);
-                    lastLoadedData = item;
-                    successCount++;
-                } catch (e) {}
-            }
-
-            loadHistoryFromStorage();
-
-            if (lastLoadedData) {
-                window.transcriptBlocks = lastLoadedData.blocks;
-                window.vocabList = lastLoadedData.vocab;
-                renderTranscriptContainer();
-                renderGrammarContainer();
-                renderVocabContainer();
-            }
-            showToast(successCount + ' 件のJSONを復元しました！', 'info');
-            event.target.value = '';
-        }
-
-        function showToast(message, type) {
-            if (type === undefined) type = 'info';
-            var container = document.getElementById('toastContainer');
-            if (!container) return;
-            var toast = document.createElement('div');
-            toast.className = (type === 'error' ? 'bg-rose-600' : 'bg-slate-800') + ' text-white px-3.5 py-2.5 rounded-xl shadow-xl text-xs font-bold flex items-center justify-between gap-2 transition-all duration-300 pointer-events-auto border border-white/10';
-            toast.innerHTML = '<span>' + escapeHtml(message) + '</span>';
-            container.appendChild(toast);
-            setTimeout(function() { if (toast.parentElement) toast.remove(); }, 4000);
-        }
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        }
-
-        function switchMobileTab(tab) {
-            window.activeMobileTab = tab;
-            var panelSetup = document.getElementById('panelSetup');
-            var panelTranscript = document.getElementById('panelTranscript');
-
-            if (window.innerWidth >= 768) {
-                if (panelSetup) panelSetup.style.display = 'flex';
-                if (panelTranscript) panelTranscript.style.display = 'flex';
-                return;
-            }
-
-            if (tab === 'setup') {
-                if (panelSetup) panelSetup.style.display = 'flex';
-                if (panelTranscript) panelTranscript.style.display = 'none';
-            } else {
-                if (panelSetup) panelSetup.style.display = 'none';
-                if (panelTranscript) panelTranscript.style.display = 'flex';
-                setStudioSubView(tab);
-            }
-        }
-
-        function setStudioSubView(subView) {
-            window.activeStudioSubView = subView;
-            var viewTranscript = document.getElementById('transcriptView');
-            var viewGrammar = document.getElementById('grammarView');
-            var viewVocab = document.getElementById('vocabView');
-
-            var btnTranscript = document.getElementById('navTabTranscript');
-            var btnGrammar = document.getElementById('navTabGrammar');
-            var btnVocab = document.getElementById('navTabVocab');
-
-            if (viewTranscript) viewTranscript.classList.add('hidden');
-            if (viewGrammar) viewGrammar.classList.add('hidden');
-            if (viewVocab) { viewVocab.classList.add('hidden'); viewVocab.classList.remove('flex'); }
-
-            [btnTranscript, btnGrammar, btnVocab].forEach(function(btn) {
-                if (btn) btn.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0";
-            });
-
-            if (subView === 'transcript') {
-                if (viewTranscript) viewTranscript.classList.remove('hidden');
-                if (btnTranscript) btnTranscript.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
-            } else if (subView === 'grammar') {
-                if (viewGrammar) viewGrammar.classList.remove('hidden');
-                if (btnGrammar) btnGrammar.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
-                renderGrammarContainer();
-            } else if (subView === 'vocab') {
-                if (viewVocab) { viewVocab.classList.remove('hidden'); viewVocab.classList.add('flex'); }
-                if (btnVocab) btnVocab.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
-                renderVocabContainer();
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            setFontSize(20);
-            setSpeechRate(0.85);
-            loadHistoryFromStorage();
-            initDropzoneEvents();
-            if ('speechSynthesis' in window) {
-                initSpeechSynthesisVoices();
-            }
-        });
-    </script>
+​var chunkPayload = {
+contents: [{ parts: [{ text: combinedPrompt }] }],
+generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 }
+};
+​try {
+var chunkResponseData = await fetchGeminiApi(apiKey, chunkPayload);
+var chunkRawText = extractGeminiText(chunkResponseData);
+var chunkParsed = safeParseTruncatedJson(chunkRawText);
+​if (chunkParsed.grammar && Array.isArray(chunkParsed.grammar)) {
+chunkParsed.grammar.forEach(function(gItem, gIdx) {
+var bIdx = (gItem.blockIndex !== undefined && gItem.blockIndex !== null) ? Number(gItem.blockIndex) : (start + gIdx);
+var targetBlock = blocks.find(function(b) { return b.blockIndex === bIdx; }) || chunkBlocks[gIdx];
+if (targetBlock && gItem.grammarExplanation) {
+targetBlock.grammarExplanation = String(gItem.grammarExplanation).trim();
+}
+});
+}
+​if (chunkParsed.vocab && Array.isArray(chunkParsed.vocab)) {
+chunkParsed.vocab.forEach(function(v) {
+var wordForm = (v.indonesian || '').trim();
+var base = (v.baseForm || wordForm).trim();
+var key = base.toLowerCase();
+var japMeaning = (v.japanese || '').trim();
+​if (wordForm && key) {
+if (!accumulatedVocabMap.has(key) || accumulatedVocabMap.get(key).japanese === '（自動抽出語）') {
+accumulatedVocabMap.set(key, {
+id: 'vocab-' + Date.now() + '-' + accumulatedVocabMap.size,
+indonesian: wordForm,
+baseForm: base,
+japanese: japMeaning || '（意味取得中）',
+pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(v.pos) ? v.pos : 'other',
+context: v.context || '',
+isKeyWord: Boolean(v.isKeyWord),
+mastered: false
+});
+}
+}
+});
+}
+} catch (chunkErr) {}
+​var missingWords = [];
+chunkWords.forEach(function(w) {
+var key = w.toLowerCase();
+if (!accumulatedVocabMap.has(key) || accumulatedVocabMap.get(key).japanese === '（自動抽出語）') {
+missingWords.push(w);
+}
+});
+​if (missingWords.length > 0) {
+var rescuePrompt = 'Provide Japanese translations, base forms, and parts of speech for these Indonesian words:\n' + missingWords.join(', ') + '\n\nReturn ONLY a JSON array:\n[\n  {\n    "indonesian": "kata",\n    "baseForm": "kata",\n    "japanese": "言葉、単語",\n    "pos": "noun",\n    "context": "Context",\n    "isKeyWord": false\n  }\n]';
+try {
+var rescueRes = await fetchGeminiApi(apiKey, {
+contents: [{ parts: [{ text: rescuePrompt }] }],
+generationConfig: { responseMimeType: "application/json", maxOutputTokens: 4096 }
+});
+var rescueParsed = safeParseTruncatedJson(extractGeminiText(rescueRes));
+if (Array.isArray(rescueParsed)) {
+rescueParsed.forEach(function(rv) {
+var rKey = (rv.baseForm || rv.indonesian || '').trim().toLowerCase();
+if (rKey && rv.japanese) {
+accumulatedVocabMap.set(rKey, {
+id: 'vocab-rescued-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
+indonesian: rv.indonesian || rKey,
+baseForm: rv.baseForm || rKey,
+japanese: rv.japanese,
+pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(rv.pos) ? rv.pos : 'other',
+context: rv.context || '',
+isKeyWord: Boolean(rv.isKeyWord),
+mastered: false
+});
+}
+});
+}
+} catch (resErr) {}
+}
+​chunkBlocks.forEach(function(cb) {
+if (!cb.grammarExplanation || cb.grammarExplanation === '解析中...') {
+cb.grammarExplanation = '【語句対比】\n・' + cb.indonesian + ' = ' + cb.japanese + '\n【構文構造】\n・標準配置構文\n【接辞解剖】\n・基本語形表現\n【解説・ニュアンス】\n・標準的な表現です。';
+}
+});
+​await sleep(500);
+}
+​return {
+blocks: blocks,
+vocab: Array.from(accumulatedVocabMap.values())
+};
+}
+​window.processAudioWithGemini = async function() {
+if (!window.fileQueue || window.fileQueue.length === 0) {
+showToast('音源ファイルがキューに追加されていません', 'error');
+return;
+}
+​var apiKey = getApiKey();
+if (!apiKey) {
+showToast('Gemini API Key が設定されていません。', 'error');
+openModal('apiKeyModal');
+return;
+}
+​if (window.isQueueProcessing) return;
+window.isQueueProcessing = true;
+​var btn = document.getElementById('startTranscribeBtn');
+var btnText = document.getElementById('transcribeBtnText');
+var progressContainer = document.getElementById('chunkProgressContainer');
+if (btn) btn.disabled = true;
+if (progressContainer) progressContainer.classList.remove('hidden');
+​for (var i = 0; i < window.fileQueue.length; i++) {
+var item = window.fileQueue[i];
+if (item.status === 'completed') continue;
+​resetActiveSessionState(item.file.name);
+​item.status = 'processing';
+renderQueueUI();
+if (btnText) btnText.textContent = 'ダイレクト解析中 (' + (i + 1) + '/' + window.fileQueue.length + ')';
+​try {
+await processSingleFileDirectly(item, apiKey, i + 1, window.fileQueue.length);
+item.status = 'completed';
+renderQueueUI();
+} catch (err) {
+item.status = 'error';
+renderQueueUI();
+showToast('エラー: ' + translateErrorMessage(err.message), 'error');
+if (err.message.includes('Spend Cap') || err.message.includes('prepayment')) {
+openModal('apiKeyModal', true);
+break;
+}
+}
+}
+​window.isQueueProcessing = false;
+if (btn) btn.disabled = false;
+if (btnText) btnText.textContent = "ダイレクト解析スタート";
+showToast('すべてのキューファイルのダイレクト解析処理が完了しました', 'info');
+setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
+};
+​async function processSingleFileDirectly(queueItem, apiKey, currentIdx, totalIdx) {
+var file = queueItem.file;
+​var progressLabel = document.getElementById('chunkProgressLabel');
+var progressPercent = document.getElementById('chunkProgressPercent');
+var progressBar = document.getElementById('chunkProgressBar');
+​if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-cloud-arrow-up text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 音声をAPIへダイレクト送信中...</span>';
+if (progressBar) progressBar.style.width = '20%';
+if (progressPercent) progressPercent.textContent = '20%';
+​var audioBase64 = await new Promise(function(resolve, reject) {
+var reader = new FileReader();
+reader.onload = function(e) { resolve(e.target.result.split(',')[1]); };
+reader.onerror = reject;
+reader.readAsDataURL(file);
+});
+​var mimeType = file.type || 'audio/mp3';
+if (mimeType === 'audio/wave' || mimeType === 'audio/x-wav') mimeType = 'audio/wav';
+​var transcribePrompt = 'You are a professional Indonesian verbatim transcription specialist. Transcribe this audio file accurately in full without splitting.\nReturn ONLY a valid JSON array:\n[\n  {\n    "speaker": "Pembicara 1",\n    "indonesian": "spoken text",\n    "japanese": "Japanese translation"\n  }\n]';
+​if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-amber-500"></i> <span>Geminiが音声を直接解析中...</span>';
+if (progressBar) progressBar.style.width = '40%';
+if (progressPercent) progressPercent.textContent = '40%';
+​var payload = {
+contents: [{ role: 'user', parts: [{ text: transcribePrompt }, { inlineData: { mimeType: mimeType, data: audioBase64 } }] }],
+generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 }
+};
+​var resData = await fetchGeminiApi(apiKey, payload);
+var rawText = extractGeminiText(resData);
+var parsed = safeParseTruncatedJson(rawText);
+var subBlocks = Array.isArray(parsed) ? parsed : (parsed.transcript || []);
+​var allCombinedBlocks = [];
+subBlocks.forEach(function(sb) {
+allCombinedBlocks.push({
+id: 'block-' + Date.now() + '-' + allCombinedBlocks.length,
+blockIndex: allCombinedBlocks.length,
+speaker: sb.speaker || 'Pembicara 1',
+indonesian: sb.indonesian || '',
+japanese: sb.japanese || '',
+grammarExplanation: '解析中...'
+});
+});
+​if (allCombinedBlocks.length === 0) throw new Error('音声からテキストが読み取れませんでした');
+​window.transcriptBlocks = allCombinedBlocks;
+renderTranscriptContainer();
+if (window.innerWidth < 768) switchMobileTab('transcript');
+​var cleanFileName = formatOutputFileName(file.name);
+var finalRes = await reanalyzeBlocksCore(
+window.transcriptBlocks,
+apiKey,
+cleanFileName,
+function(chunkIdx, totalChunks, currentPct, label) {
+var mappedPct = Math.floor(60 + (currentPct * 0.4));
+if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-blue-500"></i> <span class="truncate">【文法・単語解析】' + chunkIdx + '/' + totalChunks + '</span>';
+if (progressBar) progressBar.style.width = mappedPct + '%';
+if (progressPercent) progressPercent.textContent = mappedPct + '%';
+}
+);
+​window.transcriptBlocks = finalRes.blocks;
+window.vocabList = finalRes.vocab;
+​if (progressBar) progressBar.style.width = '100%';
+if (progressPercent) progressPercent.textContent = '100%';
+​renderTranscriptContainer();
+renderGrammarContainer();
+renderVocabContainer();
+​await saveCurrentToHistory(cleanFileName, false);
+var singleDataObj = {
+id: window.currentLoadedSessionId,
+fileName: cleanFileName,
+date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+timestamp: Date.now(),
+blocks: window.transcriptBlocks,
+vocab: window.vocabList
+};
+exportDataToFile(singleDataObj, cleanFileName + '.json');
+}
+​window.reanalyzeSelectedHistories = async function() {
+if (!window.selectedHistoryIds || window.selectedHistoryIds.length === 0) return;
+​var apiKey = getApiKey();
+if (!apiKey) {
+showToast('Gemini API Key が設定されていません。', 'error');
+openModal('apiKeyModal');
+return;
+}
+​var allSessions = await dbGetAllSessions();
+var selectedItems = window.selectedHistoryIds.map(function(id) {
+return allSessions.find(function(h) { return h.id === id; });
+}).filter(Boolean);
+​if (selectedItems.length === 0) return;
+​var btnRe = document.getElementById('btnReanalyzeSelected');
+var btnMerge = document.getElementById('btnMergeSelected');
+var btnSave = document.getElementById('btnSaveSelected');
+var progressContainer = document.getElementById('chunkProgressContainer');
+var progressLabel = document.getElementById('chunkProgressLabel');
+var progressPercent = document.getElementById('chunkProgressPercent');
+var progressBar = document.getElementById('chunkProgressBar');
+​if (btnRe) btnRe.disabled = true;
+if (btnMerge) btnMerge.disabled = true;
+if (btnSave) btnSave.disabled = true;
+if (progressContainer) progressContainer.classList.remove('hidden');
+​try {
+for (var i = 0; i < selectedItems.length; i++) {
+var item = selectedItems[i];
+var baseName = formatOutputFileName(item.fileName);
+​var res = await reanalyzeBlocksCore(
+item.blocks || [],
+apiKey,
+'[' + (i + 1) + '/' + selectedItems.length + '] ' + baseName,
+function(cIdx, totalC, pct, label) {
+if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-rotate-right fa-spin text-amber-500"></i> <span class="truncate">' + label + ' (' + cIdx + '/' + totalC + ')</span>';
+if (progressBar) progressBar.style.width = pct + '%';
+if (progressPercent) progressPercent.textContent = pct + '%';
+}
+);
+​item.fileName = baseName;
+item.blocks = res.blocks;
+item.vocab = res.vocab;
+item.date = new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+item.timestamp = Date.now();
+​window.currentLoadedSessionId = item.id;
+window.currentLoadedFileName = item.fileName;
+window.transcriptBlocks = res.blocks;
+window.vocabList = res.vocab;
+updateActiveSessionBadge();
+renderTranscriptContainer();
+renderGrammarContainer();
+renderVocabContainer();
+​await dbSaveSession(item);
+}
+showToast(selectedItems.length + ' 件の選択再解析が完了しました！', 'info');
+window.selectedHistoryIds = [];
+await loadHistoryFromStorage();
+} catch (err) {
+showToast('一括再解析エラー: ' + translateErrorMessage(err.message), 'error');
+} finally {
+updateHistoryActionButtonsState();
+setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
+}
+};
+​window.reanalyzeCurrentTranscript = async function() {
+if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
+showToast('再解析対象のテキストデータがありません', 'error');
+return;
+}
+​var apiKey = getApiKey();
+if (!apiKey) {
+showToast('Gemini API Key が設定されていません。', 'error');
+openModal('apiKeyModal');
+return;
+}
+​var btn = document.getElementById('btnReanalyzeText');
+var progressContainer = document.getElementById('chunkProgressContainer');
+var progressLabel = document.getElementById('chunkProgressLabel');
+var progressPercent = document.getElementById('chunkProgressPercent');
+var progressBar = document.getElementById('chunkProgressBar');
+​if (btn) btn.disabled = true;
+if (progressContainer) progressContainer.classList.remove('hidden');
+​try {
+var rawName = window.currentLoadedFileName || '解析データ';
+var targetName = formatOutputFileName(rawName);
+​var res = await reanalyzeBlocksCore(
+window.transcriptBlocks,
+apiKey,
+targetName,
+function(cIdx, totalC, pct, label) {
+if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-amber-500"></i> <span class="truncate">【再解析】' + label + ' (' + cIdx + '/' + totalC + ')...</span>';
+if (progressBar) progressBar.style.width = pct + '%';
+if (progressPercent) progressPercent.textContent = pct + '%';
+}
+);
+​window.transcriptBlocks = res.blocks;
+window.vocabList = res.vocab;
+renderGrammarContainer();
+renderVocabContainer();
+await saveCurrentToHistory(targetName, false);
+showToast('テキスト再解析が完了しました！', 'info');
+} catch (err) {
+showToast('再解析エラー: ' + translateErrorMessage(err.message), 'error');
+} finally {
+if (btn) btn.disabled = false;
+setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
+}
+};
+​function openModal(id, isQuotaError) {
+var input = document.getElementById('apiKeyInput');
+var notice = document.getElementById('apiKeyNotice');
+if (input) input.value = getApiKey();
+if (notice) {
+if (isQuotaError) notice.classList.remove('hidden');
+else notice.classList.add('hidden');
+}
+var modal = document.getElementById(id);
+if (modal) modal.classList.remove('hidden');
+}
+​function closeModal(id) {
+var modal = document.getElementById(id);
+if (modal) modal.classList.add('hidden');
+}
+​function saveApiKeyFromModal() {
+var input = document.getElementById('apiKeyInput');
+var clean = String(input ? input.value : '').trim();
+if (clean && clean.length > 5) {
+localStorage.setItem('suarateks_gemini_key', clean);
+showToast('API Keyを保存しました！', 'info');
+closeModal('apiKeyModal');
+} else {
+showToast('有効なAPI Keyを入力してください', 'error');
+}
+}
+​function speakIndonesian(text) {
+if (!('speechSynthesis' in window) || !text) return;
+window.speechSynthesis.cancel();
+​if (window.availableIndoVoices.length === 0) {
+initSpeechSynthesisVoices();
+}
+​var utterance = new SpeechSynthesisUtterance(text);
+utterance.lang = 'id-ID';
+utterance.rate = window.speechRate || 0.85;
+​if (window.availableIndoVoices.length > 0) {
+utterance.voice = window.availableIndoVoices[0];
+} else {
+var voices = window.speechSynthesis.getVoices();
+var indoVoice = voices.find(function(v) {
+var lang = (v.lang || '').toLowerCase();
+return lang.startsWith('id') || lang.includes('id');
+});
+if (indoVoice) utterance.voice = indoVoice;
+}
+​window.speechSynthesis.speak(utterance);
+}
+​function stopAllSpeech() {
+if (!('speechSynthesis' in window)) return;
+window.speechSynthesis.cancel();
+if (window.activeSpeechState.blockId) updateBlockToggleUI(window.activeSpeechState.blockId, 'stopped');
+window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
+}
+​function speakFromWord(blockId, wordIndex) {
+var cleanId = blockId.replace(/^[tg]-/, '');
+var block = window.transcriptBlocks.find(function(b) { return b.id === cleanId; });
+if (!block || !block.indonesian) return;
+var words = block.indonesian.split(/\s+/);
+startSpeechBlock(blockId, words.slice(wordIndex).join(' '));
+}
+​function toggleSpeechBlock(blockId) {
+if (!('speechSynthesis' in window)) return;
+if (window.activeSpeechState.blockId === blockId) {
+if (window.speechSynthesis.paused || window.activeSpeechState.isPaused) {
+window.speechSynthesis.resume();
+window.activeSpeechState.isPaused = false;
+window.activeSpeechState.isPlaying = true;
+updateBlockToggleUI(blockId, 'playing');
+} else if (window.speechSynthesis.speaking) {
+window.speechSynthesis.pause();
+window.activeSpeechState.isPaused = true;
+window.activeSpeechState.isPlaying = false;
+updateBlockToggleUI(blockId, 'paused');
+} else {
+startSpeechBlock(blockId);
+}
+} else {
+startSpeechBlock(blockId);
+}
+}
+​function startSpeechBlock(blockId, customText) {
+if (!('speechSynthesis' in window)) return;
+stopAllSpeech();
+var cleanId = blockId.replace(/^[tg]-/, '');
+var block = window.transcriptBlocks.find(function(b) { return b.id === cleanId; });
+if (!block) return;
+​var textToSpeak = customText || block.indonesian;
+​if (window.availableIndoVoices.length === 0) {
+initSpeechSynthesisVoices();
+}
+​var utterance = new SpeechSynthesisUtterance(textToSpeak);
+utterance.lang = 'id-ID';
+utterance.rate = window.speechRate || 0.85;
+​if (window.availableIndoVoices.length > 0) {
+utterance.voice = window.availableIndoVoices[0];
+} else {
+var voices = window.speechSynthesis.getVoices();
+var indoVoice = voices.find(function(v) {
+var lang = (v.lang || '').toLowerCase();
+return lang.startsWith('id') || lang.includes('id');
+});
+if (indoVoice) utterance.voice = indoVoice;
+}
+​utterance.onstart = function() {
+window.activeSpeechState = { blockId: blockId, utterance: utterance, isPlaying: true, isPaused: false };
+updateBlockToggleUI(blockId, 'playing');
+};
+utterance.onpause = function() {
+window.activeSpeechState.isPaused = true;
+window.activeSpeechState.isPlaying = false;
+updateBlockToggleUI(blockId, 'paused');
+};
+utterance.onend = function() {
+updateBlockToggleUI(blockId, 'stopped');
+window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
+};
+window.speechSynthesis.speak(utterance);
+}
+​function updateBlockToggleUI(blockId, state) {
+var btn = document.getElementById('btn-toggle-' + blockId);
+if (!btn) return;
+if (state === 'playing') btn.innerHTML = '<i class="fa-solid fa-pause text-red-500"></i><span>一時停止</span>';
+else if (state === 'paused') btn.innerHTML = '<i class="fa-solid fa-play text-amber-500"></i><span>再開</span>';
+else btn.innerHTML = '<i class="fa-solid fa-play"></i><span>再生</span>';
+}
+​function renderClickableIndonesianWords(text, blockId) {
+if (!text) return '';
+var words = text.split(/\s+/);
+return words.map(function(w, idx) {
+return '<span class="word-clickable" onclick="speakFromWord(\'' + blockId + '\', ' + idx + ')" title="ここから再生">' + escapeHtml(w) + '</span>';
+}).join(' ');
+}
+​function renderTranscriptContainer() {
+var emptyState = document.getElementById('emptyState');
+var container = document.getElementById('transcriptContainer');
+if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
+if (emptyState) emptyState.classList.remove('hidden');
+if (container) container.innerHTML = '';
+return;
+}
+if (emptyState) emptyState.classList.add('hidden');
+var html = '';
+window.transcriptBlocks.forEach(function(block, idx) {
+var clickableIndo = renderClickableIndonesianWords(block.indonesian, 't-' + block.id);
+html += '<div class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">' +
+'<div class="flex items-center justify-between text-xs text-slate-500 pb-1 border-b border-slate-100 dark:border-slate-700">' +
+'<div class="flex items-center gap-1.5">' +
+'<span class="font-extrabold text-white bg-red-600 px-2 py-0.5 rounded-md text-[10px]">#' + (idx + 1) + '</span>' +
+'<span class="font-bold text-red-600 bg-red-50 dark:bg-red-950/60 px-2 py-0.5 rounded-full text-[10px]">' + escapeHtml(block.speaker) + '</span>' +
+'</div>' +
+'<button id="btn-toggle-t-' + block.id + '" onclick="toggleSpeechBlock(\'t-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1 hover:bg-slate-200">' +
+'<i class="fa-solid fa-play text-[10px]"></i><span>再生</span>' +
+'</button>' +
+'</div>' +
+'<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + clickableIndo + '</p>' +
+'<div class="bg-amber-50/70 dark:bg-slate-900/60 p-2.5 rounded-lg border border-amber-200/50">' +
+'<p class="dynamic-text-ja font-semibold text-amber-950 dark:text-amber-200">' + escapeHtml(block.japanese) + '</p>' +
+'</div>' +
+'</div>';
+});
+if (container) container.innerHTML = html;
+}
+​function renderGrammarContainer() {
+var emptyState = document.getElementById('grammarEmptyState');
+var container = document.getElementById('grammarContainer');
+if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
+if (emptyState) emptyState.classList.remove('hidden');
+if (container) container.innerHTML = '';
+return;
+}
+if (emptyState) emptyState.classList.add('hidden');
+var html = '';
+window.transcriptBlocks.forEach(function(block, idx) {
+var clickableIndo = renderClickableIndonesianWords(block.indonesian, 'g-' + block.id);
+html += '<div class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2.5">' +
+'<div class="flex items-center justify-between text-xs pb-1 border-b border-slate-100 dark:border-slate-700">' +
+'<span class="font-extrabold text-blue-700 bg-blue-100 dark:bg-blue-950/80 px-2.5 py-0.5 rounded-full text-[11px]">文節 #' + (idx + 1) + '</span>' +
+'<button id="btn-toggle-g-' + block.id + '" onclick="toggleSpeechBlock(\'g-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-xs font-bold">' +
+'<i class="fa-solid fa-play text-[9px]"></i><span>再生</span>' +
+'</button>' +
+'</div>' +
+'<div class="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border-l-4 border-blue-500 space-y-1">' +
+'<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + clickableIndo + '</p>' +
+'<p class="dynamic-text-ja text-slate-500 dark:text-slate-400 font-medium">' + escapeHtml(block.japanese) + '</p>' +
+'</div>' +
+'<div class="bg-blue-50/60 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200/60 text-xs leading-relaxed text-blue-950 dark:text-blue-200 space-y-1.5">' +
+'<h5 class="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1 text-[10px] uppercase tracking-wider"><i class="fa-solid fa-diagram-project"></i> 4段階精密構文解剖・応用解説</h5>' +
+'<div class="dynamic-text-ja whitespace-pre-line font-medium pt-0.5 leading-relaxed">' + escapeHtml(block.grammarExplanation) + '</div>' +
+'</div>' +
+'</div>';
+});
+if (container) container.innerHTML = html;
+}
+​function highlightMatch(str, query) {
+var safeStr = escapeHtml(str || '');
+var q = (query || '').trim();
+if (!q) return safeStr;
+try {
+var escQuery = q.replace(/[.*+?^{}()|[\]\\]/g, '\\&');
+return safeStr.replace(new RegExp('(' + escQuery + ')', 'gi'), '<mark class="search-highlight">$1</mark>');
+} catch (e) { return safeStr; }
+}
+​function getFilteredVocabList() {
+var filtered = window.isShuffled ? Array.from(window.shuffledVocabList) : (window.vocabList || []);
+if (window.activeVocabPosFilter !== 'all') {
+filtered = filtered.filter(function(v) { return v.pos === window.activeVocabPosFilter; });
+}
+var query = (window.activeVocabSearchQuery || '').trim().toLowerCase();
+if (query !== '') {
+filtered = filtered.filter(function(v) {
+return (v.indonesian || '').toLowerCase().includes(query) || (v.japanese || '').toLowerCase().includes(query) || (v.baseForm || '').toLowerCase().includes(query);
+});
+}
+return filtered;
+}
+​function renderVocabContainer() {
+var emptyState = document.getElementById('vocabEmptyState');
+var listContainer = document.getElementById('vocabListContainer');
+var cardContainer = document.getElementById('vocabCardContainer');
+var vocabBadge = document.getElementById('vocabCountBadge');
+​var filtered = getFilteredVocabList();
+if (vocabBadge) vocabBadge.textContent = (window.vocabList || []).length;
+updatePosFilterUI();
+updateModeBtnUI();
+​if (!filtered || filtered.length === 0) {
+if (emptyState) emptyState.classList.remove('hidden');
+if (listContainer) listContainer.innerHTML = '';
+if (cardContainer) cardContainer.classList.add('hidden');
+return;
+}
+​if (emptyState) emptyState.classList.add('hidden');
+if (window.activeVocabMode === 'list') {
+if (cardContainer) cardContainer.classList.add('hidden');
+if (listContainer) listContainer.classList.remove('hidden');
+​var html = '', q = window.activeVocabSearchQuery;
+filtered.forEach(function(v) {
+var hIndo = highlightMatch(v.indonesian, q);
+var hJap = highlightMatch(v.japanese, q);
+var keyTag = v.isKeyWord ? '<span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/50 flex items-center gap-0.5 shrink-0"><i class="fa-solid fa-star text-[8px]"></i>重要</span>' : '';
+​html += '<div class="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between gap-2">' +
+'<div class="space-y-0.5 flex-1 min-w-0">' +
+'<div class="flex items-center gap-1.5 flex-wrap">' +
+'<span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0">' + getPosLabel(v.pos) + '</span>' +
+keyTag +
+'<h4 class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100 truncate">' + hIndo + '</h4>' +
+'<button onclick="speakIndonesian(\'' + escapeHtml(v.indonesian) + '\')" class="text-slate-400 hover:text-emerald-500 p-1 shrink-0"><i class="fa-solid fa-volume-high text-xs"></i></button>' +
+'</div>' +
+'<p class="dynamic-text-ja text-emerald-700 dark:text-emerald-400 font-bold">' + hJap + '</p>' +
+'</div>' +
+'<button onclick="toggleVocabMastered(\'' + v.id + '\')" class="px-2 py-1 rounded ' + (v.mastered ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400') + ' text-[10px] font-bold shrink-0">' + (v.mastered ? '習得' : '未修') + '</button>' +
+'</div>';
+});
+if (listContainer) listContainer.innerHTML = html;
+} else {
+if (listContainer) listContainer.classList.add('hidden');
+if (cardContainer) { cardContainer.classList.remove('hidden'); cardContainer.classList.add('flex'); }
+updateFlashcardUI();
+}
+}
+​function getPosLabel(pos) {
+switch(pos) {
+case 'noun': return '名詞';
+case 'verb': return '動詞';
+case 'adjective': return '形容詞';
+case 'adverb': return '副詞';
+default: return 'その他';
+}
+}
+​function updateModeBtnUI() {
+var btnCard = document.getElementById('btnModeCard'), btnList = document.getElementById('btnModeList');
+if (btnCard && btnList) {
+if (window.activeVocabMode === 'card') {
+btnCard.className = "px-3 py-1.5 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition";
+btnList.className = "px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
+} else {
+btnList.className = "px-3 py-1.5 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition";
+btnCard.className = "px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
+}
+}
+}
+​function updatePosFilterUI() {
+document.querySelectorAll('.btn-pos-filter').forEach(function(btn) {
+if (btn.dataset.pos === window.activeVocabPosFilter) {
+btn.className = "btn-pos-filter px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-red-600 text-white shadow-xs transition";
+} else {
+btn.className = "btn-pos-filter px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
+}
+});
+}
+​function setVocabMode(mode) { window.activeVocabMode = mode; renderVocabContainer(); }
+function setVocabPosFilter(pos) { window.activeVocabPosFilter = pos; window.currentCardIndex = 0; renderVocabContainer(); }
+function toggleShuffleCards() {
+window.isShuffled = !window.isShuffled;
+if (window.isShuffled) window.shuffledVocabList = Array.from(window.vocabList).sort(function() { return Math.random() - 0.5; });
+window.currentCardIndex = 0;
+renderVocabContainer();
+}
+function toggleVocabMastered(id) {
+var item = window.vocabList.find(function(v) { return v.id === id; });
+if (item) { item.mastered = !item.mastered; renderVocabContainer(); }
+}
+​function updateFlashcardUI() {
+var filtered = getFilteredVocabList();
+if (!filtered || filtered.length === 0) return;
+if (window.currentCardIndex >= filtered.length) window.currentCardIndex = 0;
+​var item = filtered[window.currentCardIndex];
+var q = window.activeVocabSearchQuery;
+var cardIndo = document.getElementById('cardIndoText');
+var cardJap = document.getElementById('cardJapText');
+var cardContext = document.getElementById('cardContextFull');
+var cardPosFront = document.getElementById('cardBadgeFront');
+var cardPosBack = document.getElementById('cardPosBack');
+var progressLabel = document.getElementById('flashcardProgressLabel');
+​if (cardIndo) cardIndo.innerHTML = highlightMatch(item.indonesian, q);
+if (cardJap) cardJap.innerHTML = highlightMatch(item.japanese, q);
+if (cardContext) cardContext.innerHTML = item.context ? ('文脈: "' + highlightMatch(item.context, q) + '"') : '文脈なし';
+if (cardPosFront) cardPosFront.innerHTML = getPosLabel(item.pos) + (item.isKeyWord ? ' <span class="ml-1 px-1.5 py-0.5 bg-amber-500 text-white rounded text-[9px] font-extrabold"><i class="fa-solid fa-star text-[8px]"></i> 重要語</span>' : '');
+if (cardPosBack) cardPosBack.innerHTML = '品詞: ' + getPosLabel(item.pos) + (item.baseForm ? (' (原形: ' + item.baseForm + ')') : '');
+if (progressLabel) progressLabel.textContent = (window.currentCardIndex + 1) + ' / ' + filtered.length;
+​window.isCardFlipped = false;
+var flashcardInner = document.getElementById('flashcardInner');
+if (flashcardInner) flashcardInner.classList.remove('rotate-y-180');
+}
+​function flipFlashcard() {
+window.isCardFlipped = !window.isCardFlipped;
+var inner = document.getElementById('flashcardInner');
+if (window.isCardFlipped) inner.classList.add('rotate-y-180');
+else inner.classList.remove('rotate-y-180');
+}
+​function nextFlashcard(mastered) {
+var filtered = getFilteredVocabList();
+if (filtered.length === 0) return;
+if (mastered && filtered[window.currentCardIndex]) filtered[window.currentCardIndex].mastered = true;
+window.currentCardIndex = (window.currentCardIndex + 1) % filtered.length;
+updateFlashcardUI();
+}
+​async function loadHistoryFromStorage() {
+try {
+var history = await dbGetAllSessions();
+renderHistoryList(history);
+} catch (e) { renderHistoryList([]); }
+}
+​function toggleHistorySelect(id, event) {
+if (event) event.stopPropagation();
+var idx = window.selectedHistoryIds.indexOf(id);
+if (idx > -1) window.selectedHistoryIds.splice(idx, 1);
+else window.selectedHistoryIds.push(id);
+updateHistoryActionButtonsState();
+}
+​function updateHistoryActionButtonsState() {
+var btnMerge = document.getElementById('btnMergeSelected');
+var btnRe = document.getElementById('btnReanalyzeSelected');
+var btnSave = document.getElementById('btnSaveSelected');
+var count = window.selectedHistoryIds.length;
+​if (btnRe) {
+if (count >= 1) {
+btnRe.disabled = false;
+btnRe.className = "px-1.5 py-0.5 bg-amber-500 hover:bg-amber-600 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
+btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 再解析 (' + count + ')';
+} else {
+btnRe.disabled = true;
+btnRe.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
+btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 再解析';
+}
+}
+​if (btnMerge) {
+if (count >= 2) {
+btnMerge.disabled = false;
+btnMerge.className = "px-1.5 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
+btnMerge.innerHTML = '<i class="fa-solid fa-code-merge"></i> 結合 (' + count + ')';
+} else {
+btnMerge.disabled = true;
+btnMerge.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
+btnMerge.innerHTML = '<i class="fa-solid fa-code-merge"></i> 結合';
+}
+}
+​if (btnSave) {
+if (count >= 1) {
+btnSave.disabled = false;
+btnSave.className = "px-1.5 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
+btnSave.innerHTML = '<i class="fa-solid fa-download"></i> 保存 (' + count + ')';
+} else {
+btnSave.disabled = true;
+btnSave.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
+btnSave.innerHTML = '<i class="fa-solid fa-download"></i> 保存';
+}
+}
+}
+​function renderHistoryList(history) {
+var container = document.getElementById('historyList');
+if (!container) return;
+if (!history || history.length === 0) {
+container.innerHTML = '<p class="text-xs text-slate-400 py-1.5 text-center">履歴なし (IndexedDB)</p>';
+window.selectedHistoryIds = [];
+updateHistoryActionButtonsState();
+return;
+}
+var html = '';
+history.forEach(function(item) {
+var isChecked = window.selectedHistoryIds.includes(item.id);
+var isCurrent = window.currentLoadedSessionId === item.id;
+html += '<div onclick="loadHistoryItem(\'' + item.id + '\')" class="p-1.5 rounded-lg ' + (isCurrent ? 'bg-red-50 dark:bg-red-950/40 border-red-300' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700') + ' border hover:bg-red-50 cursor-pointer flex justify-between items-center text-xs transition mb-1">' +
+'<div class="flex items-center gap-1.5 min-w-0 flex-1">' +
+'<input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onclick="toggleHistorySelect('' + item.id + '', event)" class="rounded text-red-600 cursor-pointer shrink-0 w-3.5 h-3.5">' +
+'<div class="min-w-0 flex-1">' +
+'<p class="font-bold text-slate-800 dark:text-slate-100 truncate leading-tight text-[11px]">' + escapeHtml(item.fileName) + '</p>' +
+'<p class="text-[8px] text-slate-400 font-mono">' + escapeHtml(item.date) + '</p>' +
+'</div>' +
+'</div>' +
+'<button onclick="deleteHistoryItem(\'' + item.id + '\', event)" class="text-slate-400 hover:text-rose-500 p-1 shrink-0 ml-1"><i class="fa-solid fa-trash-can text-[10px]"></i></button>' +
+'</div>';
+});
+container.innerHTML = html;
+updateHistoryActionButtonsState();
+}
+​async function saveSelectedHistories() {
+if (!window.selectedHistoryIds || window.selectedHistoryIds.length === 0) return;
+var allSessions = await dbGetAllSessions();
+var selectedItems = window.selectedHistoryIds.map(function(id) {
+return allSessions.find(function(h) { return h.id === id; });
+}).filter(Boolean);
+​if (selectedItems.length === 0) return;
+​selectedItems.forEach(function(item, index) {
+var cleanName = formatOutputFileName(item.fileName || '解析データ');
+var exportObj = {
+id: item.id,
+fileName: cleanName,
+date: item.date,
+blocks: item.blocks || [],
+vocab: item.vocab || []
+};
+setTimeout(function() {
+exportDataToFile(exportObj, cleanName + '.json');
+}, index * 300);
+});
+​showToast(selectedItems.length + ' 件の履歴を個別JSONとして保存しました！', 'info');
+}
+​async function saveCurrentToHistory(fileName, showToastNotification) {
+if (showToastNotification === undefined) showToastNotification = true;
+if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
+try {
+var formattedName = formatOutputFileName(fileName);
+if (!window.currentLoadedSessionId) window.currentLoadedSessionId = 'session-' + Date.now();
+var sessionObj = {
+id: window.currentLoadedSessionId,
+fileName: formattedName,
+date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+timestamp: Date.now(),
+blocks: window.transcriptBlocks,
+vocab: window.vocabList
+};
+await dbSaveSession(sessionObj);
+var history = await dbGetAllSessions();
+renderHistoryList(history);
+updateActiveSessionBadge();
+} catch (e) {}
+}
+​async function mergeSelectedHistories() {
+if (window.selectedHistoryIds.length < 2) return;
+var allSessions = await dbGetAllSessions();
+var selectedItems = window.selectedHistoryIds.map(function(id) {
+return allSessions.find(function(h) { return h.id === id; });
+}).filter(Boolean);
+​var mergedBlocks = [], mergedVocabMap = new Map(), titleParts = [];
+var globalBlockIdx = 0;
+​selectedItems.forEach(function(item) {
+titleParts.push(item.fileName.replace(/.[^/.]+$/, ""));
+if (Array.isArray(item.blocks)) {
+item.blocks.forEach(function(b) {
+mergedBlocks.push(Object.assign({}, b, { id: 'block-merged-' + Date.now() + '-' + globalBlockIdx, blockIndex: globalBlockIdx }));
+globalBlockIdx++;
+});
+}
+if (Array.isArray(item.vocab)) {
+item.vocab.forEach(function(v) {
+var key = (v.indonesian || '').trim().toLowerCase();
+if (key && !mergedVocabMap.has(key)) mergedVocabMap.set(key, v);
+});
+}
+});
+​var mergedTitle = formatOutputFileName('結合_' + titleParts.join('_').substring(0, 20));
+window.currentLoadedSessionId = 'session-merged-' + Date.now();
+window.currentLoadedFileName = mergedTitle;
+window.transcriptBlocks = mergedBlocks;
+window.vocabList = Array.from(mergedVocabMap.values());
+updateActiveSessionBadge();
+renderTranscriptContainer();
+renderGrammarContainer();
+renderVocabContainer();
+​var mergedDataObj = {
+id: window.currentLoadedSessionId,
+fileName: mergedTitle,
+date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+timestamp: Date.now(),
+blocks: window.transcriptBlocks,
+vocab: window.vocabList
+};
+await dbSaveSession(mergedDataObj);
+var history = await dbGetAllSessions();
+renderHistoryList(history);
+​exportDataToFile(mergedDataObj, mergedTitle + '.json');
+window.selectedHistoryIds = [];
+showToast('選択した履歴を結合しました！', 'info');
+}
+​async function clearHistory() {
+await dbClearAll();
+window.selectedHistoryIds = [];
+renderHistoryList([]);
+showToast('IndexedDB履歴をすべて消去しました', 'info');
+}
+​async function loadHistoryItem(id) {
+var found = await dbGetSession(id);
+if (found) {
+window.currentLoadedSessionId = found.id;
+window.currentLoadedFileName = found.fileName || '';
+window.transcriptBlocks = found.blocks || [];
+window.vocabList = found.vocab || [];
+updateActiveSessionBadge();
+renderTranscriptContainer();
+renderGrammarContainer();
+renderVocabContainer();
+var history = await dbGetAllSessions();
+renderHistoryList(history);
+showToast('「' + found.fileName + '」を切り替え読み込みました', 'info');
+if (window.innerWidth < 768) switchMobileTab('transcript');
+}
+}
+​async function deleteHistoryItem(id, event) {
+if (event) event.stopPropagation();
+await dbDeleteSession(id);
+window.selectedHistoryIds = window.selectedHistoryIds.filter(function(sid) { return sid !== id; });
+var history = await dbGetAllSessions();
+renderHistoryList(history);
+showToast('履歴から削除しました', 'info');
+}
+​function exportDataToFile(dataObj, customFilename) {
+var blob = new Blob([JSON.stringify(dataObj, null, 2)], { type: 'application/json' });
+var url = URL.createObjectURL(blob);
+var a = document.createElement('a');
+a.href = url;
+a.download = customFilename || 'suarateks_backup.json';
+a.click();
+URL.revokeObjectURL(url);
+}
+​async function importHistoryBackup(event) {
+var files = event.target.files ? Array.from(event.target.files) : [];
+if (files.length === 0) return;
+​var successCount = 0, lastLoadedData = null;
+​for (var i = 0; i < files.length; i++) {
+try {
+var content = await new Promise(function(resolve, reject) {
+var reader = new FileReader();
+reader.onload = function(e) { resolve(e.target.result); };
+reader.onerror = reject;
+reader.readAsText(files[i]);
+});
+var importedData = JSON.parse(content);
+var singleObj = Array.isArray(importedData) ? importedData[0] : importedData;
+if (!singleObj || !singleObj.blocks) continue;
+​var formattedName = formatOutputFileName(singleObj.fileName || files[i].name);
+var item = {
+id: singleObj.id || ('session-imported-' + Date.now() + '-' + i),
+fileName: formattedName,
+date: singleObj.date || new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+timestamp: Date.now(),
+blocks: singleObj.blocks,
+vocab: singleObj.vocab || []
+};
+await dbSaveSession(item);
+lastLoadedData = item;
+successCount++;
+} catch (e) {}
+}
+​var history = await dbGetAllSessions();
+renderHistoryList(history);
+​if (lastLoadedData) {
+window.currentLoadedSessionId = lastLoadedData.id;
+window.currentLoadedFileName = lastLoadedData.fileName;
+window.transcriptBlocks = lastLoadedData.blocks;
+window.vocabList = lastLoadedData.vocab;
+updateActiveSessionBadge();
+renderTranscriptContainer();
+renderGrammarContainer();
+renderVocabContainer();
+}
+showToast(successCount + ' 件のJSONをIndexedDBにインポートしました！', 'info');
+event.target.value = '';
+}
+​function showToast(message, type) {
+if (type === undefined) type = 'info';
+var container = document.getElementById('toastContainer');
+if (!container) return;
+var toast = document.createElement('div');
+toast.className = (type === 'error' ? 'bg-rose-600' : 'bg-slate-800') + ' text-white px-3.5 py-2.5 rounded-xl shadow-xl text-xs font-bold flex items-center justify-between gap-2 transition-all duration-300 pointer-events-auto border border-white/10';
+toast.innerHTML = '<span>' + escapeHtml(message) + '</span>';
+container.appendChild(toast);
+setTimeout(function() { if (toast.parentElement) toast.remove(); }, 4000);
+}
+​function escapeHtml(str) {
+if (!str) return '';
+return String(str).replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"');
+}
+​function switchMobileTab(tab) {
+window.activeMobileTab = tab;
+var panelSetup = document.getElementById('panelSetup');
+var panelTranscript = document.getElementById('panelTranscript');
+​if (window.innerWidth >= 768) {
+if (panelSetup) panelSetup.style.display = 'flex';
+if (panelTranscript) panelTranscript.style.display = 'flex';
+return;
+}
+​if (tab === 'setup') {
+if (panelSetup) panelSetup.style.display = 'flex';
+if (panelTranscript) panelTranscript.style.display = 'none';
+} else {
+if (panelSetup) panelSetup.style.display = 'none';
+if (panelTranscript) panelTranscript.style.display = 'flex';
+setStudioSubView(tab);
+}
+}
+​function setStudioSubView(subView) {
+window.activeStudioSubView = subView;
+var viewTranscript = document.getElementById('transcriptView');
+var viewGrammar = document.getElementById('grammarView');
+var viewVocab = document.getElementById('vocabView');
+​var btnTranscript = document.getElementById('navTabTranscript');
+var btnGrammar = document.getElementById('navTabGrammar');
+var btnVocab = document.getElementById('navTabVocab');
+​if (viewTranscript) viewTranscript.classList.add('hidden');
+if (viewGrammar) viewGrammar.classList.add('hidden');
+if (viewVocab) { viewVocab.classList.add('hidden'); viewVocab.classList.remove('flex'); }
+​[btnTranscript, btnGrammar, btnVocab].forEach(function(btn) {
+if (btn) btn.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0";
+});
+​if (subView === 'transcript') {
+if (viewTranscript) viewTranscript.classList.remove('hidden');
+if (btnTranscript) btnTranscript.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
+} else if (subView === 'grammar') {
+if (viewGrammar) viewGrammar.classList.remove('hidden');
+if (btnGrammar) btnGrammar.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
+renderGrammarContainer();
+} else if (subView === 'vocab') {
+if (viewVocab) { viewVocab.classList.remove('hidden'); viewVocab.classList.add('flex'); }
+if (btnVocab) btnVocab.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
+renderVocabContainer();
+}
+}
+​document.addEventListener('DOMContentLoaded', function() {
+setFontSize(20);
+setSpeechRate(0.85);
+loadHistoryFromStorage();
+initDropzoneEvents();
+if ('speechSynthesis' in window) {
+initSpeechSynthesisVoices();
+}
+});
+</script>
 </body>
 </html>
