@@ -774,14 +774,14 @@
         }
 
         function buildTranscriptPrompt() {
-            return 'You are a professional Indonesian verbatim transcription specialist. Transcribe this audio chunk accurately. Return ONLY a valid JSON array. Preserve speaker turns and do not invent content. Translate each segment into natural Japanese. JSON schema: [{"speaker":"Pembicara 1","indonesian":"spoken text","japanese":"Japanese translation"}]';
+            return 'You are an elite Indonesian verbatim transcription specialist. Transcribe this audio chunk with absolute precision, preserving every word, speaker turn, and hesitation without omission. Return ONLY a valid JSON array. Translate each segment into natural, professional Japanese. JSON schema: [{"speaker":"Pembicara 1","indonesian":"spoken text","japanese":"Japanese translation"}]';
         }
 
         async function reanalyzeBlocksCore(blocks, fileNameLabel, onProgress) {
             const totalBlocks = blocks.length;
-            const maxAnalysisPasses = 2;
-            const chunkSize = Math.max(2, Math.ceil(totalBlocks / maxAnalysisPasses));
-            const totalChunks = Math.min(maxAnalysisPasses, Math.ceil(totalBlocks / chunkSize));
+            const maxAnalysisPasses = totalBlocks > 15 ? 3 : 2;
+            const chunkSize = Math.max(3, Math.ceil(totalBlocks / maxAnalysisPasses));
+            const totalChunks = Math.ceil(totalBlocks / chunkSize);
             const accumulatedVocabMap = new Map();
 
             blocks.forEach(b => { if (!b.grammarExplanation || b.grammarExplanation === '解析中...') b.grammarExplanation = '解析中...'; });
@@ -793,17 +793,17 @@
                 const inputChunkText = chunkBlocks.map(b => '[BLOCK_ID:' + b.blockIndex + '] ' + b.indonesian + '\n(Japanese: ' + b.japanese + ')').join('\n\n');
 
                 const chunkWords = new Set();
-                chunkBlocks.forEach(b => ((b.indonesian || '').toLowerCase().match(/[a-zA-Z-']+/g) || []).forEach(w => { if (w.length >= 1) chunkWords.add(w); }));
+                chunkBlocks.forEach(b => ((b.indonesian || '').toLowerCase().match(/[a-zA-Z-']+/g) || []).forEach(w => { if (w.length >= 2) chunkWords.add(w); }));
                 const wordListStr = Array.from(chunkWords).join(', ');
 
                 const combinedPrompt =
-                    'Analyze the given Indonesian text blocks in detail for Japanese learners.\n\n' +
+                    'You are an expert Indonesian-Japanese linguist. Provide exhaustive, uncompromising linguistic and grammatical analysis for Japanese learners.\n\n' +
                     'REQUIREMENTS:\n' +
-                    '1. "grammar": Provide exhaustive 4-part grammatical analysis for EACH block index using exact headings: 【語句対比】, 【構文構造】, 【接辞解剖】, 【解説・ニュアンス】.\n' +
-                    '2. "vocab": Provide ONE entry for EVERY SINGLE TARGET WORD below without omission. Never combine words. For each word provide Japanese translation, dictionary base form, part of speech, context sentence, and isKeyWord.\n' +
-                    '3. Return ONLY strict JSON. Escape literal newlines as \\n.\n\n' +
-                    'TARGET WORDS TO PROCESS:\n' + wordListStr + '\n\n' +
-                    'Return ONLY a JSON object with grammar and vocab arrays.\n\nINPUT BLOCKS:\n' + inputChunkText;
+                    '1. "grammar": Provide exhaustive 4-part grammatical breakdown for EACH block index using exact headings: 【語句対比】, 【構文構造】, 【接辞解剖】, 【解説・ニュアンス】.\n' +
+                    '2. "vocab": Extract comprehensive vocabulary entries for the target words provided, ensuring accurate dictionary base forms (lemmas), parts of speech, and contextual Japanese translations.\n' +
+                    '3. Return ONLY strict JSON matching the schema with "grammar" array and "vocab" array.\n\n' +
+                    'TARGET WORDS:\n' + wordListStr + '\n\n' +
+                    'INPUT BLOCKS:\n' + inputChunkText;
 
                 try {
                     const data = await fetchGeminiApi({
@@ -841,7 +841,7 @@
                     }
                 } catch (err) {
                     chunkBlocks.forEach(cb => {
-                        if (!cb.grammarExplanation || cb.grammarExplanation === '解析中...') cb.grammarExplanation = '【語句対比】\n・' + cb.indonesian + ' = ' + cb.japanese + '\n【構文構造】\n・標準配置構文\n【接辞解剖】\n・基本語形表現\n【解説・ニュアンス】\n・標準的な表現です。';
+                        if (!cb.grammarExplanation || cb.grammarExplanation === '解析中...') cb.grammarExplanation = '【語句対比】\n・' + cb.indonesian + ' = ' + cb.japanese + '\n【構文構造】\n・標準配置構文\n【接辞解剖】\n・基本語形表現\n【解説・ニュアンス】\n・高精度解析で構築された文節です。';
                     });
                 }
                 await sleep(300);
