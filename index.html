@@ -107,7 +107,7 @@
             <div id="playerCard" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
                 <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
                     <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音源キュー選択</span>
-                    <span class="text-[9px] text-slate-400">安全な2分割(10分単位)対応</span>
+                    <span class="text-[9px] text-slate-400">ダイレクト解析対応</span>
                 </h3>
                 
                 <label id="fileDropLabel" for="audioFileInput" class="relative group cursor-pointer block">
@@ -118,7 +118,7 @@
                             <div class="w-6 h-6 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
                                 <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
                             </div>
-                            <p class="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">音声ファイルを選択（安全な2分割）</p>
+                            <p class="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">音声ファイルを選択（ダイレクト解析）</p>
                         </div>
 
                         <div id="dropzoneSelected" class="hidden space-y-1 text-left">
@@ -133,8 +133,17 @@
 
                 <button id="startTranscribeBtn" onclick="window.processAudioWithGemini()" class="w-full py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition flex items-center justify-center gap-1.5">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    <span id="transcribeBtnText">安全2分割 ＆ マルチパス解析</span>
+                    <span id="transcribeBtnText">ダイレクト ＆ マルチパス解析</span>
                 </button>
+            </div>
+
+            <!-- エラー詳細表示ボックス -->
+            <div id="errorBoxContainer" class="hidden bg-rose-50 dark:bg-rose-950/40 p-2.5 rounded-xl border border-rose-200 dark:border-rose-800/60 shadow-sm space-y-1 shrink-0">
+                <div class="flex items-center justify-between text-xs font-extrabold text-rose-700 dark:text-rose-300">
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-triangle-exclamation"></i> エラー詳細</span>
+                    <button onclick="document.getElementById('errorBoxContainer').classList.add('hidden')" class="text-[10px] text-rose-500 hover:text-rose-700">閉じる</button>
+                </div>
+                <p id="errorBoxText" class="text-[11px] font-mono text-rose-900 dark:text-rose-200 break-all leading-tight">エラーなし</p>
             </div>
 
             <div id="chunkProgressContainer" class="hidden bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-1.5 shrink-0">
@@ -207,7 +216,7 @@
             <div id="transcriptView" class="flex-1 p-3 overflow-y-auto space-y-3">
                 <div id="emptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
                     <i class="fa-solid fa-file-audio text-3xl text-slate-300 dark:text-slate-700"></i>
-                    <span>音声ファイルを選択して「安全2分割 ＆ マルチパス解析」を押してください</span>
+                    <span>音声ファイルを選択して「ダイレクト ＆ マルチパス解析」を押してください</span>
                 </div>
                 <div id="transcriptContainer" class="space-y-3"></div>
             </div>
@@ -435,102 +444,10 @@
             renderVocabContainer();
         }
 
-        // ==========================================
-        // SAFE 2-SPLIT AUDIO CHUNKING (10分単位)
-        // ==========================================
-        async function splitAudioFileIntoWavChunks(file, maxDurationSeconds = 600) {
-            try {
-                var arrayBuffer = await file.arrayBuffer();
-                var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                var audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-                await audioCtx.close();
-
-                var sampleRate = audioBuffer.sampleRate;
-                var numberOfChannels = audioBuffer.numberOfChannels;
-                var totalDuration = audioBuffer.duration;
-
-                if (totalDuration <= maxDurationSeconds) {
-                    return [{ chunkIndex: 0, blob: file, duration: totalDuration }];
-                }
-
-                var samplesPerChunk = maxDurationSeconds * sampleRate;
-                var totalChunks = Math.ceil(audioBuffer.length / samplesPerChunk);
-                var chunks = [];
-
-                for (var i = 0; i < totalChunks; i++) {
-                    var startSample = i * samplesPerChunk;
-                    var endSample = Math.min(audioBuffer.length, startSample + samplesPerChunk);
-                    var frameCount = endSample - startSample;
-
-                    var chunkBuffer = new (window.AudioContext || window.webkitAudioContext)().createBuffer(numberOfChannels, frameCount, sampleRate);
-                    for (var channel = 0; channel < numberOfChannels; channel++) {
-                        var channelData = audioBuffer.getChannelData(channel);
-                        chunkBuffer.copyToChannel(channelData.subarray(startSample, endSample), channel);
-                    }
-
-                    var wavBlob = audioBufferToWavBlob(chunkBuffer);
-                    chunks.push({
-                        chunkIndex: i,
-                        blob: wavBlob,
-                        duration: frameCount / sampleRate
-                    });
-                }
-                return chunks;
-            } catch (e) {
-                console.warn('Audio decoding/splitting failed, falling back to original file:', e);
-                return [{ chunkIndex: 0, blob: file, duration: 0 }];
-            }
-        }
-
-        function audioBufferToWavBlob(buffer) {
-            var numOfChan = buffer.numberOfChannels;
-            var length = buffer.length * numOfChan * 2 + 44;
-            var out = new DataView(new ArrayBuffer(length));
-            var sampleRate = buffer.sampleRate;
-            var offset = 0;
-            var pos = 0;
-
-            function writeString(str) {
-                for (var i = 0; i < str.length; i++) {
-                    out.setUint8(pos++, str.charCodeAt(i));
-                }
-            }
-
-            writeString('RIFF');
-            out.setUint32(pos, length - 8, true); pos += 4;
-            writeString('WAVE');
-            writeString('fmt ');
-            out.setUint32(pos, 16, true); pos += 4;
-            out.setUint16(pos, 1, true); pos += 2;
-            out.setUint16(pos, numOfChan, true); pos += 2;
-            out.setUint32(pos, sampleRate, true); pos += 4;
-            out.setUint32(pos, sampleRate * 2 * numOfChan, true); pos += 4;
-            out.setUint16(pos, numOfChan * 2, true); pos += 2;
-            out.setUint16(pos, 16, true); pos += 2;
-            writeString('data');
-            out.setUint32(pos, length - pos - 4, true); pos += 4;
-
-            var channels = [];
-            for (var i = 0; i < buffer.numberOfChannels; i++) {
-                channels.push(buffer.getChannelData(i));
-            }
-
-            while (offset < buffer.length) {
-                for (var i = 0; i < numOfChan; i++) {
-                    var sample = Math.max(-1, Math.min(1, channels[i][offset]));
-                    sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
-                    out.setInt16(pos, sample, true);
-                    pos += 2;
-                }
-                offset++;
-            }
-            return new Blob([out.buffer], { type: 'audio/wav' });
-        }
-
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 var swCode = `
-                    const CACHE_NAME = 'suarateks-pro-v6';
+                    const CACHE_NAME = 'suarateks-pro-v7';
                     const ASSETS = [
                         '/',
                         'https://cdn.tailwindcss.com',
@@ -617,6 +534,16 @@
         window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
 
         var sleep = function(ms) { return new Promise(function(resolve) { setTimeout(resolve, ms); }); };
+
+        function displayErrorBox(errMessage) {
+            var errorBox = document.getElementById('errorBoxContainer');
+            var errorText = document.getElementById('errorBoxText');
+            if (errorBox && errorText) {
+                errorText.textContent = errMessage;
+                errorBox.classList.remove('hidden');
+            }
+            showToast(errMessage, 'error');
+        }
 
         function translateErrorMessage(rawMessage) {
             var str = String(rawMessage || '').toLowerCase();
@@ -837,7 +764,13 @@
 
             if (!response) throw new Error('Gemini APIへの通信に失敗しました');
             var responseText = await response.text();
-            var data = JSON.parse(responseText);
+            
+            var data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseErr) {
+                throw new Error('Geminiからの応答が正しいJSONではありません (HTMLエラー等の可能性): ' + responseText.substring(0, 100));
+            }
 
             if (!response.ok || data.error) {
                 var errDetail = (data.error && data.error.message) ? data.error.message : ('HTTP Error ' + response.status);
@@ -1001,17 +934,18 @@
 
                 item.status = 'processing';
                 renderQueueUI();
-                if (btnText) btnText.textContent = '安全2分割・解析中 (' + (i + 1) + '/' + window.fileQueue.length + ')';
+                if (btnText) btnText.textContent = 'ダイレクト解析中 (' + (i + 1) + '/' + window.fileQueue.length + ')';
 
                 try {
-                    await processSingleFileWithSafeChunking(item, apiKey, i + 1, window.fileQueue.length);
+                    await processSingleFileDirectly(item, apiKey, i + 1, window.fileQueue.length);
                     item.status = 'completed';
                     renderQueueUI();
                 } catch (err) {
                     console.error('Queue Error:', err);
                     item.status = 'error';
                     renderQueueUI();
-                    showToast('エラー: ' + translateErrorMessage(err.message), 'error');
+                    var translated = translateErrorMessage(err.message);
+                    displayErrorBox(translated);
                     if (err.message.includes('Spend Cap') || err.message.includes('prepayment')) {
                         openModal('apiKeyModal', true);
                         break;
@@ -1021,12 +955,13 @@
 
             window.isQueueProcessing = false;
             if (btn) btn.disabled = false;
-            if (btnText) btnText.textContent = "安全2分割 ＆ マルチパス解析";
+            if (btnText) btnText.textContent = "ダイレクト ＆ マルチパス解析";
             showToast('すべてのキューファイルの解析処理が終了しました', 'info');
             setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
         };
 
-        async function processSingleFileWithSafeChunking(queueItem, apiKey, currentIdx, totalIdx) {
+        // 分割処理を完全にバイパスしてファイルをそのままダイレクト送信する仕様
+        async function processSingleFileDirectly(queueItem, apiKey, currentIdx, totalIdx) {
             var file = queueItem.file;
             window.currentLoadedFile = file;
             window.currentLoadedFileName = file.name;
@@ -1035,52 +970,47 @@
             var progressPercent = document.getElementById('chunkProgressPercent');
             var progressBar = document.getElementById('chunkProgressBar');
 
-            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-scissors text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 長音声を安全な2分割(10分単位)に準備中...</span>';
-            if (progressBar) progressBar.style.width = '10%';
-            if (progressPercent) progressPercent.textContent = '10%';
+            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 音声ファイルをダイレクト読み込み中...</span>';
+            if (progressBar) progressBar.style.width = '20%';
+            if (progressPercent) progressPercent.textContent = '20%';
 
-            // 10分（600秒）ごとの安全なチャンクに分割
-            var wavChunks = await splitAudioFileIntoWavChunks(file, 600);
+            var base64Data = await new Promise(function(resolve, reject) {
+                var reader = new FileReader();
+                reader.onload = function(e) { resolve(e.target.result.split(',')[1]); };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+
+            var mimeType = file.type || 'audio/mp3';
+            if (!mimeType.startsWith('audio/')) { mimeType = 'audio/mp3'; }
+
+            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-amber-500"></i> <span>Gemini APIで一括文字起こし・解析中...</span>';
+            if (progressBar) progressBar.style.width = '45%';
+            if (progressPercent) progressPercent.textContent = '45%';
+
+            var transcribePrompt = 'You are a professional Indonesian verbatim transcription specialist. Transcribe this audio accurately and thoroughly.\nReturn ONLY a valid JSON array:\n[\n  {\n    "speaker": "Pembicara 1",\n    "indonesian": "spoken text",\n    "japanese": "Japanese translation"\n  }\n]';
+
+            var payload = {
+                contents: [{ role: 'user', parts: [{ text: transcribePrompt }, { inlineData: { mimeType: mimeType, data: base64Data } }] }],
+                generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 }
+            };
+
+            var resData = await fetchGeminiApi(apiKey, payload);
+            var rawText = extractGeminiText(resData);
+            var parsed = safeParseTruncatedJson(rawText);
+            var subBlocks = Array.isArray(parsed) ? parsed : (parsed.transcript || []);
+
             var allCombinedBlocks = [];
-
-            for (var c = 0; c < wavChunks.length; c++) {
-                var chunkObj = wavChunks[c];
-                var subPct = Math.floor(10 + ((c / wavChunks.length) * 40));
-                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> <span>パート ' + (c + 1) + '/' + wavChunks.length + ' を文字起こし中...</span>';
-                if (progressBar) progressBar.style.width = subPct + '%';
-                if (progressPercent) progressPercent.textContent = subPct + '%';
-
-                var chunkBase64 = await new Promise(function(resolve, reject) {
-                    var reader = new FileReader();
-                    reader.onload = function(e) { resolve(e.target.result.split(',')[1]); };
-                    reader.onerror = reject;
-                    reader.readAsDataURL(chunkObj.blob);
+            subBlocks.forEach(function(sb) {
+                allCombinedBlocks.push({
+                    id: 'block-' + Date.now() + '-' + allCombinedBlocks.length,
+                    blockIndex: allCombinedBlocks.length,
+                    speaker: sb.speaker || 'Pembicara 1',
+                    indonesian: sb.indonesian || '',
+                    japanese: sb.japanese || '',
+                    grammarExplanation: '解析中...'
                 });
-
-                var transcribePrompt = 'You are a professional Indonesian verbatim transcription specialist. Transcribe this audio chunk accurately.\nReturn ONLY a valid JSON array:\n[\n  {\n    "speaker": "Pembicara 1",\n    "indonesian": "spoken text",\n    "japanese": "Japanese translation"\n  }\n]';
-
-                var payload = {
-                    contents: [{ role: 'user', parts: [{ text: transcribePrompt }, { inlineData: { mimeType: 'audio/wav', data: chunkBase64 } }] }],
-                    generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 }
-                };
-
-                var resData = await fetchGeminiApi(apiKey, payload);
-                var rawText = extractGeminiText(resData);
-                var parsed = safeParseTruncatedJson(rawText);
-                var subBlocks = Array.isArray(parsed) ? parsed : (parsed.transcript || []);
-
-                subBlocks.forEach(function(sb) {
-                    allCombinedBlocks.push({
-                        id: 'block-' + Date.now() + '-' + allCombinedBlocks.length,
-                        blockIndex: allCombinedBlocks.length,
-                        speaker: sb.speaker || 'Pembicara 1',
-                        indonesian: sb.indonesian || '',
-                        japanese: sb.japanese || '',
-                        grammarExplanation: '解析中...'
-                    });
-                });
-                await sleep(300);
-            }
+            });
 
             if (allCombinedBlocks.length === 0) throw new Error('音声からテキストが読み取れませんでした');
 
@@ -1185,7 +1115,8 @@
                 showToast(selectedItems.length + ' 件の選択再解析が完了しました！', 'info');
                 window.selectedHistoryIds = [];
             } catch (err) {
-                showToast('一括再解析エラー: ' + translateErrorMessage(err.message), 'error');
+                var translated = translateErrorMessage(err.message);
+                displayErrorBox(translated);
             } finally {
                 updateHistoryActionButtonsState();
                 setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
@@ -1246,7 +1177,8 @@
                 loadHistoryFromStorage();
                 showToast('テキスト再解析が完了しました！', 'info');
             } catch (err) {
-                showToast('再解析エラー: ' + translateErrorMessage(err.message), 'error');
+                var translated = translateErrorMessage(err.message);
+                displayErrorBox(translated);
             } finally {
                 if (btn) btn.disabled = false;
                 setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
