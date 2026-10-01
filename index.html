@@ -55,7 +55,7 @@
     <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center justify-between shrink-0">
         <h1 class="font-extrabold text-sm flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block"></span>
-            SuaraTeks<span class="text-red-600">ID</span> Pro <span class="text-[10px] text-slate-400 font-normal">v5.4 (Gemini 3.6 Flash)</span>
+            SuaraTeks<span class="text-red-600">ID</span> Pro <span class="text-[10px] text-slate-400 font-normal">v5.0 (Phase 1 & 2)</span>
             <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-wifi-slash"></i> オフライン動作中</span>
         </h1>
         <div class="flex items-center gap-2">
@@ -111,7 +111,7 @@
             <div id="playerCard" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
                 <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
                     <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音源キュー選択</span>
-                    <span class="text-[9px] text-slate-400">最適化10分分割対応</span>
+                    <span class="text-[9px] text-slate-400">セッション完全隔離対応</span>
                 </h3>
                 
                 <label id="fileDropLabel" for="audioFileInput" class="relative group cursor-pointer block">
@@ -137,7 +137,7 @@
 
                 <button id="startTranscribeBtn" onclick="window.processAudioWithGemini()" class="w-full py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition flex items-center justify-center gap-1.5">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    <span id="transcribeBtnText">最適化セッション順次解析スタート</span>
+                    <span id="transcribeBtnText">独立セッション順次解析スタート</span>
                 </button>
             </div>
 
@@ -217,7 +217,7 @@
             <div id="transcriptView" class="flex-1 p-3 overflow-y-auto space-y-3">
                 <div id="emptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
                     <i class="fa-solid fa-file-audio text-3xl text-slate-300 dark:text-slate-700"></i>
-                    <span>音声ファイルを選択して「最適化セッション順次解析スタート」を押してください</span>
+                    <span>音声ファイルを選択して「独立セッション順次解析スタート」を押してください</span>
                 </div>
                 <div id="transcriptContainer" class="space-y-3"></div>
             </div>
@@ -321,7 +321,7 @@
 
     <script>
         // ==========================================
-        // INDEXEDDB HYBRID STORAGE LAYER
+        // PHASE 2: INDEXEDDB HYBRID STORAGE LAYER
         // ==========================================
         const DB_NAME = 'SuaraTeksIDProDB';
         const DB_VERSION = 1;
@@ -352,6 +352,7 @@
                     request.onerror = () => reject(request.error);
                 });
             } catch (e) {
+                console.warn('IndexedDB save failed, falling back to localStorage:', e);
                 saveToLocalStorageFallback(sessionObj);
             }
         }
@@ -371,6 +372,7 @@
                     request.onerror = () => reject(request.error);
                 });
             } catch (e) {
+                console.warn('IndexedDB getAll failed, using localStorage fallback');
                 var local = localStorage.getItem('suarateks_history');
                 return local ? JSON.parse(local) : [];
             }
@@ -432,8 +434,46 @@
         }
 
         // ==========================================
-        // ONLINE STATUS LISTENER
+        // SERVICE WORKER & OFFLINE SETUP
         // ==========================================
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                var swCode = `
+                    const CACHE_NAME = 'suarateks-pro-v5';
+                    const ASSETS = [
+                        '/',
+                        'https://cdn.tailwindcss.com',
+                        'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+                        'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap'
+                    ];
+                    self.addEventListener('install', event => {
+                        event.waitUntil(
+                            caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())
+                        );
+                    });
+                    self.addEventListener('activate', event => {
+                        event.waitUntil(self.clients.claim());
+                    });
+                    self.addEventListener('fetch', event => {
+                        event.respondWith(
+                            caches.match(event.request).then(response => {
+                                return response || fetch(event.request).catch(() => {
+                                    if (event.request.mode === 'navigate') {
+                                        return caches.match('/');
+                                    }
+                                });
+                            })
+                        );
+                    });
+                `;
+                var blob = new Blob([swCode], { type: 'application/javascript' });
+                var swUrl = URL.createObjectURL(blob);
+                navigator.serviceWorker.register(swUrl).catch(function(err) {
+                    console.warn('ServiceWorker registration failed:', err);
+                });
+            });
+        }
+
         window.addEventListener('online', updateOnlineStatus);
         window.addEventListener('offline', updateOnlineStatus);
         function updateOnlineStatus() {
@@ -448,7 +488,7 @@
         }
 
         // ==========================================
-        // SPEECH SYNTHESIS & OPTIMIZED AUDIO CHUNKING
+        // STABLE SPEECH SYNTHESIS VOICE MANAGEMENT
         // ==========================================
         window.availableIndoVoices = [];
 
@@ -468,7 +508,13 @@
             initSpeechSynthesisVoices();
         }
 
-        async function splitAudioFileIntoWavChunks(file, maxDurationSeconds = 600) {
+        // ==========================================
+        // 音声分割
+        // 変更点：
+        // - 2分以下 -> 1チャンク
+        // - 2分超   -> 音声全体を2等分して最大2チャンク
+        // ==========================================
+        async function splitAudioFileIntoWavChunks(file, maxDurationSeconds = 120) {
             try {
                 var arrayBuffer = await file.arrayBuffer();
                 var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -479,35 +525,65 @@
                 var numberOfChannels = audioBuffer.numberOfChannels;
                 var totalDuration = audioBuffer.duration;
 
+                // 2分以下なら分割しない
                 if (totalDuration <= maxDurationSeconds) {
-                    return [{ chunkIndex: 0, blob: file, duration: totalDuration }];
+                    return [{
+                        chunkIndex: 0,
+                        blob: file,
+                        duration: totalDuration
+                    }];
                 }
 
-                var samplesPerChunk = maxDurationSeconds * sampleRate;
-                var totalChunks = Math.ceil(audioBuffer.length / samplesPerChunk);
+                // 2分を超える場合は、音声全体を2等分する
+                // これによりAPIへの音声リクエスト数は最大2回になる
+                var totalChunks = 2;
+                var samplesPerChunk = Math.ceil(audioBuffer.length / totalChunks);
                 var chunks = [];
 
                 for (var i = 0; i < totalChunks; i++) {
                     var startSample = i * samplesPerChunk;
                     var endSample = Math.min(audioBuffer.length, startSample + samplesPerChunk);
+
+                    if (startSample >= audioBuffer.length) break;
+
                     var frameCount = endSample - startSample;
 
-                    var chunkBuffer = new (window.AudioContext || window.webkitAudioContext)().createBuffer(numberOfChannels, frameCount, sampleRate);
+                    var chunkAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    var chunkBuffer = chunkAudioCtx.createBuffer(
+                        numberOfChannels,
+                        frameCount,
+                        sampleRate
+                    );
+
                     for (var channel = 0; channel < numberOfChannels; channel++) {
                         var channelData = audioBuffer.getChannelData(channel);
-                        chunkBuffer.copyToChannel(channelData.subarray(startSample, endSample), channel);
+                        chunkBuffer.copyToChannel(
+                            channelData.subarray(startSample, endSample),
+                            channel
+                        );
                     }
 
                     var wavBlob = audioBufferToWavBlob(chunkBuffer);
+
                     chunks.push({
                         chunkIndex: i,
                         blob: wavBlob,
                         duration: frameCount / sampleRate
                     });
+
+                    await chunkAudioCtx.close();
                 }
+
                 return chunks;
+
             } catch (e) {
-                return [{ chunkIndex: 0, blob: file, duration: 0 }];
+                console.warn('Audio decoding/splitting failed, falling back to original file:', e);
+
+                return [{
+                    chunkIndex: 0,
+                    blob: file,
+                    duration: 0
+                }];
             }
         }
 
@@ -557,7 +633,7 @@
         }
 
         // ==========================================
-        // APP STATE & SESSION ISOLATION
+        // APP STATE & PHASE 1 SESSION ISOLATION
         // ==========================================
         window.fileQueue = [];
         window.isQueueProcessing = false;
@@ -589,8 +665,8 @@
             if (str.includes('spend cap breached') || str.includes('quota exceeded') || str.includes('resourcehasexhausted')) {
                 return 'API利用上限に達しました。時間をおくかGoogle AI Studioで設定をご確認ください。';
             }
-            if (str.includes('invalid authentication credentials') || str.includes('api_key_invalid') || str.includes('unauthorized') || str.includes('403')) {
-                return 'API Key認証エラーです。有効なAPI Keyを「API Key」ボタンから再入力してください。';
+            if (str.includes('invalid authentication credentials') || str.includes('api_key_invalid') || str.includes('unauthorized')) {
+                return 'API Key認証エラーです。新しいAPI Keyを発行し、設定し直してください。';
             }
             if (str.includes('network') || str.includes('failed to fetch')) {
                 return 'ネットワーク通信エラーが発生しました。接続状況をご確認の上、再度お試しください。';
@@ -687,6 +763,9 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
         }
 
+        // ==========================================
+        // PHASE 1: SESSION STATE ISOLATION & CLEARANCE
+        // ==========================================
         function resetActiveSessionState(newFileName) {
             window.currentLoadedSessionId = 'session-' + Date.now();
             window.currentLoadedFileName = newFileName || '新規セッション';
@@ -735,7 +814,7 @@
                 return { id: 'queue-' + Date.now() + '-' + idx, file: f, status: 'waiting', progress: 0 };
             });
             renderQueueUI();
-            showToast(window.fileQueue.length + ' 件の音源をキューにセットしました！', 'info');
+            showToast(window.fileQueue.length + ' 件の音源をキューに隔離セットしました！', 'info');
         }
 
         function renderQueueUI() {
@@ -792,11 +871,9 @@
             }, false);
         }
 
-        // 💡 修正: モデル名を `gemini-3.6-flash` に設定
         async function fetchGeminiApi(apiKey, payload) {
             var cleanKey = String(apiKey || getApiKey() || '').trim();
             if (!cleanKey || cleanKey.length < 10) {
-                openModal('apiKeyModal', true);
                 throw new Error('API Keyが正しく設定されていません。「API Key」ボタンから設定してください。');
             }
 
@@ -804,7 +881,7 @@
             payload.generationConfig.temperature = 0.1;
             payload.generationConfig.maxOutputTokens = 8192;
 
-            var targetUrl = '[https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=)' + cleanKey;
+            var targetUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=' + cleanKey;
 
             var response;
             var maxAttempts = 10;
@@ -832,23 +909,13 @@
             }
 
             if (!response) throw new Error('Gemini APIへの通信に失敗しました');
-            
             var responseText = await response.text();
-            let data;
-            try {
-                data = JSON.parse(responseText);
-            } catch (parseErr) {
-                if (response.status === 403 || response.status === 401 || response.status === 400 || response.status === 405) {
-                    openModal('apiKeyModal', true);
-                    throw new Error('API Key認証またはモデルのエンドポイントが無効です。');
-                }
-                throw new Error('APIサーバーからの応答形式が不正です (HTTP ' + response.status + ')');
-            }
+            var data = JSON.parse(responseText);
 
             if (!response.ok || data.error) {
                 var errDetail = (data.error && data.error.message) ? data.error.message : ('HTTP Error ' + response.status);
-                if (response.status === 400 || response.status === 401 || response.status === 403) {
-                    openModal('apiKeyModal', true);
+                if (response.status === 400 || response.status === 401) {
+                    openModal('apiKeyModal');
                     throw new Error('API Key認証エラーです。有効なAPI Keyを再入力してください。');
                 }
                 throw new Error(translateErrorMessage(errDetail));
@@ -864,8 +931,8 @@
 
         async function reanalyzeBlocksCore(blocks, apiKey, fileNameLabel, onProgress) {
             var totalBlocks = blocks.length;
-            var maxAnalysisPasses = 3;
-            var chunkSize = Math.max(3, Math.ceil(totalBlocks / maxAnalysisPasses));
+            var maxAnalysisPasses = 5;
+            var chunkSize = Math.max(2, Math.ceil(totalBlocks / maxAnalysisPasses));
             var totalChunks = Math.min(maxAnalysisPasses, Math.ceil(totalBlocks / chunkSize));
             var accumulatedVocabMap = new Map();
 
@@ -967,13 +1034,49 @@
                     console.warn('[reanalyzeBlocksCore] Chunk error:', chunkErr);
                 }
 
+                var missingWords = [];
+                chunkWords.forEach(function(w) {
+                    var key = w.toLowerCase();
+                    if (!accumulatedVocabMap.has(key) || accumulatedVocabMap.get(key).japanese === '（自動抽出語）') {
+                        missingWords.push(w);
+                    }
+                });
+
+                if (missingWords.length > 0) {
+                    var rescuePrompt = 'Provide Japanese translations, base forms, and parts of speech for these Indonesian words:\n' + missingWords.join(', ') + '\n\nReturn ONLY a JSON array:\n[\n  {\n    "indonesian": "kata",\n    "baseForm": "kata",\n    "japanese": "言葉、単語",\n    "pos": "noun",\n    "context": "Context",\n    "isKeyWord": false\n  }\n]';
+                    try {
+                        var rescueRes = await fetchGeminiApi(apiKey, {
+                            contents: [{ parts: [{ text: rescuePrompt }] }],
+                            generationConfig: { responseMimeType: "application/json", maxOutputTokens: 4096 }
+                        });
+                        var rescueParsed = safeParseTruncatedJson(extractGeminiText(rescueRes));
+                        if (Array.isArray(rescueParsed)) {
+                            rescueParsed.forEach(function(rv) {
+                                var rKey = (rv.baseForm || rv.indonesian || '').trim().toLowerCase();
+                                if (rKey && rv.japanese) {
+                                    accumulatedVocabMap.set(rKey, {
+                                        id: 'vocab-rescued-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
+                                        indonesian: rv.indonesian || rKey,
+                                        baseForm: rv.baseForm || rKey,
+                                        japanese: rv.japanese,
+                                        pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(rv.pos) ? rv.pos : 'other',
+                                        context: rv.context || '',
+                                        isKeyWord: Boolean(rv.isKeyWord),
+                                        mastered: false
+                                    });
+                                }
+                            });
+                        }
+                    } catch (resErr) {}
+                }
+
                 chunkBlocks.forEach(function(cb) {
                     if (!cb.grammarExplanation || cb.grammarExplanation === '解析中...') {
                         cb.grammarExplanation = '【語句対比】\n・' + cb.indonesian + ' = ' + cb.japanese + '\n【構文構造】\n・標準配置構文\n【接辞解剖】\n・基本語形表現\n【解説・ニュアンス】\n・標準的な表現です。';
                     }
                 });
 
-                await sleep(400);
+                await sleep(500);
             }
 
             return {
@@ -984,7 +1087,7 @@
 
         window.processAudioWithGemini = async function() {
             if (!window.fileQueue || window.fileQueue.length === 0) {
-                showToast('音声ファイルがキューに追加されていません', 'error');
+                showToast('音源ファイルがキューに追加されていません', 'error');
                 return;
             }
 
@@ -1008,11 +1111,12 @@
                 var item = window.fileQueue[i];
                 if (item.status === 'completed') continue;
 
+                // 【フェーズ1の徹底】新規ファイル処理開始前に必ず状態を完全隔離リセット
                 resetActiveSessionState(item.file.name);
 
                 item.status = 'processing';
                 renderQueueUI();
-                if (btnText) btnText.textContent = '最適化解析中 (' + (i + 1) + '/' + window.fileQueue.length + ')';
+                if (btnText) btnText.textContent = '独立隔離解析中 (' + (i + 1) + '/' + window.fileQueue.length + ')';
 
                 try {
                     await processSingleFileWithLongAudioChunking(item, apiKey, i + 1, window.fileQueue.length);
@@ -1023,7 +1127,7 @@
                     item.status = 'error';
                     renderQueueUI();
                     showToast('エラー: ' + translateErrorMessage(err.message), 'error');
-                    if (err.message.includes('Spend Cap') || err.message.includes('prepayment') || err.message.includes('認証エラー')) {
+                    if (err.message.includes('Spend Cap') || err.message.includes('prepayment')) {
                         openModal('apiKeyModal', true);
                         break;
                     }
@@ -1032,8 +1136,8 @@
 
             window.isQueueProcessing = false;
             if (btn) btn.disabled = false;
-            if (btnText) btnText.textContent = "最適化セッション順次解析スタート";
-            showToast('すべてのキューファイルの最適化解析処理が完了しました', 'info');
+            if (btnText) btnText.textContent = "独立セッション順次解析スタート";
+            showToast('すべてのキューファイルの独立解析処理が完了しました', 'info');
             setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
         };
 
@@ -1044,11 +1148,11 @@
             var progressPercent = document.getElementById('chunkProgressPercent');
             var progressBar = document.getElementById('chunkProgressBar');
 
-            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-scissors text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 音声を10分ごとに最適分割中...</span>';
+            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-scissors text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 音声を2分ごとに事前分割中...</span>';
             if (progressBar) progressBar.style.width = '10%';
             if (progressPercent) progressPercent.textContent = '10%';
 
-            var wavChunks = await splitAudioFileIntoWavChunks(file, 600);
+            var wavChunks = await splitAudioFileIntoWavChunks(file, 120);
             var allCombinedBlocks = [];
 
             for (var c = 0; c < wavChunks.length; c++) {
@@ -1119,6 +1223,7 @@
             renderGrammarContainer();
             renderVocabContainer();
 
+            // IndexedDB への永続化保存
             await saveCurrentToHistory(cleanFileName, false);
             var singleDataObj = {
                 id: window.currentLoadedSessionId,
