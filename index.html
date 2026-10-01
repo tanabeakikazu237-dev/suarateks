@@ -46,12 +46,12 @@ colors: { indoRed: { 500: '#E70011', 600: '#C8000F', 700: '#A0000C' } }
 ​<header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center justify-between shrink-0">
 <h1 class="font-extrabold text-sm flex items-center gap-2">
 <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block"></span>
-SuaraTeks<span class="text-red-600">ID</span> Pro <span class="text-[10px] text-slate-400 font-normal">v5.1 (Direct API)</span>
+SuaraTeks<span class="text-red-600">ID</span> Pro <span class="text-[10px] text-slate-400 font-normal">v5.2 (Fixed)</span>
 <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-wifi-slash"></i> オフライン動作中</span>
 </h1>
 <div class="flex items-center gap-2">
 <span id="activeSessionBadge" class="hidden text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 px-2 py-0.5 rounded-full font-extrabold border border-blue-200/50 truncate max-w-[150px]"></span>
-<button onclick="openModal('apiKeyModal')" class="px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-xs font-bold transition flex items-center gap-1">
+<button onclick="openModal('apiKeyModal')" class="px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm">
 <i class="fa-solid fa-key text-[10px]"></i> API Key
 </button>
 </div>
@@ -95,7 +95,7 @@ SuaraTeks<span class="text-red-600">ID</span> Pro <span class="text-[10px] text-
 <div id="playerCard" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
 <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
 <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音源キュー選択</span>
-<span class="text-[9px] text-slate-400">一括ダイレクト送信対応</span>
+<span class="text-[9px] text-slate-400">ダイレクト送信対応</span>
 </h3>
 ​<label id="fileDropLabel" for="audioFileInput" class="relative group cursor-pointer block">
 <input type="file" id="audioFileInput" accept="audio/*" multiple onchange="window.handleFileChange(event)" class="hidden">
@@ -385,47 +385,6 @@ localStorage.setItem('suarateks_history', JSON.stringify(history));
 } catch (err) {}
 }
 ​// ==========================================
-// SERVICE WORKER & OFFLINE SETUP
-// ==========================================
-if ('serviceWorker' in navigator) {
-window.addEventListener('load', function() {
-var swCode = const CACHE_NAME = 'suarateks-pro-v5'; const ASSETS = [ '/', 'https://cdn.tailwindcss.com', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css', 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap' ]; self.addEventListener('install', event => { event.waitUntil( caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()) ); }); self.addEventListener('activate', event => { event.waitUntil(self.clients.claim()); }); self.addEventListener('fetch', event => { event.respondWith( caches.match(event.request).then(response => { return response || fetch(event.request).catch(() => { if (event.request.mode === 'navigate') { return caches.match('/'); } }); }) ); });;
-var blob = new Blob([swCode], { type: 'application/javascript' });
-var swUrl = URL.createObjectURL(blob);
-navigator.serviceWorker.register(swUrl).catch(function(err) {});
-});
-}
-​window.addEventListener('online', updateOnlineStatus);
-window.addEventListener('offline', updateOnlineStatus);
-function updateOnlineStatus() {
-var badge = document.getElementById('offlineBadge');
-if (!badge) return;
-if (!navigator.onLine) {
-badge.classList.remove('hidden');
-showToast('ネットワークがオフラインです（IndexedDB履歴・単語帳は完全に動作します）', 'info');
-} else {
-badge.classList.add('hidden');
-}
-}
-​// ==========================================
-// SPEECH SYNTHESIS VOICE MANAGEMENT
-// ==========================================
-window.availableIndoVoices = [];
-​function initSpeechSynthesisVoices() {
-if (!('speechSynthesis' in window)) return;
-var voices = window.speechSynthesis.getVoices();
-if (voices && voices.length > 0) {
-window.availableIndoVoices = voices.filter(function(v) {
-var lang = (v.lang || '').toLowerCase();
-return lang.startsWith('id') || lang.includes('id-id') || lang.includes('indonesian');
-});
-}
-}
-​if ('speechSynthesis' in window) {
-window.speechSynthesis.onvoiceschanged = initSpeechSynthesisVoices;
-initSpeechSynthesisVoices();
-}
-​// ==========================================
 // APP STATE & SESSION ISOLATION
 // ==========================================
 window.fileQueue = [];
@@ -465,7 +424,7 @@ return rawMessage;
 }
 ​function formatOutputFileName(baseName) {
 var clean = String(baseName || '解析データ').trim().replace(/.[^/.]+$/, "");
-clean = clean.replace(/^®️️\s*/, '');
+clean = clean.replace(/^®\s*/, '');
 return clean || '解析データ';
 }
 ​function setSpeechRate(val) {
