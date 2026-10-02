@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="id" class="h-full">
 <head>
@@ -55,7 +56,7 @@
     <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center justify-between shrink-0">
         <h1 class="font-extrabold text-sm flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block"></span>
-            SuaraTeks<span class="text-red-600">ID</span> Pro <span class="text-[10px] text-slate-400 font-normal">v5.2 (全ブロック深掘り文法解剖)</span>
+            SuaraTeks<span class="text-red-600">ID</span> Pro <span class="text-[10px] text-slate-400 font-normal">v5.3 (安定軽量化版)</span>
             <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-wifi-slash"></i> オフライン動作中</span>
         </h1>
         <div class="flex items-center gap-2">
@@ -327,7 +328,6 @@
         const DB_VERSION = 1;
         const STORE_NAME = 'sessions';
 
-        // インストール済みのインドネシア語基本機能語（ストップワード）
         const INDO_STOP_WORDS = new Set([
             'a','di','ke','dan','yang','ini','itu','ada','dari','pada','atau','untuk','akan','bisa','sudah',
             'saya','anda','mereka','kita','kami','dia','ia','ya','tidak','bukan','pula','lagi','juga','saja',
@@ -443,7 +443,7 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 var swCode = `
-                    const CACHE_NAME = 'suarateks-pro-v5.2';
+                    const CACHE_NAME = 'suarateks-pro-v5.3';
                     const ASSETS = [
                         '/',
                         'https://cdn.tailwindcss.com',
@@ -509,6 +509,7 @@
             initSpeechSynthesisVoices();
         }
 
+        // 16kHz モノラル ダウンサンプリング処理
         async function splitAudioFileIntoWavChunks(file, maxDurationSeconds = 180) {
             try {
                 var arrayBuffer = await file.arrayBuffer();
@@ -516,50 +517,63 @@
                 var audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
                 await audioCtx.close();
 
-                var sampleRate = audioBuffer.sampleRate;
-                var numberOfChannels = audioBuffer.numberOfChannels;
+                var targetSampleRate = 16000;
                 var totalDuration = audioBuffer.duration;
 
                 if (totalDuration <= maxDurationSeconds) {
-                    return [{ chunkIndex: 0, blob: file, duration: totalDuration }];
+                    var singleWav = await resampleAndExportWav(audioBuffer, 0, audioBuffer.length, targetSampleRate);
+                    return [{ chunkIndex: 0, blob: singleWav, duration: totalDuration }];
                 }
 
-                var samplesPerChunk = maxDurationSeconds * sampleRate;
+                var origSampleRate = audioBuffer.sampleRate;
+                var samplesPerChunk = maxDurationSeconds * origSampleRate;
                 var totalChunks = Math.ceil(audioBuffer.length / samplesPerChunk);
                 var chunks = [];
 
                 for (var i = 0; i < totalChunks; i++) {
-                    var startSample = i * samplesPerChunk;
-                    var endSample = Math.min(audioBuffer.length, startSample + samplesPerChunk);
-                    var frameCount = endSample - startSample;
-
-                    var chunkBuffer = new (window.AudioContext || window.webkitAudioContext)().createBuffer(numberOfChannels, frameCount, sampleRate);
-                    for (var channel = 0; channel < numberOfChannels; channel++) {
-                        var channelData = audioBuffer.getChannelData(channel);
-                        chunkBuffer.copyToChannel(channelData.subarray(startSample, endSample), channel);
-                    }
-
-                    var wavBlob = audioBufferToWavBlob(chunkBuffer);
+                    var startSample = Math.floor(i * samplesPerChunk);
+                    var endSample = Math.min(audioBuffer.length, Math.floor(startSample + samplesPerChunk));
+                    var chunkWavBlob = await resampleAndExportWav(audioBuffer, startSample, endSample, targetSampleRate);
+                    
                     chunks.push({
                         chunkIndex: i,
-                        blob: wavBlob,
-                        duration: frameCount / sampleRate
+                        blob: chunkWavBlob,
+                        duration: (endSample - startSample) / origSampleRate
                     });
                 }
                 return chunks;
             } catch (e) {
-                console.warn('Audio decoding/splitting failed, falling back to original file:', e);
+                console.warn('Audio decoding/resampling failed, falling back to original file:', e);
                 return [{ chunkIndex: 0, blob: file, duration: 0 }];
             }
         }
 
-        function audioBufferToWavBlob(buffer) {
-            var numOfChan = buffer.numberOfChannels;
-            var length = buffer.length * numOfChan * 2 + 44;
+        async function resampleAndExportWav(audioBuffer, startSample, endSample, targetSampleRate) {
+            var frameCount = endSample - startSample;
+            var duration = frameCount / audioBuffer.sampleRate;
+            var targetLength = Math.ceil(duration * targetSampleRate);
+
+            var offlineCtx = new OfflineAudioContext(1, targetLength, targetSampleRate);
+            var src = offlineCtx.createBufferSource();
+
+            var tempBuffer = offlineCtx.createBuffer(audioBuffer.numberOfChannels, frameCount, audioBuffer.sampleRate);
+            for (var c = 0; c < audioBuffer.numberOfChannels; c++) {
+                tempBuffer.copyToChannel(audioBuffer.getChannelData(c).subarray(startSample, endSample), c);
+            }
+
+            src.buffer = tempBuffer;
+            src.connect(offlineCtx.destination);
+            src.start(0);
+
+            var renderedBuffer = await offlineCtx.startRendering();
+            return monoAudioBufferToWavBlob(renderedBuffer);
+        }
+
+        function monoAudioBufferToWavBlob(buffer) {
+            var length = buffer.length * 2 + 44;
             var out = new DataView(new ArrayBuffer(length));
-            var channels = [];
             var sampleRate = buffer.sampleRate;
-            var offset = 0;
+            var channelData = buffer.getChannelData(0);
             var pos = 0;
 
             function writeString(str) {
@@ -574,27 +588,21 @@
             writeString('fmt ');
             out.setUint32(pos, 16, true); pos += 4;
             out.setUint16(pos, 1, true); pos += 2;
-            out.setUint16(pos, numOfChan, true); pos += 2;
+            out.setUint16(pos, 1, true); pos += 2;
             out.setUint32(pos, sampleRate, true); pos += 4;
-            out.setUint32(pos, sampleRate * 2 * numOfChan, true); pos += 4;
-            out.setUint16(pos, numOfChan * 2, true); pos += 2;
+            out.setUint32(pos, sampleRate * 2, true); pos += 4;
+            out.setUint16(pos, 2, true); pos += 2;
             out.setUint16(pos, 16, true); pos += 2;
             writeString('data');
             out.setUint32(pos, length - pos - 4, true); pos += 4;
 
-            for (var i = 0; i < buffer.numberOfChannels; i++) {
-                channels.push(buffer.getChannelData(i));
+            for (var i = 0; i < channelData.length; i++) {
+                var sample = Math.max(-1, Math.min(1, channelData[i]));
+                sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+                out.setInt16(pos, sample, true);
+                pos += 2;
             }
 
-            while (offset < buffer.length) {
-                for (var i = 0; i < numOfChan; i++) {
-                    var sample = Math.max(-1, Math.min(1, channels[i][offset]));
-                    sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
-                    out.setInt16(pos, sample, true);
-                    pos += 2;
-                }
-                offset++;
-            }
             return new Blob([out.buffer], { type: 'audio/wav' });
         }
 
@@ -774,7 +782,7 @@
                 return { id: 'queue-' + Date.now() + '-' + idx, file: f, status: 'waiting', progress: 0 };
             });
             renderQueueUI();
-            showToast(window.fileQueue.length + ' 件の音源をキューに隔離セットしました！', 'info');
+            showToast(window.fileQueue.length + ' 件の音源をキューにセットしました！', 'info');
         }
 
         function renderQueueUI() {
@@ -841,10 +849,10 @@
             payload.generationConfig.temperature = 0.1;
             payload.generationConfig.maxOutputTokens = 8192;
 
-            var targetUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=' + cleanKey;
+            var targetUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + cleanKey;
 
             var response;
-            var maxAttempts = 10;
+            var maxAttempts = 8;
             for (var attempt = 1; attempt <= maxAttempts; attempt++) {
                 try {
                     response = await fetch(targetUrl, {
@@ -855,7 +863,7 @@
 
                     if (response.status === 429 || response.status === 503) {
                         var errText = await response.text();
-                        var waitMs = attempt * 6000;
+                        var waitMs = attempt * 5000 + Math.floor(Math.random() * 2000);
                         var retryMatch = errText.match(/retry in ([0-9.]+)s/i);
                         if (retryMatch && retryMatch[1]) waitMs = Math.ceil(parseFloat(retryMatch[1]) * 1000) + 2000;
                         await sleep(waitMs);
@@ -864,7 +872,7 @@
                     break;
                 } catch (netErr) {
                     if (attempt === maxAttempts) throw new Error('ネットワーク通信エラーが発生しました: ' + netErr.message);
-                    await sleep(2000);
+                    await sleep(3000);
                 }
             }
 
@@ -874,7 +882,7 @@
 
             if (!response.ok || data.error) {
                 var errDetail = (data.error && data.error.message) ? data.error.message : ('HTTP Error ' + response.status);
-                if (response.status === 400 || response.status === 401) {
+                if (response.status === 400 && errDetail.toLowerCase().includes('key')) {
                     openModal('apiKeyModal');
                     throw new Error('API Key認証エラーです。有効なAPI Keyを再入力してください。');
                 }
@@ -891,9 +899,8 @@
 
         async function reanalyzeBlocksCore(blocks, apiKey, fileNameLabel, onProgress) {
             var totalBlocks = blocks.length;
-            var maxAnalysisPasses = 5;
-            var chunkSize = Math.max(2, Math.ceil(totalBlocks / maxAnalysisPasses));
-            var totalChunks = Math.min(maxAnalysisPasses, Math.ceil(totalBlocks / chunkSize));
+            var chunkSize = 3;
+            var totalChunks = Math.ceil(totalBlocks / chunkSize);
             var accumulatedVocabMap = new Map();
 
             blocks.forEach(function(b) { if (!b.grammarExplanation || b.grammarExplanation === '解析中...') b.grammarExplanation = '解析中...'; });
@@ -901,7 +908,6 @@
             for (var chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
                 var start = chunkIdx * chunkSize;
                 var end = Math.min(totalBlocks, start + chunkSize);
-                if (start >= totalBlocks) break;
 
                 var currentPct = Math.floor(((chunkIdx + 1) / totalChunks) * 100);
                 if (onProgress) onProgress(chunkIdx + 1, totalChunks, currentPct, fileNameLabel);
@@ -999,7 +1005,7 @@
                     }
                 });
 
-                await sleep(400);
+                await sleep(1500);
             }
 
             return {
@@ -1038,7 +1044,7 @@
 
                 item.status = 'processing';
                 renderQueueUI();
-                if (btnText) btnText.textContent = '独立隔離解析中 (' + (i + 1) + '/' + window.fileQueue.length + ')';
+                if (btnText) btnText.textContent = '解析中 (' + (i + 1) + '/' + window.fileQueue.length + ')';
 
                 try {
                     await processSingleFileWithLongAudioChunking(item, apiKey, i + 1, window.fileQueue.length);
@@ -1054,12 +1060,13 @@
                         break;
                     }
                 }
+                await sleep(2000);
             }
 
             window.isQueueProcessing = false;
             if (btn) btn.disabled = false;
             if (btnText) btnText.textContent = "全ブロック深掘り解析スタート";
-            showToast('すべてのキューファイルの独立解析処理が完了しました', 'info');
+            showToast('すべてのキューファイルの解析処理が完了しました', 'info');
             setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
         };
 
@@ -1070,7 +1077,7 @@
             var progressPercent = document.getElementById('chunkProgressPercent');
             var progressBar = document.getElementById('chunkProgressBar');
 
-            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-scissors text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 音声を3分ごとに分割・読み込み中...</span>';
+            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-scissors text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 音声を軽量化・分割処理中...</span>';
             if (progressBar) progressBar.style.width = '10%';
             if (progressPercent) progressPercent.textContent = '10%';
 
@@ -1113,7 +1120,7 @@
                         grammarExplanation: '解析中...'
                     });
                 });
-                await sleep(250);
+                await sleep(1500);
             }
 
             if (allCombinedBlocks.length === 0) throw new Error('音声からテキストが読み取れませんでした');
@@ -1219,6 +1226,7 @@
                     renderVocabContainer();
 
                     await dbSaveSession(item);
+                    await sleep(1500);
                 }
                 showToast(selectedItems.length + ' 件の選択再解析が完了しました！', 'info');
                 window.selectedHistoryIds = [];
@@ -2018,3 +2026,4 @@
     </script>
 </body>
 </html>
+```
