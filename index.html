@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SuaraTeks ID Pro Pro</title>
+    <title>SuaraTeks ID Pro v6 Complete</title>
 
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -12,6 +12,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎙️</text></svg>">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2991/2991148.png">
 
+    <!-- Tailwind CSS (Playground CDN for immersive execution; ready for Tailwind CLI in production) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -74,6 +75,7 @@
     <div class="flex-1 flex overflow-hidden p-2 sm:p-3 gap-3 max-w-7xl mx-auto w-full">
         <div id="panelSetup" class="w-full md:w-80 flex flex-col gap-2.5 shrink-0 overflow-y-auto">
 
+            <!-- Display & Audio settings -->
             <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
                 <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1.5"><i class="fa-solid fa-sliders text-red-600"></i> 表示・音声調整</h3>
                 <div class="space-y-1 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
@@ -111,6 +113,7 @@
                 <div class="text-[9px] text-slate-400 leading-snug">APIキーはブラウザにのみ安全に保存されます。</div>
             </div>
 
+            <!-- Audio queue selection -->
             <div id="playerCard" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
                 <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
                     <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音源キュー選択</span>
@@ -140,7 +143,7 @@
                 </button>
             </div>
 
-            <!-- 常時表示されるコスト・トークン集計パネル -->
+            <!-- Persistent cost & token tracking panel -->
             <div id="chunkProgressContainer" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-1.5 shrink-0">
                 <div class="flex justify-between text-xs font-bold">
                     <span id="chunkProgressLabel" class="flex items-center gap-1 text-[10px] truncate max-w-[80%] text-slate-600 dark:text-slate-300">スタンバイ中</span>
@@ -163,6 +166,7 @@
                 <div id="usageBreakdownText" class="text-[9px] text-slate-400 leading-snug">音声・文法解析ごとの実測トークンと推定費用です。</div>
             </div>
 
+            <!-- History panel -->
             <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[220px]">
                 <div class="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-700 mb-1.5 gap-1 shrink-0">
                     <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1 shrink-0 truncate"><i class="fa-solid fa-database text-blue-500"></i> 履歴<span class="hidden sm:inline">(無制限)</span></h4>
@@ -848,6 +852,30 @@
                     });
                 }
                 await sleep(300);
+            }
+
+            // Fallback vocab generation from blocks if empty
+            if (accumulatedVocabMap.size === 0) {
+                blocks.forEach((b, bIdx) => {
+                    const words = (b.indonesian || '').match(/[a-zA-Z-']+/g) || [];
+                    words.forEach((w, wIdx) => {
+                        if (w.length >= 3) {
+                            const key = w.toLowerCase();
+                            if (!accumulatedVocabMap.has(key)) {
+                                accumulatedVocabMap.set(key, {
+                                    id: 'vocab-fb-' + bIdx + '-' + wIdx,
+                                    indonesian: w,
+                                    baseForm: w,
+                                    japanese: '（文脈語）',
+                                    pos: 'other',
+                                    context: b.indonesian,
+                                    isKeyWord: false,
+                                    mastered: false
+                                });
+                            }
+                        }
+                    });
+                });
             }
 
             return { blocks, vocab: Array.from(accumulatedVocabMap.values()) };
