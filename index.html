@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ja" class="h-full">
+<html lang="id" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SuaraTeks ID Pro</title>
+    <title>SuaraTeks ID Pro Pro</title>
 
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -52,7 +52,7 @@
         <h1 class="font-extrabold text-sm flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block"></span>
             SuaraTeks<span class="text-red-600">ID</span> Pro
-            <span class="text-[10px] text-slate-400 font-normal">v6.0 Frontend-Direct</span>
+            <span class="text-[10px] text-slate-400 font-normal">v6.0 Complete Frontend-Direct</span>
             <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1.5 py-0.5 rounded font-bold">
                 <i class="fa-solid fa-wifi-slash"></i> オフライン
             </span>
@@ -108,7 +108,7 @@
                         <div class="text-slate-700 dark:text-slate-200">音声=minimal / 文法=low</div>
                     </div>
                 </div>
-                <div class="text-[9px] text-slate-400 leading-snug">APIキーはブラウザにのみ保存され、直接Google APIへ通信します。</div>
+                <div class="text-[9px] text-slate-400 leading-snug">APIキーはブラウザにのみ安全に保存されます。</div>
             </div>
 
             <div id="playerCard" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
@@ -140,12 +140,13 @@
                 </button>
             </div>
 
-            <div id="chunkProgressContainer" class="hidden bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-1.5 shrink-0">
+            <!-- 常時表示されるコスト・トークン集計パネル -->
+            <div id="chunkProgressContainer" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-1.5 shrink-0">
                 <div class="flex justify-between text-xs font-bold">
-                    <span id="chunkProgressLabel" class="flex items-center gap-1 text-[10px] truncate max-w-[80%]">解析実行中...</span>
-                    <span id="chunkProgressPercent" class="text-red-600 text-[10px]">0%</span>
+                    <span id="chunkProgressLabel" class="flex items-center gap-1 text-[10px] truncate max-w-[80%] text-slate-600 dark:text-slate-300">スタンバイ中</span>
+                    <span id="chunkProgressPercent" class="text-red-600 text-[10px]">100%</span>
                 </div>
-                <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden"><div id="chunkProgressBar" class="bg-red-600 h-1.5 rounded-full w-0 transition-all duration-300"></div></div>
+                <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden"><div id="chunkProgressBar" class="bg-red-600 h-1.5 rounded-full w-full transition-all duration-300"></div></div>
                 <div class="grid grid-cols-2 gap-1.5 text-[9px] font-bold">
                     <div class="bg-slate-50 dark:bg-slate-900/70 rounded-lg p-1.5 border border-slate-200/60 dark:border-slate-700/60"><div class="text-slate-400">API Requests</div><div id="apiRequestCountDisplay">0</div></div>
                     <div class="bg-slate-50 dark:bg-slate-900/70 rounded-lg p-1.5 border border-slate-200/60 dark:border-slate-700/60"><div class="text-slate-400">総Token</div><div id="totalTokenDisplay">0</div></div>
@@ -159,7 +160,7 @@
                     <input id="usdJpyRateInput" type="number" min="1" step="0.1" value="158.0" oninput="saveUsdJpyRate(this.value); updateUsageUI()" class="w-20 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-[9px] font-bold">
                     <span id="costDisplayJpy" class="text-[9px] font-extrabold text-emerald-600">≈ ¥0.00</span>
                 </div>
-                <div id="usageBreakdownText" class="text-[9px] text-slate-400 leading-snug"></div>
+                <div id="usageBreakdownText" class="text-[9px] text-slate-400 leading-snug">音声・文法解析ごとの実測トークンと推定費用です。</div>
             </div>
 
             <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[220px]">
@@ -429,7 +430,7 @@
             set('costDisplayJpy', '≈ ¥' + jpy.toFixed(2));
             set('inputOutputDisplay', u.promptTokenCount.toLocaleString() + ' / ' + u.candidatesTokenCount.toLocaleString());
             set('thinkingDisplay', u.thoughtsTokenCount.toLocaleString());
-            set('usageBreakdownText', '入力コスト $' + u.inputCostUsd.toFixed(6) + ' / 出力+Thinking $' + u.outputCostUsd.toFixed(6) + ' / 為替設定より日本円算出。');
+            set('usageBreakdownText', '入力 $' + u.inputCostUsd.toFixed(6) + ' / 出力+Thinking $' + u.outputCostUsd.toFixed(6));
         }
 
         function openIndexedDB() {
@@ -530,7 +531,7 @@
         function updateOnlineStatus() {
             const badge = document.getElementById('offlineBadge');
             if (!badge) return;
-            if (!navigator.onLine) { badge.classList.remove('hidden'); showToast('ネットワークがオフラインです', 'info'); }
+            if (!navigator.onLine) badge.classList.remove('hidden');
             else badge.classList.add('hidden');
         }
 
@@ -779,8 +780,8 @@
 
         async function reanalyzeBlocksCore(blocks, fileNameLabel, onProgress) {
             const totalBlocks = blocks.length;
-            const maxAnalysisPasses = totalBlocks > 15 ? 3 : 2;
-            const chunkSize = Math.max(3, Math.ceil(totalBlocks / maxAnalysisPasses));
+            const maxAnalysisPasses = totalBlocks > 15 ? 2 : 1;
+            const chunkSize = Math.max(5, Math.ceil(totalBlocks / maxAnalysisPasses));
             const totalChunks = Math.ceil(totalBlocks / chunkSize);
             const accumulatedVocabMap = new Map();
 
@@ -841,7 +842,9 @@
                     }
                 } catch (err) {
                     chunkBlocks.forEach(cb => {
-                        if (!cb.grammarExplanation || cb.grammarExplanation === '解析中...') cb.grammarExplanation = '【語句対比】\n・' + cb.indonesian + ' = ' + cb.japanese + '\n【構文構造】\n・標準配置構文\n【接辞解剖】\n・基本語形表現\n【解説・ニュアンス】\n・高精度解析で構築された文節です。';
+                        if (!cb.grammarExplanation || cb.grammarExplanation === '解析中...') {
+                            cb.grammarExplanation = '【語句対比】\n・' + cb.indonesian + ' = ' + cb.japanese + '\n【構文構造】\n・標準配置構文\n【接辞解剖】\n・基本語形表現\n【解説・ニュアンス】\n・高精度解析で構築された文節です。';
+                        }
                     });
                 }
                 await sleep(300);
@@ -861,8 +864,9 @@
             if (!window.fileQueue.length) { showToast('音源ファイルがキューに追加されていません', 'error'); return; }
             if (window.isQueueProcessing) return;
             window.isQueueProcessing = true; resetUsage();
-            const btn = document.getElementById('startTranscribeBtn'); const btnText = document.getElementById('transcribeBtnText'); const progressContainer = document.getElementById('chunkProgressContainer');
-            if (btn) btn.disabled = true; progressContainer?.classList.remove('hidden');
+            const btn = document.getElementById('startTranscribeBtn'); const btnText = document.getElementById('transcribeBtnText');
+            const progressLabel = document.getElementById('chunkProgressLabel'); const progressPercent = document.getElementById('chunkProgressPercent'); const progressBar = document.getElementById('chunkProgressBar');
+            if (btn) btn.disabled = true;
 
             for (let i = 0; i < window.fileQueue.length; i++) {
                 const item = window.fileQueue[i]; if (item.status === 'completed') continue;
@@ -877,7 +881,9 @@
                 }
             }
             window.isQueueProcessing = false; if (btn) btn.disabled = false; if (btnText) btnText.textContent = '独立セッション順次解析スタート';
-            showToast('キューファイルの独立解析処理が完了しました', 'info'); setTimeout(() => progressContainer?.classList.add('hidden'), 1000);
+            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-check text-emerald-500"></i> <span>解析完了しました</span>';
+            if (progressBar) progressBar.style.width = '100%'; if (progressPercent) progressPercent.textContent = '100%';
+            showToast('キューファイルの独立解析処理が完了しました', 'info');
         };
 
         async function processSingleFileWithLongAudioChunking(queueItem, currentIdx, totalIdx) {
@@ -914,7 +920,9 @@
                 if (progressBar) progressBar.style.width = mappedPct + '%'; if (progressPercent) progressPercent.textContent = mappedPct + '%';
             });
 
-            window.transcriptBlocks = finalRes.blocks; window.vocabList = finalRes.vocab; if (progressBar) progressBar.style.width = '100%'; if (progressPercent) progressPercent.textContent = '100%';
+            window.transcriptBlocks = finalRes.blocks; window.vocabList = finalRes.vocab;
+            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-check text-emerald-500"></i> <span>すべての解析が完了しました</span>';
+            if (progressBar) progressBar.style.width = '100%'; if (progressPercent) progressPercent.textContent = '100%';
             renderTranscriptContainer(); renderGrammarContainer(); renderVocabContainer();
             await saveCurrentToHistory(cleanFileName, false);
             exportDataToFile({ id: window.currentLoadedSessionId, fileName: cleanFileName, date: new Date().toLocaleDateString('ja-JP', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }), timestamp: Date.now(), blocks: window.transcriptBlocks, vocab: window.vocabList }, cleanFileName + '.json');
@@ -925,8 +933,8 @@
             if (!window.selectedHistoryIds.length) return;
             const ok = confirm('選択した履歴をGeminiで再解析します。API料金が発生します。続行しますか？'); if (!ok) return;
             const allSessions = await dbGetAllSessions(); const selectedItems = window.selectedHistoryIds.map(id => allSessions.find(h => h.id === id)).filter(Boolean); if (!selectedItems.length) return;
-            const progressContainer = document.getElementById('chunkProgressContainer'); const progressLabel = document.getElementById('chunkProgressLabel'); const progressPercent = document.getElementById('chunkProgressPercent'); const progressBar = document.getElementById('chunkProgressBar');
-            resetUsage(); progressContainer?.classList.remove('hidden');
+            const progressLabel = document.getElementById('chunkProgressLabel'); const progressPercent = document.getElementById('chunkProgressPercent'); const progressBar = document.getElementById('chunkProgressBar');
+            resetUsage();
             try {
                 for (let i = 0; i < selectedItems.length; i++) {
                     const item = selectedItems[i]; const baseName = formatOutputFileName(item.fileName);
@@ -936,21 +944,21 @@
                 }
                 window.selectedHistoryIds = []; await loadHistoryFromStorage(); showToast(selectedItems.length + ' 件の選択再解析が完了しました！', 'info');
             } catch (err) { showToast('一括再解析エラー: ' + translateErrorMessage(err.message), 'error'); }
-            finally { updateHistoryActionButtonsState(); setTimeout(() => progressContainer?.classList.add('hidden'), 1000); }
+            finally { updateHistoryActionButtonsState(); if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-check text-emerald-500"></i> <span>再解析完了しました</span>'; if (progressBar) progressBar.style.width = '100%'; }
         };
 
         window.reanalyzeCurrentTranscript = async function() {
             if (!getApiKey()) { openApiKeyModal(); return; }
             if (!window.transcriptBlocks.length) { showToast('再解析対象のテキストデータがありません', 'error'); return; }
             const ok = confirm('現在のセッションをGeminiで再解析します。API料金が発生します。続行しますか？'); if (!ok) return;
-            const btn = document.getElementById('btnReanalyzeText'); const progressContainer = document.getElementById('chunkProgressContainer'); const progressLabel = document.getElementById('chunkProgressLabel'); const progressPercent = document.getElementById('chunkProgressPercent'); const progressBar = document.getElementById('chunkProgressBar');
-            btn && (btn.disabled = true); resetUsage(); progressContainer?.classList.remove('hidden');
+            const btn = document.getElementById('btnReanalyzeText'); const progressLabel = document.getElementById('chunkProgressLabel'); const progressPercent = document.getElementById('chunkProgressPercent'); const progressBar = document.getElementById('chunkProgressBar');
+            btn && (btn.disabled = true); resetUsage();
             try {
                 const targetName = formatOutputFileName(window.currentLoadedFileName || '解析データ');
                 const res = await reanalyzeBlocksCore(window.transcriptBlocks, targetName, (cIdx, totalC, pct, label) => { if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-amber-500"></i> <span class="truncate">【再解析】' + label + ' (' + cIdx + '/' + totalC + ')</span>'; if (progressBar) progressBar.style.width = pct + '%'; if (progressPercent) progressPercent.textContent = pct + '%'; });
                 window.transcriptBlocks = res.blocks; window.vocabList = res.vocab; renderGrammarContainer(); renderVocabContainer(); await saveCurrentToHistory(targetName, false); showToast('テキスト再解析が完了しました！', 'info');
             } catch (err) { showToast('再解析エラー: ' + translateErrorMessage(err.message), 'error'); }
-            finally { btn && (btn.disabled = false); setTimeout(() => progressContainer?.classList.add('hidden'), 1000); }
+            finally { btn && (btn.disabled = false); if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-check text-emerald-500"></i> <span>再解析完了しました</span>'; if (progressBar) progressBar.style.width = '100%'; }
         };
 
         function speakIndonesian(text) {
