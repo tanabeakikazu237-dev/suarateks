@@ -440,9 +440,6 @@
             } catch (err) {}
         }
 
-        // ==========================================
-        // SERVICE WORKER & OFFLINE SETUP
-        // ==========================================
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 var swCode = `
@@ -494,9 +491,6 @@
             }
         }
 
-        // ==========================================
-        // STABLE SPEECH SYNTHESIS VOICE MANAGEMENT
-        // ==========================================
         window.availableIndoVoices = [];
 
         function initSpeechSynthesisVoices() {
@@ -515,7 +509,6 @@
             initSpeechSynthesisVoices();
         }
 
-        // 音声分割単位：3分(180秒)
         async function splitAudioFileIntoWavChunks(file, maxDurationSeconds = 180) {
             try {
                 var arrayBuffer = await file.arrayBuffer();
@@ -605,9 +598,6 @@
             return new Blob([out.buffer], { type: 'audio/wav' });
         }
 
-        // ==========================================
-        // APP STATE & PHASE 1 SESSION ISOLATION
-        // ==========================================
         window.fileQueue = [];
         window.isQueueProcessing = false;
         window.currentLoadedSessionId = null;
@@ -736,9 +726,6 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
         }
 
-        // ==========================================
-        // PHASE 1: SESSION STATE ISOLATION & CLEARANCE
-        // ==========================================
         function resetActiveSessionState(newFileName) {
             window.currentLoadedSessionId = 'session-' + Date.now();
             window.currentLoadedFileName = newFileName || '新規セッション';
@@ -902,7 +889,6 @@
             return parts.map(function(p) { return p.text || ''; }).join('').trim();
         }
 
-        // 全ブロックに徹底的に深い詳細文法解剖を生成するプロンプト調整
         async function reanalyzeBlocksCore(blocks, apiKey, fileNameLabel, onProgress) {
             var totalBlocks = blocks.length;
             var maxAnalysisPasses = 5;
@@ -925,7 +911,6 @@
                     return '[BLOCK_ID:' + b.blockIndex + '] ' + b.indonesian + '\n(JP: ' + b.japanese + ')';
                 }).join('\n\n');
 
-                // 基本機能語の自動除外（トークン節約維持）
                 var chunkWords = new Set();
                 chunkBlocks.forEach(function(b) {
                     var words = (b.indonesian || '').toLowerCase().match(/[a-zA-Z-']+/g) || [];
@@ -938,7 +923,6 @@
 
                 var wordListStr = Array.from(chunkWords).join(', ');
 
-                // 全ブロック濃密解剖プロンプト（手抜き・省略を厳格禁止）
                 var combinedPrompt = 'You are a master Indonesian linguist and language instructor for Japanese native speakers.\n' +
 'Analyze EVERY single given Indonesian text block with utmost precision and depth. NEVER omit, skip, or summarize any part.\n\n' +
 'REQUIREMENTS:\n' +
@@ -2034,15 +2018,3 @@
     </script>
 </body>
 </html>
-```eoc
-
-### 主な調整内容
-1. **Geminiプロンプト指示の厳格強化**
-   - 「すべての文節ブロックに対して、手抜き・省略・要約を例外なく厳禁とする（`NEVER omit, skip, or summarize any part.`）」と命じ、各ブロックに濃密な解説を出力させます。
-2. **4項目の詳細指定の明確化**
-   - 【語句対比】：語句の1対1対応の徹底。
-   - 【構文構造】：SVOの配置および語順（後置修飾関係など）の可視化。
-   - 【接辞解剖】：語根（Kata Dasar）の特定と、接辞（me-, ber-, di-, -kan, -i等）による能動・受動・使役変化の明記。
-   - 【解説・ニュアンス】：口語表現や文脈・トーンの補足解説。
-3. **コスト最適化との両立**
-   - 3分単位の音声分割やストップワード除外などの基盤システムによる節約設計（約30%節約効果）はそのまま機能しています。
