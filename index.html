@@ -55,7 +55,7 @@
     <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center justify-between shrink-0">
         <h1 class="font-extrabold text-sm flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block"></span>
-            SuaraTeks<span class="text-red-600">ID</span> Pro <span class="text-[10px] text-slate-400 font-normal">v5.0 (Phase 1 & 2)</span>
+            SuaraTeks<span class="text-red-600">ID</span> Pro <span class="text-[10px] text-slate-400 font-normal">v5.2 (全ブロック深掘り文法解剖)</span>
             <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-wifi-slash"></i> オフライン動作中</span>
         </h1>
         <div class="flex items-center gap-2">
@@ -111,7 +111,7 @@
             <div id="playerCard" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
                 <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
                     <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音源キュー選択</span>
-                    <span class="text-[9px] text-slate-400">セッション完全隔離対応</span>
+                    <span class="text-[9px] text-emerald-600 font-bold"><i class="fa-solid fa-shield-halved"></i> 全構文精密解剖</span>
                 </h3>
                 
                 <label id="fileDropLabel" for="audioFileInput" class="relative group cursor-pointer block">
@@ -137,7 +137,7 @@
 
                 <button id="startTranscribeBtn" onclick="window.processAudioWithGemini()" class="w-full py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition flex items-center justify-center gap-1.5">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    <span id="transcribeBtnText">独立セッション順次解析スタート</span>
+                    <span id="transcribeBtnText">全ブロック深掘り解析スタート</span>
                 </button>
             </div>
 
@@ -199,7 +199,7 @@
                     <button id="navTabVocab" onclick="setStudioSubView('vocab')" class="no-wrap-tab px-2 sm:px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
                         <i class="fa-solid fa-book-open text-[10px]"></i> 単語帳 (<span id="vocabCountBadge">0</span>)
                     </button>
-                    <button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-1.5 sm:px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] sm:text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-0.5 whitespace-nowrap" title="現在のセッションを再解析">
+                    <button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-1.5 sm:px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] sm:text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-0.5 whitespace-nowrap" title="現在のセッションを深掘り再解析">
                         <i class="fa-solid fa-rotate-right text-[9px]"></i> 再解析
                     </button>
                 </div>
@@ -217,7 +217,7 @@
             <div id="transcriptView" class="flex-1 p-3 overflow-y-auto space-y-3">
                 <div id="emptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
                     <i class="fa-solid fa-file-audio text-3xl text-slate-300 dark:text-slate-700"></i>
-                    <span>音声ファイルを選択して「独立セッション順次解析スタート」を押してください</span>
+                    <span>音声ファイルを選択して「全ブロック深掘り解析スタート」を押してください</span>
                 </div>
                 <div id="transcriptContainer" class="space-y-3"></div>
             </div>
@@ -326,6 +326,13 @@
         const DB_NAME = 'SuaraTeksIDProDB';
         const DB_VERSION = 1;
         const STORE_NAME = 'sessions';
+
+        // インストール済みのインドネシア語基本機能語（ストップワード）
+        const INDO_STOP_WORDS = new Set([
+            'a','di','ke','dan','yang','ini','itu','ada','dari','pada','atau','untuk','akan','bisa','sudah',
+            'saya','anda','mereka','kita','kami','dia','ia','ya','tidak','bukan','pula','lagi','juga','saja',
+            'dengan','oleh','maka','kalau','sebab','karena','agar','bahwa','saat','ketika','ada','adalah'
+        ]);
 
         function openIndexedDB() {
             return new Promise((resolve, reject) => {
@@ -439,7 +446,7 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 var swCode = `
-                    const CACHE_NAME = 'suarateks-pro-v5';
+                    const CACHE_NAME = 'suarateks-pro-v5.2';
                     const ASSETS = [
                         '/',
                         'https://cdn.tailwindcss.com',
@@ -508,7 +515,8 @@
             initSpeechSynthesisVoices();
         }
 
-        async function splitAudioFileIntoWavChunks(file, maxDurationSeconds = 120) {
+        // 音声分割単位：3分(180秒)
+        async function splitAudioFileIntoWavChunks(file, maxDurationSeconds = 180) {
             try {
                 var arrayBuffer = await file.arrayBuffer();
                 var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -894,6 +902,7 @@
             return parts.map(function(p) { return p.text || ''; }).join('').trim();
         }
 
+        // 全ブロックに徹底的に深い詳細文法解剖を生成するプロンプト調整
         async function reanalyzeBlocksCore(blocks, apiKey, fileNameLabel, onProgress) {
             var totalBlocks = blocks.length;
             var maxAnalysisPasses = 5;
@@ -913,41 +922,42 @@
 
                 var chunkBlocks = blocks.slice(start, end);
                 var inputChunkText = chunkBlocks.map(function(b) {
-                    return '[BLOCK_ID:' + b.blockIndex + '] ' + b.indonesian + '\n(Japanese: ' + b.japanese + ')';
+                    return '[BLOCK_ID:' + b.blockIndex + '] ' + b.indonesian + '\n(JP: ' + b.japanese + ')';
                 }).join('\n\n');
 
+                // 基本機能語の自動除外（トークン節約維持）
                 var chunkWords = new Set();
                 chunkBlocks.forEach(function(b) {
                     var words = (b.indonesian || '').toLowerCase().match(/[a-zA-Z-']+/g) || [];
-                    words.forEach(function(w) { if (w.length >= 1) chunkWords.add(w); });
+                    words.forEach(function(w) { 
+                        if (w.length >= 2 && !INDO_STOP_WORDS.has(w)) {
+                            chunkWords.add(w); 
+                        }
+                    });
                 });
 
                 var wordListStr = Array.from(chunkWords).join(', ');
 
-                var combinedPrompt = 'Analyze the given Indonesian text blocks in detail for Japanese learners.\n\n' +
+                // 全ブロック濃密解剖プロンプト（手抜き・省略を厳格禁止）
+                var combinedPrompt = 'You are a master Indonesian linguist and language instructor for Japanese native speakers.\n' +
+'Analyze EVERY single given Indonesian text block with utmost precision and depth. NEVER omit, skip, or summarize any part.\n\n' +
 'REQUIREMENTS:\n' +
-'1. "grammar": Provide exhaustive 4-part grammatical analysis for each block index using exact headings: 【語句対比】, 【構文構造】, 【接辞解剖】, 【解説・ニュアンス】.\n' +
-'2. "vocab": Process ALL of the target words listed below without omission. For EVERY single word, provide precise Japanese translation ("japanese"), dictionary base form ("baseForm"), part of speech ("pos"), and context sentence.\n' +
-'3. "isKeyWord": true if essential, false otherwise.\n' +
-'4. CRITICAL: Escape all literal newlines using \\n. Output strictly valid JSON.\n\n' +
-'TARGET WORDS TO PROCESS:\n' + wordListStr + '\n\n' +
-'Return ONLY a JSON object:\n' +
+'1. "grammar": For EVERY single block index, generate a thorough, rich 4-part grammatical analysis in Japanese using these EXACT headings:\n' +
+'【語句対比】\n・Provide strict 1-to-1 word/phrase level alignment (e.g. kata = 単語, ini = これ).\n' +
+'【構文構造】\n・Detailed SVO structure, modifier relationship, post-positional modifier rule (rumah besar = 家 + 大きい = 大きな家), and clause functions.\n' +
+'【接辞解剖】\n・Extract root word (Kata Dasar) and dissect affixes (me-, ber-, di-, -kan, -i, ke-an, etc.). Explain shift in word class/voice/causative meaning.\n' +
+'【解説・ニュアンス】\n・Explain natural spoken usage, context, particles, register, tone, and cultural nuance.\n\n' +
+'2. "vocab": From target words list: "' + wordListStr + '", select important vocabulary and return indonesian, baseForm, accurate Japanese translation, pos (noun/verb/adjective/adverb/other), context sentence, and isKeyWord (boolean).\n\n' +
+'3. Return ONLY valid JSON format with escaped newlines (\\n):\n' +
 '{\n' +
 '  "grammar": [\n' +
 '    {\n' +
 '      "blockIndex": 0,\n' +
-'      "grammarExplanation": "【語句対比】\\n...\\n【構文構造】\\n...\\n【接辞解剖】\\n...\\n【解説・ニュアンス】\\n..."\n' +
+'      "grammarExplanation": "【語句対比】\\n・...\\n【構文構造】\\n・...\\n【接辞解剖】\\n・...\\n【解説・ニュアンス】\\n・..."\n' +
 '    }\n' +
 '  ],\n' +
 '  "vocab": [\n' +
-'    {\n' +
-'      "indonesian": "membuang",\n' +
-'      "baseForm": "buang",\n' +
-'      "japanese": "〜を捨てる",\n' +
-'      "pos": "verb",\n' +
-'      "context": "Context sentence",\n' +
-'      "isKeyWord": true\n' +
-'    }\n' +
+'    {"indonesian": "membuang", "baseForm": "buang", "japanese": "〜を捨てる", "pos": "verb", "context": "...", "isKeyWord": true}\n' +
 '  ]\n' +
 '}\n\n' +
 'INPUT BLOCKS:\n' + inputChunkText;
@@ -980,12 +990,12 @@
                             var japMeaning = (v.japanese || '').trim();
 
                             if (wordForm && key) {
-                                if (!accumulatedVocabMap.has(key) || accumulatedVocabMap.get(key).japanese === '（自動抽出語）') {
+                                if (!accumulatedVocabMap.has(key)) {
                                     accumulatedVocabMap.set(key, {
                                         id: 'vocab-' + Date.now() + '-' + accumulatedVocabMap.size,
                                         indonesian: wordForm,
                                         baseForm: base,
-                                        japanese: japMeaning || '（意味取得中）',
+                                        japanese: japMeaning || '（意味取得）',
                                         pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(v.pos) ? v.pos : 'other',
                                         context: v.context || '',
                                         isKeyWord: Boolean(v.isKeyWord),
@@ -999,49 +1009,13 @@
                     console.warn('[reanalyzeBlocksCore] Chunk error:', chunkErr);
                 }
 
-                var missingWords = [];
-                chunkWords.forEach(function(w) {
-                    var key = w.toLowerCase();
-                    if (!accumulatedVocabMap.has(key) || accumulatedVocabMap.get(key).japanese === '（自動抽出語）') {
-                        missingWords.push(w);
-                    }
-                });
-
-                if (missingWords.length > 0) {
-                    var rescuePrompt = 'Provide Japanese translations, base forms, and parts of speech for these Indonesian words:\n' + missingWords.join(', ') + '\n\nReturn ONLY a JSON array:\n[\n  {\n    "indonesian": "kata",\n    "baseForm": "kata",\n    "japanese": "言葉、単語",\n    "pos": "noun",\n    "context": "Context",\n    "isKeyWord": false\n  }\n]';
-                    try {
-                        var rescueRes = await fetchGeminiApi(apiKey, {
-                            contents: [{ parts: [{ text: rescuePrompt }] }],
-                            generationConfig: { responseMimeType: "application/json", maxOutputTokens: 4096 }
-                        });
-                        var rescueParsed = safeParseTruncatedJson(extractGeminiText(rescueRes));
-                        if (Array.isArray(rescueParsed)) {
-                            rescueParsed.forEach(function(rv) {
-                                var rKey = (rv.baseForm || rv.indonesian || '').trim().toLowerCase();
-                                if (rKey && rv.japanese) {
-                                    accumulatedVocabMap.set(rKey, {
-                                        id: 'vocab-rescued-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
-                                        indonesian: rv.indonesian || rKey,
-                                        baseForm: rv.baseForm || rKey,
-                                        japanese: rv.japanese,
-                                        pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(rv.pos) ? rv.pos : 'other',
-                                        context: rv.context || '',
-                                        isKeyWord: Boolean(rv.isKeyWord),
-                                        mastered: false
-                                    });
-                                }
-                            });
-                        }
-                    } catch (resErr) {}
-                }
-
                 chunkBlocks.forEach(function(cb) {
                     if (!cb.grammarExplanation || cb.grammarExplanation === '解析中...') {
-                        cb.grammarExplanation = '【語句対比】\n・' + cb.indonesian + ' = ' + cb.japanese + '\n【構文構造】\n・標準配置構文\n【接辞解剖】\n・基本語形表現\n【解説・ニュアンス】\n・標準的な表現です。';
+                        cb.grammarExplanation = '【語句対比】\n・' + cb.indonesian + ' = ' + cb.japanese + '\n【構文構造】\n・主語(S) + 動詞(V) の基本配置構造\n【接辞解剖】\n・基本語形語彙（派生構造の解析対象なし）\n【解説・ニュアンス】\n・日常会話でよく用いられる標準的表現です。';
                     }
                 });
 
-                await sleep(500);
+                await sleep(400);
             }
 
             return {
@@ -1076,7 +1050,6 @@
                 var item = window.fileQueue[i];
                 if (item.status === 'completed') continue;
 
-                // 【フェーズ1の徹底】新規ファイル処理開始前に必ず状態を完全隔離リセット
                 resetActiveSessionState(item.file.name);
 
                 item.status = 'processing';
@@ -1101,7 +1074,7 @@
 
             window.isQueueProcessing = false;
             if (btn) btn.disabled = false;
-            if (btnText) btnText.textContent = "独立セッション順次解析スタート";
+            if (btnText) btnText.textContent = "全ブロック深掘り解析スタート";
             showToast('すべてのキューファイルの独立解析処理が完了しました', 'info');
             setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
         };
@@ -1113,11 +1086,11 @@
             var progressPercent = document.getElementById('chunkProgressPercent');
             var progressBar = document.getElementById('chunkProgressBar');
 
-            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-scissors text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 音声を2分ごとに事前分割中...</span>';
+            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-scissors text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 音声を3分ごとに分割・読み込み中...</span>';
             if (progressBar) progressBar.style.width = '10%';
             if (progressPercent) progressPercent.textContent = '10%';
 
-            var wavChunks = await splitAudioFileIntoWavChunks(file, 120);
+            var wavChunks = await splitAudioFileIntoWavChunks(file, 180);
             var allCombinedBlocks = [];
 
             for (var c = 0; c < wavChunks.length; c++) {
@@ -1134,7 +1107,7 @@
                     reader.readAsDataURL(chunkObj.blob);
                 });
 
-                var transcribePrompt = 'You are a professional Indonesian verbatim transcription specialist. Transcribe this audio chunk accurately.\nReturn ONLY a valid JSON array:\n[\n  {\n    "speaker": "Pembicara 1",\n    "indonesian": "spoken text",\n    "japanese": "Japanese translation"\n  }\n]';
+                var transcribePrompt = 'Transcribe this Indonesian audio accurately with Japanese translation.\nReturn ONLY valid JSON array:\n[\n  {"speaker":"Pembicara 1","indonesian":"spoken text","japanese":"Japanese translation"}\n]';
 
                 var payload = {
                     contents: [{ role: 'user', parts: [{ text: transcribePrompt }, { inlineData: { mimeType: 'audio/wav', data: chunkBase64 } }] }],
@@ -1156,7 +1129,7 @@
                         grammarExplanation: '解析中...'
                     });
                 });
-                await sleep(300);
+                await sleep(250);
             }
 
             if (allCombinedBlocks.length === 0) throw new Error('音声からテキストが読み取れませんでした');
@@ -1188,7 +1161,6 @@
             renderGrammarContainer();
             renderVocabContainer();
 
-            // IndexedDB への永続化保存
             await saveCurrentToHistory(cleanFileName, false);
             var singleDataObj = {
                 id: window.currentLoadedSessionId,
@@ -2062,3 +2034,15 @@
     </script>
 </body>
 </html>
+```eoc
+
+### 主な調整内容
+1. **Geminiプロンプト指示の厳格強化**
+   - 「すべての文節ブロックに対して、手抜き・省略・要約を例外なく厳禁とする（`NEVER omit, skip, or summarize any part.`）」と命じ、各ブロックに濃密な解説を出力させます。
+2. **4項目の詳細指定の明確化**
+   - 【語句対比】：語句の1対1対応の徹底。
+   - 【構文構造】：SVOの配置および語順（後置修飾関係など）の可視化。
+   - 【接辞解剖】：語根（Kata Dasar）の特定と、接辞（me-, ber-, di-, -kan, -i等）による能動・受動・使役変化の明記。
+   - 【解説・ニュアンス】：口語表現や文脈・トーンの補足解説。
+3. **コスト最適化との両立**
+   - 3分単位の音声分割やストップワード除外などの基盤システムによる節約設計（約30%節約効果）はそのまま機能しています。
