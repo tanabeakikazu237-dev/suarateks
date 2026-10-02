@@ -998,9 +998,36 @@
                         reader.onerror = reject;
                         reader.readAsText(files[i]);
                     });
-                    var importedData = JSON.parse(content);
-                    var singleObj = Array.isArray(importedData) ? importedData[0] : importedData;
-                    if (!singleObj || !singleObj.blocks) continue;
+                    
+                    var cleanContent = content.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+                    var importedData = JSON.parse(cleanContent);
+                    
+                    var singleObj = null;
+                    if (Array.isArray(importedData)) {
+                        // もし配列全体がblocksのリスト、あるいはオブジェクトのリストの場合
+                        if (importedData.length > 0 && importedData[0].indonesian) {
+                            singleObj = {
+                                id: 'session-imported-' + Date.now() + '-' + i,
+                                fileName: formatOutputFileName(files[i].name),
+                                date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                                blocks: importedData,
+                                vocab: []
+                            };
+                        } else {
+                            singleObj = importedData[0];
+                        }
+                    } else {
+                        singleObj = importedData;
+                    }
+
+                    if (!singleObj) {
+                        throw new Error('JSONの構造が認識できません');
+                    }
+
+                    // blocksがない場合のフォールバック
+                    if (!singleObj.blocks && singleObj.transcript) {
+                        singleObj.blocks = singleObj.transcript;
+                    }
 
                     var formattedName = formatOutputFileName(singleObj.fileName || files[i].name);
                     var item = {
@@ -1008,13 +1035,16 @@
                         fileName: formattedName,
                         date: singleObj.date || new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
                         timestamp: Date.now(),
-                        blocks: singleObj.blocks,
+                        blocks: singleObj.blocks || [],
                         vocab: singleObj.vocab || []
                     };
                     await dbSaveSession(item);
                     lastLoadedData = item;
                     successCount++;
-                } catch (e) {}
+                } catch (e) {
+                    console.error('Import parse error:', e);
+                    showToast('JSON読み込みエラー: ' + e.message, 'error');
+                }
             }
 
             var history = await dbGetAllSessions();
@@ -1029,8 +1059,10 @@
                 renderTranscriptContainer();
                 renderGrammarContainer();
                 renderVocabContainer();
+                showToast(successCount + ' 件のJSONを正常に読み込みました！', 'info');
+            } else if (successCount === 0) {
+                showToast('有効なJSONデータを読み込めませんでした', 'error');
             }
-            showToast(successCount + ' 件のJSONを読み込みました！', 'info');
             event.target.value = '';
         }
 
