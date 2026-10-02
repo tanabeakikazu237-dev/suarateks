@@ -12,7 +12,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎙️</text></svg>">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2991/2991148.png">
 
-    <!-- Tailwind CSS (Playground CDN for immersive execution; ready for Tailwind CLI in production) -->
+    <!-- Tailwind CSS (Playground CDN for immersive execution) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -53,7 +53,7 @@
         <h1 class="font-extrabold text-sm flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block"></span>
             SuaraTeks<span class="text-red-600">ID</span> Pro
-            <span class="text-[10px] text-slate-400 font-normal">v6.0 Complete Frontend-Direct</span>
+            <span class="text-[10px] text-slate-400 font-normal">v6.0 Frontend Direct</span>
             <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1.5 py-0.5 rounded font-bold">
                 <i class="fa-solid fa-wifi-slash"></i> オフライン
             </span>
@@ -75,7 +75,6 @@
     <div class="flex-1 flex overflow-hidden p-2 sm:p-3 gap-3 max-w-7xl mx-auto w-full">
         <div id="panelSetup" class="w-full md:w-80 flex flex-col gap-2.5 shrink-0 overflow-y-auto">
 
-            <!-- Display & Audio settings -->
             <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
                 <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1.5"><i class="fa-solid fa-sliders text-red-600"></i> 表示・音声調整</h3>
                 <div class="space-y-1 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
@@ -110,7 +109,7 @@
                         <div class="text-slate-700 dark:text-slate-200">音声=minimal / 文法=low</div>
                     </div>
                 </div>
-                <div class="text-[9px] text-slate-400 leading-snug">APIキーはブラウザにのみ安全に保存されます。</div>
+                <div class="text-[9px] text-slate-400 leading-snug">APIキーはブラウザに安全に保存されます。</div>
             </div>
 
             <!-- Audio queue selection -->
@@ -154,7 +153,7 @@
                     <div class="bg-slate-50 dark:bg-slate-900/70 rounded-lg p-1.5 border border-slate-200/60 dark:border-slate-700/60"><div class="text-slate-400">API Requests</div><div id="apiRequestCountDisplay">0</div></div>
                     <div class="bg-slate-50 dark:bg-slate-900/70 rounded-lg p-1.5 border border-slate-200/60 dark:border-slate-700/60"><div class="text-slate-400">総Token</div><div id="totalTokenDisplay">0</div></div>
                     <div class="bg-slate-50 dark:bg-slate-900/70 rounded-lg p-1.5 border border-slate-200/60 dark:border-slate-700/60"><div class="text-slate-400">音声Token</div><div id="audioTokenDisplay">0</div></div>
-                    <div class="bg-slate-50 dark:bg-slate-900/70 rounded-lg p-1.5 border border-slate-200/60 dark:border-slate-700/60"><div class="text-slate-400">推定Cost</div><div id="costDisplayUsd">$0.000000</div></div>
+                    <div class="bg-slate-50 dark:bg-slate-900/70 rounded-lg p-1.5 border border-slate-200/60 dark:border-slate-700/60"><div class="text-slate-400">推定Cost (USD)</div><div id="costDisplayUsd">$0.000000</div></div>
                     <div class="bg-slate-50 dark:bg-slate-900/70 rounded-lg p-1.5 border border-slate-200/60 dark:border-slate-700/60"><div class="text-slate-400">入力 / 出力</div><div id="inputOutputDisplay">0 / 0</div></div>
                     <div class="bg-slate-50 dark:bg-slate-900/70 rounded-lg p-1.5 border border-slate-200/60 dark:border-slate-700/60"><div class="text-slate-400">Thinking</div><div id="thinkingDisplay">0</div></div>
                 </div>
@@ -709,10 +708,11 @@
                 throw new Error('Gemini APIへの通信に失敗しました: ' + e.message);
             }
 
-            const text = await response.text();
-            let data;
-            try { data = JSON.parse(text); } catch (e) { throw new Error('GoogleからJSONではない応答が返されました。HTTP ' + response.status); }
-            if (!response.ok || data.error) throw new Error(translateErrorMessage(data.error?.message || ('HTTP Error ' + response.status)));
+            const data = await response.json();
+            if (!response.ok) {
+                const errMessage = data?.error?.message || response.statusText;
+                throw new Error(errMessage);
+            }
 
             const usage = normalizeUsage(data.usageMetadata, kind, audioDurationSeconds);
             mergeUsage(usage);
@@ -854,7 +854,6 @@
                 await sleep(300);
             }
 
-            // Fallback vocab generation from blocks if empty
             if (accumulatedVocabMap.size === 0) {
                 blocks.forEach((b, bIdx) => {
                     const words = (b.indonesian || '').match(/[a-zA-Z-']+/g) || [];
@@ -1020,7 +1019,7 @@
         async function loadHistoryFromStorage(){try{renderHistoryList(await dbGetAllSessions());}catch(e){renderHistoryList([]);}}
         function toggleHistorySelect(id,event){event?.stopPropagation();const idx=window.selectedHistoryIds.indexOf(id);if(idx>-1)window.selectedHistoryIds.splice(idx,1);else window.selectedHistoryIds.push(id);updateHistoryActionButtonsState();}
         function updateHistoryActionButtonsState(){const count=window.selectedHistoryIds.length,br=document.getElementById('btnReanalyzeSelected'),bm=document.getElementById('btnMergeSelected'),bs=document.getElementById('btnSaveSelected');if(br){br.disabled=count<1;br.className=count>=1?'px-1.5 py-0.5 bg-amber-500 text-white rounded text-[9px] font-bold shadow transition':'px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold opacity-60';br.innerHTML='<i class="fa-solid fa-rotate-right"></i> '+(count>=1?'再解析 ('+count+')':'再解析');}if(bm){bm.disabled=count<2;bm.className=count>=2?'px-1.5 py-0.5 bg-blue-600 text-white rounded text-[9px] font-bold shadow transition':'px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold opacity-60';bm.innerHTML='<i class="fa-solid fa-code-merge"></i> '+(count>=2?'結合 ('+count+')':'結合');}if(bs){bs.disabled=count<1;bs.className=count>=1?'px-1.5 py-0.5 bg-emerald-600 text-white rounded text-[9px] font-bold shadow transition':'px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold opacity-60';bs.innerHTML='<i class="fa-solid fa-download"></i> '+(count>=1?'保存 ('+count+')':'保存');}}
-        function renderHistoryList(history){const container=document.getElementById('historyList');if(!container)return;if(!history.length){container.innerHTML='<p class="text-xs text-slate-400 py-1.5 text-center">履歴なし (IndexedDB)</p>';window.selectedHistoryIds=[];updateHistoryActionButtonsState();return;}let html='';history.forEach(item=>{const checked=window.selectedHistoryIds.includes(item.id),current=window.currentLoadedSessionId===item.id;html+='<div onclick="loadHistoryItem(\''+item.id+'\')" class="p-1.5 rounded-lg '+(current?'bg-red-50 dark:bg-red-950/40 border-red-300':'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700')+' border flex justify-between items-center text-xs transition mb-1"><div class="flex items-center gap-1.5 min-w-0 flex-1"><input type="checkbox" '+(checked?'checked':'')+' onclick="toggleHistorySelect(\''+item.id+'\',event)" class="rounded text-red-600 cursor-pointer shrink-0 w-3.5 h-3.5"><div class="min-w-0 flex-1"><p class="font-bold text-slate-800 dark:text-slate-100 truncate leading-tight text-[11px]">'+escapeHtml(item.fileName)+'</p><p class="text-[8px] text-slate-400 font-mono">'+escapeHtml(item.date)+'</p></div></div><button onclick="deleteHistoryItem(\''+item.id+'\',event)" class="text-slate-400 hover:text-rose-500 p-1"><i class="fa-solid fa-trash-can text-[10px]"></i></button></div>';});container.innerHTML=html;updateHistoryActionButtonsState();}
+        function renderHistoryList(history){const container=document.getElementById('historyList');if(!container)return;if(!history.length){container.innerHTML='<p class="text-xs text-slate-400 py-1.5 text-center">履歴なし (IndexedDB)</p>';window.selectedHistoryIds=[];updateHistoryActionButtonsState();return; }let html='';history.forEach(item=>{const checked=window.selectedHistoryIds.includes(item.id),current=window.currentLoadedSessionId===item.id;html+='<div onclick="loadHistoryItem(\''+item.id+'\')" class="p-1.5 rounded-lg '+(current?'bg-red-50 dark:bg-red-950/40 border-red-300':'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700')+' border flex justify-between items-center text-xs transition mb-1"><div class="flex items-center gap-1.5 min-w-0 flex-1"><input type="checkbox" '+(checked?'checked':'')+' onclick="toggleHistorySelect(\''+item.id+'\',event)" class="rounded text-red-600 cursor-pointer shrink-0 w-3.5 h-3.5"><div class="min-w-0 flex-1"><p class="font-bold text-slate-800 dark:text-slate-100 truncate leading-tight text-[11px]">'+escapeHtml(item.fileName)+'</p><p class="text-[8px] text-slate-400 font-mono">'+escapeHtml(item.date)+'</p></div></div><button onclick="deleteHistoryItem(\''+item.id+'\',event)" class="text-slate-400 hover:text-rose-500 p-1"><i class="fa-solid fa-trash-can text-[10px]"></i></button></div>';});container.innerHTML=html;updateHistoryActionButtonsState();}
         async function saveSelectedHistories(){if(!window.selectedHistoryIds.length)return;const all=await dbGetAllSessions();const selected=window.selectedHistoryIds.map(id=>all.find(h=>h.id===id)).filter(Boolean);selected.forEach((item,index)=>{const name=formatOutputFileName(item.fileName||'解析データ');setTimeout(()=>exportDataToFile({id:item.id,fileName:name,date:item.date,blocks:item.blocks||[],vocab:item.vocab||[]},name+'.json'),index*300);});showToast(selected.length+' 件の履歴を個別JSONとして保存しました！','info');}
         async function saveCurrentToHistory(fileName){if(!window.transcriptBlocks.length)return;try{const obj={id:window.currentLoadedSessionId||('session-'+Date.now()),fileName:formatOutputFileName(fileName),date:new Date().toLocaleDateString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}),timestamp:Date.now(),blocks:window.transcriptBlocks,vocab:window.vocabList};window.currentLoadedSessionId=obj.id;await dbSaveSession(obj);renderHistoryList(await dbGetAllSessions());updateActiveSessionBadge();}catch(e){}}
         async function mergeSelectedHistories(){if(window.selectedHistoryIds.length<2)return;const all=await dbGetAllSessions();const selected=window.selectedHistoryIds.map(id=>all.find(h=>h.id===id)).filter(Boolean);const mergedBlocks=[],mergedVocabMap=new Map(),titleParts=[];let globalIdx=0;selected.forEach(item=>{titleParts.push(item.fileName.replace(/\.[^/.]+$/,''));(item.blocks||[]).forEach(b=>mergedBlocks.push({...b,id:'block-merged-'+Date.now()+'-'+globalIdx,blockIndex:globalIdx++}));(item.vocab||[]).forEach(v=>{const key=(v.indonesian||'').trim().toLowerCase();if(key&&!mergedVocabMap.has(key))mergedVocabMap.set(key,v);});});const mergedTitle=formatOutputFileName('結合_'+titleParts.join('_').substring(0,20));window.currentLoadedSessionId='session-merged-'+Date.now();window.currentLoadedFileName=mergedTitle;window.transcriptBlocks=mergedBlocks;window.vocabList=Array.from(mergedVocabMap.values());updateActiveSessionBadge();renderTranscriptContainer();renderGrammarContainer();renderVocabContainer();const obj={id:window.currentLoadedSessionId,fileName:mergedTitle,date:new Date().toLocaleDateString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}),timestamp:Date.now(),blocks:window.transcriptBlocks,vocab:window.vocabList};await dbSaveSession(obj);renderHistoryList(await dbGetAllSessions());exportDataToFile(obj,mergedTitle+'.json');window.selectedHistoryIds=[];showToast('選択した履歴を結合しました！','info');}
