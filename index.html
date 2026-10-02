@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SuaraTeks ID Pro (Optimized)</title>
+    <title>SuaraTeks ID Viewer Pro</title>
 
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -55,19 +55,15 @@
     <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center justify-between shrink-0">
         <h1 class="font-extrabold text-sm flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block"></span>
-            SuaraTeks<span class="text-red-600">ID</span> Pro <span class="text-[10px] text-slate-400 font-normal">v5.1 (Optimized)</span>
-            <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-wifi-slash"></i> オフライン動作中</span>
+            SuaraTeks<span class="text-red-600">ID</span> Viewer <span class="text-[10px] text-slate-400 font-normal">v5.0 (軽量オフロード版)</span>
         </h1>
         <div class="flex items-center gap-2">
             <span id="activeSessionBadge" class="hidden text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 px-2 py-0.5 rounded-full font-extrabold border border-blue-200/50 truncate max-w-[150px]"></span>
-            <button onclick="openModal('apiKeyModal')" class="px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-xs font-bold transition flex items-center gap-1">
-                <i class="fa-solid fa-key text-[10px]"></i> API Key
-            </button>
         </div>
     </header>
 
     <div class="md:hidden bg-slate-200 dark:bg-slate-800 p-1 flex items-center gap-1 shrink-0 border-b border-slate-300 dark:border-slate-700 text-xs font-bold">
-        <button id="btnMobSetup" onclick="switchMobileTab('setup')" class="flex-1 py-1.5 text-center bg-white dark:bg-slate-700 rounded shadow-sm text-slate-800 dark:text-slate-100">設定・音源</button>
+        <button id="btnMobSetup" onclick="switchMobileTab('setup')" class="flex-1 py-1.5 text-center bg-white dark:bg-slate-700 rounded shadow-sm text-slate-800 dark:text-slate-100">設定・インポート</button>
         <button id="btnMobTranscript" onclick="switchMobileTab('transcript')" class="flex-1 py-1.5 text-center text-slate-600 dark:text-slate-400">本文</button>
         <button id="btnMobVocab" onclick="switchMobileTab('vocab')" class="flex-1 py-1.5 text-center text-slate-600 dark:text-slate-400">単語帳</button>
     </div>
@@ -107,49 +103,25 @@
                 </div>
             </div>
 
-            <!-- Audio Queue Selection -->
-            <div id="playerCard" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
+            <!-- JSON Import Panel (Replaces Audio Processing) -->
+            <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
                 <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音源キュー選択</span>
-                    <span class="text-[9px] text-slate-400">トークン5割削減版</span>
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-file-arrow-down text-red-600"></i> Geminiデータ読込</span>
+                    <span class="text-[9px] text-slate-400">完全ローカル動作</span>
                 </h3>
                 
-                <label id="fileDropLabel" for="audioFileInput" class="relative group cursor-pointer block">
-                    <input type="file" id="audioFileInput" accept="audio/*" multiple onchange="window.handleFileChange(event)" class="hidden">
-                    
-                    <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-red-500 rounded-lg p-2 text-center bg-slate-50 dark:bg-slate-900 transition-all duration-200 group-hover:bg-red-50/30">
-                        <div id="dropzoneDefault" class="space-y-0.5">
-                            <div class="w-6 h-6 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
-                                <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
+                <label class="relative group cursor-pointer block">
+                    <input type="file" accept=".json" multiple onchange="importHistoryBackup(event)" class="hidden">
+                    <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-red-500 rounded-lg p-3 text-center bg-slate-50 dark:bg-slate-900 transition-all duration-200 group-hover:bg-red-50/30">
+                        <div class="space-y-1">
+                            <div class="w-7 h-7 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-code text-xs"></i>
                             </div>
-                            <p class="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">音声ファイルを選択（複数可）</p>
-                        </div>
-
-                        <div id="dropzoneSelected" class="hidden space-y-1 text-left">
-                            <div class="flex items-center justify-between text-emerald-600 mb-0.5">
-                                <span class="text-[9px] font-extrabold"><i class="fa-solid fa-list-check"></i> キューセット完了</span>
-                                <span class="text-[8px] text-slate-400">タップで再選択</span>
-                            </div>
-                            <div id="queueListContainer" class="max-h-24 overflow-y-auto pr-1"></div>
+                            <p class="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">Gemini出力JSONを選択</p>
+                            <p class="text-[9px] text-slate-400">ドラッグ＆ドロップまたはタップして読込</p>
                         </div>
                     </div>
                 </label>
-
-                <button id="startTranscribeBtn" onclick="window.processAudioWithGemini()" class="w-full py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition flex items-center justify-center gap-1.5">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    <span id="transcribeBtnText">高速・高効率解析スタート</span>
-                </button>
-            </div>
-
-            <!-- Progress Bar -->
-            <div id="chunkProgressContainer" class="hidden bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-1.5 shrink-0">
-                <div class="flex justify-between text-xs font-bold">
-                    <span id="chunkProgressLabel" class="flex items-center gap-1 text-[10px] truncate max-w-[80%]">解析実行中...</span>
-                    <span id="chunkProgressPercent" class="text-red-600 text-[10px]">0%</span>
-                </div>
-                <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
-                    <div id="chunkProgressBar" class="bg-red-600 h-1.5 rounded-full w-0 transition-all duration-300"></div>
-                </div>
             </div>
 
             <!-- IndexedDB History Panel -->
@@ -159,9 +131,6 @@
                         <i class="fa-solid fa-database text-blue-500"></i> 履歴<span class="hidden sm:inline">(無制限)</span>
                     </h4>
                     <div class="flex items-center gap-0.5 sm:gap-1 shrink-0">
-                        <button id="btnReanalyzeSelected" disabled onclick="reanalyzeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-0.5 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed">
-                            <i class="fa-solid fa-rotate-right"></i> 再解析
-                        </button>
                         <button id="btnMergeSelected" disabled onclick="mergeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-0.5 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed">
                             <i class="fa-solid fa-code-merge"></i> 結合
                         </button>
@@ -175,17 +144,10 @@
                 <div id="historyList" class="space-y-1 flex-1 overflow-y-auto max-h-[280px] pr-0.5">
                     <p class="text-xs text-slate-400 py-1.5 text-center">読み込み中...</p>
                 </div>
-
-                <div class="pt-1.5 border-t border-slate-100 dark:border-slate-700 mt-1 shrink-0">
-                    <label class="w-full py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition">
-                        <i class="fa-solid fa-file-import"></i> JSONインポート
-                        <input type="file" accept=".json" multiple onchange="importHistoryBackup(event)" class="hidden">
-                    </label>
-                </div>
             </div>
         </div>
 
-        <!-- Right Studio Panel -->
+        <!-- Right Studio Panel (Transcript, Grammar, Vocab) -->
         <div id="panelTranscript" class="hidden md:flex flex-1 flex-col bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             
             <div class="bg-white dark:bg-slate-800 px-2 sm:px-3 py-1.5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-1 shrink-0 overflow-x-auto hide-scrollbar">
@@ -198,9 +160,6 @@
                     </button>
                     <button id="navTabVocab" onclick="setStudioSubView('vocab')" class="no-wrap-tab px-2 sm:px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
                         <i class="fa-solid fa-book-open text-[10px]"></i> 単語帳 (<span id="vocabCountBadge">0</span>)
-                    </button>
-                    <button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-1.5 sm:px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] sm:text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-0.5 whitespace-nowrap" title="現在のセッションを再解析">
-                        <i class="fa-solid fa-rotate-right text-[9px]"></i> 再解析
                     </button>
                 </div>
 
@@ -216,8 +175,8 @@
             <!-- Transcript Subview -->
             <div id="transcriptView" class="flex-1 p-3 overflow-y-auto space-y-3">
                 <div id="emptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
-                    <i class="fa-solid fa-file-audio text-3xl text-slate-300 dark:text-slate-700"></i>
-                    <span>音声ファイルを選択して「高速・高効率解析スタート」を押してください</span>
+                    <i class="fa-solid fa-file-code text-3xl text-slate-300 dark:text-slate-700"></i>
+                    <span>左側のパネルからGemini出力のJSONファイルを読み込んでください</span>
                 </div>
                 <div id="transcriptContainer" class="space-y-3"></div>
             </div>
@@ -301,26 +260,11 @@
 
     </div>
 
-    <!-- API Key Modal -->
-    <div id="apiKeyModal" class="fixed inset-0 bg-slate-900/60 hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-white dark:bg-slate-800 rounded-xl p-4 max-w-sm w-full space-y-3 shadow-xl border border-slate-200 dark:border-slate-700">
-            <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-                <i class="fa-solid fa-key text-amber-500"></i> Gemini API Key 設定
-            </h3>
-            <div id="apiKeyNotice" class="hidden p-2 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded text-[11px] text-amber-800 dark:text-amber-200 font-medium leading-snug">
-                <i class="fa-solid fa-triangle-exclamation mr-1 text-amber-600"></i> API利用上限に達しました。新しいAPI Keyを入力して保存してください。
-            </div>
-            <p class="text-[10px] text-slate-400">Google AI Studio で取得した API Key を入力してください</p>
-            <input type="password" id="apiKeyInput" placeholder="API Key を貼り付け" class="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 text-xs dark:bg-slate-900 font-mono text-slate-800 dark:text-slate-100 focus:outline-none focus:border-red-500">
-            <div class="flex justify-end gap-2">
-                <button onclick="closeModal('apiKeyModal')" class="px-3 py-1 text-xs text-slate-500 hover:text-slate-700">キャンセル</button>
-                <button onclick="saveApiKeyFromModal()" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold">保存して再開</button>
-            </div>
-        </div>
-    </div>
-
     <script>
-        const DB_NAME = 'SuaraTeksIDProDB';
+        // ==========================================
+        // INDEXEDDB HYBRID STORAGE LAYER
+        // ==========================================
+        const DB_NAME = 'SuaraTeksIDViewerDB';
         const DB_VERSION = 1;
         const STORE_NAME = 'sessions';
 
@@ -428,127 +372,10 @@
             } catch (err) {}
         }
 
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                var swCode = `
-                    const CACHE_NAME = 'suarateks-pro-v5-opt';
-                    const ASSETS = ['/', 'https://cdn.tailwindcss.com', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css', 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap'];
-                    self.addEventListener('install', event => event.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())));
-                    self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
-                    self.addEventListener('fetch', event => event.respondWith(caches.match(event.request).then(r => r || fetch(event.request).catch(() => caches.match('/')))));
-                `;
-                var blob = new Blob([swCode], { type: 'application/javascript' });
-                navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(function(err) {});
-            });
-        }
-
-        window.addEventListener('online', updateOnlineStatus);
-        window.addEventListener('offline', updateOnlineStatus);
-        function updateOnlineStatus() {
-            var badge = document.getElementById('offlineBadge');
-            if (!badge) return;
-            if (!navigator.onLine) {
-                badge.classList.remove('hidden');
-                showToast('ネットワークオフライン (IndexedDB/単語帳は利用可能)', 'info');
-            } else {
-                badge.classList.add('hidden');
-            }
-        }
-
+        // ==========================================
+        // APP STATE & SPEECH SYNTHESIS
+        // ==========================================
         window.availableIndoVoices = [];
-        function initSpeechSynthesisVoices() {
-            if (!('speechSynthesis' in window)) return;
-            var voices = window.speechSynthesis.getVoices();
-            if (voices && voices.length > 0) {
-                window.availableIndoVoices = voices.filter(function(v) {
-                    var lang = (v.lang || '').toLowerCase();
-                    return lang.startsWith('id') || lang.includes('indonesian');
-                });
-            }
-        }
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.onvoiceschanged = initSpeechSynthesisVoices;
-            initSpeechSynthesisVoices();
-        }
-
-        async function splitAudioFileIntoWavChunks(file, maxDurationSeconds = 120) {
-            try {
-                var arrayBuffer = await file.arrayBuffer();
-                var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                var audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-                await audioCtx.close();
-
-                var sampleRate = audioBuffer.sampleRate;
-                var numberOfChannels = audioBuffer.numberOfChannels;
-                var totalDuration = audioBuffer.duration;
-
-                if (totalDuration <= maxDurationSeconds) {
-                    return [{ chunkIndex: 0, blob: file, duration: totalDuration }];
-                }
-
-                var samplesPerChunk = maxDurationSeconds * sampleRate;
-                var totalChunks = Math.ceil(audioBuffer.length / samplesPerChunk);
-                var chunks = [];
-
-                for (var i = 0; i < totalChunks; i++) {
-                    var startSample = i * samplesPerChunk;
-                    var endSample = Math.min(audioBuffer.length, startSample + samplesPerChunk);
-                    var frameCount = endSample - startSample;
-
-                    var chunkBuffer = new (window.AudioContext || window.webkitAudioContext)().createBuffer(numberOfChannels, frameCount, sampleRate);
-                    for (var channel = 0; channel < numberOfChannels; channel++) {
-                        var channelData = audioBuffer.getChannelData(channel);
-                        chunkBuffer.copyToChannel(channelData.subarray(startSample, endSample), channel);
-                    }
-
-                    chunks.push({ chunkIndex: i, blob: audioBufferToWavBlob(chunkBuffer), duration: frameCount / sampleRate });
-                }
-                return chunks;
-            } catch (e) {
-                return [{ chunkIndex: 0, blob: file, duration: 0 }];
-            }
-        }
-
-        function audioBufferToWavBlob(buffer) {
-            var numOfChan = buffer.numberOfChannels;
-            var length = buffer.length * numOfChan * 2 + 44;
-            var out = new DataView(new ArrayBuffer(length));
-            var channels = [], sampleRate = buffer.sampleRate, offset = 0, pos = 0;
-
-            function writeString(str) {
-                for (var i = 0; i < str.length; i++) out.setUint8(pos++, str.charCodeAt(i));
-            }
-
-            writeString('RIFF');
-            out.setUint32(pos, length - 8, true); pos += 4;
-            writeString('WAVE');
-            writeString('fmt ');
-            out.setUint32(pos, 16, true); pos += 4;
-            out.setUint16(pos, 1, true); pos += 2;
-            out.setUint16(pos, numOfChan, true); pos += 2;
-            out.setUint32(pos, sampleRate, true); pos += 4;
-            out.setUint32(pos, sampleRate * 2 * numOfChan, true); pos += 4;
-            out.setUint16(pos, numOfChan * 2, true); pos += 2;
-            out.setUint16(pos, 16, true); pos += 2;
-            writeString('data');
-            out.setUint32(pos, length - pos - 4, true); pos += 4;
-
-            for (var i = 0; i < buffer.numberOfChannels; i++) channels.push(buffer.getChannelData(i));
-
-            while (offset < buffer.length) {
-                for (var i = 0; i < numOfChan; i++) {
-                    var sample = Math.max(-1, Math.min(1, channels[i][offset]));
-                    sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
-                    out.setInt16(pos, sample, true);
-                    pos += 2;
-                }
-                offset++;
-            }
-            return new Blob([out.buffer], { type: 'audio/wav' });
-        }
-
-        window.fileQueue = [];
-        window.isQueueProcessing = false;
         window.currentLoadedSessionId = null;
         window.currentLoadedFileName = '';
         window.transcriptBlocks = [];
@@ -561,31 +388,47 @@
         window.currentCardIndex = 0;
         window.isCardFlipped = false;
         window.isShuffled = false;
+        window.shuffledVocabList = [];
         window.selectedHistoryIds = [];
         window.speechRate = 0.85;
 
-        var sleep = function(ms) { return new Promise(function(resolve) { setTimeout(resolve, ms); }); };
+        window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
 
-        function translateErrorMessage(rawMessage) {
-            var str = String(rawMessage || '').toLowerCase();
-            if (str.includes('prepayment') || str.includes('credit depleted')) return 'API前払いクレジットがなくなりました。';
-            if (str.includes('quota exceeded') || str.includes('resourcehasexhausted')) return 'API利用上限に達しました。時間をおいてください。';
-            if (str.includes('unauthorized') || str.includes('api_key_invalid')) return 'API Key認証エラーです。設定を確認してください。';
-            return rawMessage;
+        function initSpeechSynthesisVoices() {
+            if (!('speechSynthesis' in window)) return;
+            var voices = window.speechSynthesis.getVoices();
+            if (voices && voices.length > 0) {
+                window.availableIndoVoices = voices.filter(function(v) {
+                    var lang = (v.lang || '').toLowerCase();
+                    return lang.startsWith('id') || lang.includes('id-id') || lang.includes('indonesian');
+                });
+            }
+        }
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = initSpeechSynthesisVoices;
+            initSpeechSynthesisVoices();
         }
 
         function formatOutputFileName(baseName) {
-            return String(baseName || '解析データ').trim().replace(/\.[^/.]+$/, "").replace(/^®️\s*/, '') || '解析データ';
+            var clean = String(baseName || '解析データ').trim().replace(/\.[^/.]+$/, "");
+            return clean || '解析データ';
         }
 
         function setSpeechRate(val) {
-            window.speechRate = Math.max(0.6, Math.min(1.3, parseFloat(val) || 0.85));
+            var num = parseFloat(val);
+            if (isNaN(num)) num = 0.85;
+            window.speechRate = Math.max(0.6, Math.min(1.3, num));
             var display = document.getElementById('speechRateDisplay');
             if (display) display.textContent = window.speechRate.toFixed(2) + 'x';
+            var slider = document.getElementById('speechRateSlider');
+            if (slider) slider.value = window.speechRate;
         }
 
         function setFontSize(val) {
-            var num = Math.max(20, Math.min(30, parseInt(val) || 20));
+            var num = parseInt(val);
+            if (isNaN(num)) num = 20;
+            num = Math.max(20, Math.min(30, num));
             document.documentElement.style.setProperty('--transcript-font-size', num + 'px');
             document.querySelectorAll('.fontSizeDisplayPt').forEach(function(el) { el.textContent = num + 'pt'; });
             document.querySelectorAll('.fontSizeSlider').forEach(function(el) { el.value = num; });
@@ -594,69 +437,6 @@
         function adjustFontSize(delta) {
             var current = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--transcript-font-size')) || 20;
             setFontSize(current + delta);
-        }
-
-        function getApiKey() { return String(localStorage.getItem('suarateks_gemini_key') || '').trim(); }
-
-        function stripJsonCodeFence(text) {
-            return String(text || '').trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
-        }
-
-        function safeParseTruncatedJson(jsonString) {
-            var raw = stripJsonCodeFence(jsonString);
-            if (!raw) throw new Error('Geminiからの応答がありません');
-            try { return JSON.parse(raw); } catch (e) {}
-
-            var sanitized = raw.replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, function(match) {
-                return match.replace(/\r?\n/g, '\\n').replace(/\t/g, '\\t');
-            });
-            try { return JSON.parse(sanitized); } catch (e2) {}
-
-            var firstBrace = sanitized.indexOf('{');
-            var firstBracket = sanitized.indexOf('[');
-            var startIdx = firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket) ? firstBrace : firstBracket;
-
-            if (startIdx !== -1) {
-                var sub = sanitized.substring(startIdx).replace(/,\s*$/, '').replace(/,\s*([}\]])/g, '$1');
-                var openQuotes = false, stack = [], repaired = '';
-                for (var i = 0; i < sub.length; i++) {
-                    var ch = sub[i], prevCh = i > 0 ? sub[i - 1] : '';
-                    if (ch === '"' && prevCh !== '\\') openQuotes = !openQuotes;
-                    if (!openQuotes) {
-                        if (ch === '{' || ch === '[') stack.push(ch);
-                        else if (ch === '}' || ch === ']') { if (stack.length > 0) stack.pop(); }
-                    }
-                    repaired += ch;
-                }
-                if (openQuotes) repaired += '"';
-                while (stack.length > 0) repaired += (stack.pop() === '{' ? '}' : ']');
-                try { return JSON.parse(repaired); } catch (e3) {}
-            }
-            throw new Error('JSONの解釈に失敗しました');
-        }
-
-        function formatBytes(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            var k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            var i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-        }
-
-        function resetActiveSessionState(newFileName) {
-            window.currentLoadedSessionId = 'session-' + Date.now();
-            window.currentLoadedFileName = newFileName || '新規セッション';
-            window.transcriptBlocks = [];
-            window.vocabList = [];
-            window.activeVocabSearchQuery = '';
-            window.currentCardIndex = 0;
-            window.isCardFlipped = false;
-            window.isShuffled = false;
-            var searchInput = document.getElementById('vocabSearchInput');
-            if (searchInput) searchInput.value = '';
-            updateActiveSessionBadge();
-            renderTranscriptContainer();
-            renderGrammarContainer();
-            renderVocabContainer();
         }
 
         function updateActiveSessionBadge() {
@@ -670,293 +450,119 @@
             }
         }
 
-        window.handleFileChange = function(event) {
-            var files = event && event.target ? event.target.files : document.getElementById('audioFileInput').files;
-            if (!files || files.length === 0) return;
-            window.fileQueue = Array.from(files).filter(function(f) { return f.type.startsWith('audio/') || f.name.match(/\.(mp3|wav|m4a|aac|ogg|flac)$/i); }).slice(0, 10).map(function(f, idx) {
-                return { id: 'queue-' + Date.now() + '-' + idx, file: f, status: 'waiting' };
-            });
-            renderQueueUI();
-            showToast(window.fileQueue.length + ' 件の音源キューセット完了', 'info');
-        };
-
-        function renderQueueUI() {
-            var defaultDiv = document.getElementById('dropzoneDefault');
-            var selectedDiv = document.getElementById('dropzoneSelected');
-            var container = document.getElementById('queueListContainer');
-            if (!window.fileQueue || window.fileQueue.length === 0) {
-                if (defaultDiv) defaultDiv.classList.remove('hidden');
-                if (selectedDiv) selectedDiv.classList.add('hidden');
-                return;
-            }
-            if (defaultDiv) defaultDiv.classList.add('hidden');
-            if (selectedDiv) selectedDiv.classList.remove('hidden');
-
-            var html = '';
-            window.fileQueue.forEach(function(q, idx) {
-                var badge = q.status === 'completed' ? '<span class="text-[9px] px-1 py-0.5 rounded bg-emerald-500 text-white font-bold">完了</span>' : '<span class="text-[9px] px-1 py-0.5 rounded bg-slate-200 text-slate-600 font-bold">待機</span>';
-                html += '<div class="flex items-center justify-between text-xs p-1 rounded bg-white dark:bg-slate-800 border border-slate-200 mb-1"><span class="truncate text-[10px] font-bold">' + (idx + 1) + '. ' + escapeHtml(q.file.name) + '</span>' + badge + '</div>';
-            });
-            if (container) container.innerHTML = html;
-        }
-
-        function initDropzoneEvents() {
-            var label = document.getElementById('fileDropLabel');
-            if (!label) return;
-            ['dragenter', 'dragover'].forEach(e => label.addEventListener(e, ev => { ev.preventDefault(); label.classList.add('dropzone-active'); }));
-            ['dragleave', 'drop'].forEach(e => label.addEventListener(e, ev => { ev.preventDefault(); label.classList.remove('dropzone-active'); }));
-            label.addEventListener('drop', ev => {
-                if (ev.dataTransfer.files && ev.dataTransfer.files.length > 0) {
-                    window.fileQueue = Array.from(ev.dataTransfer.files).map((f, i) => ({ id: 'q-' + i, file: f, status: 'waiting' }));
-                    renderQueueUI();
-                }
-            });
-        }
-
-        async function fetchGeminiApi(apiKey, payload) {
-            var cleanKey = String(apiKey || getApiKey()).trim();
-            if (!cleanKey) throw new Error('API Keyが設定されていません');
-            if (!payload.generationConfig) payload.generationConfig = {};
-            payload.generationConfig.temperature = 0.1;
-            payload.generationConfig.maxOutputTokens = 8192;
-
-            var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=' + cleanKey;
-            var response, maxAttempts = 8;
-            for (var attempt = 1; attempt <= maxAttempts; attempt++) {
-                try {
-                    response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    if (response.status === 429 || response.status === 503) {
-                        await sleep(attempt * 4000);
-                        continue;
-                    }
-                    break;
-                } catch (err) {
-                    if (attempt === maxAttempts) throw new Error('ネットワークエラー: ' + err.message);
-                    await sleep(2000);
-                }
-            }
-            var data = await response.json();
-            if (!response.ok || data.error) throw new Error(translateErrorMessage(data.error ? data.error.message : 'API Error'));
-            return data;
-        }
-
-        function extractGeminiText(data) {
-            var parts = (data.candidates && data.candidates[0].content && data.candidates[0].content.parts) || [];
-            return parts.map(p => p.text || '').join('').trim();
-        }
-
-        async function reanalyzeBlocksCoreOptimized(blocks, apiKey, fileNameLabel, onProgress) {
-            var totalBlocks = blocks.length;
-            // 5割削減のポイント：最大パス数を2回（従来比半分）に圧縮し、チャンクサイズを倍増させてリクエスト回数を削減
-            var maxPasses = 2;
-            var chunkSize = Math.max(5, Math.ceil(totalBlocks / maxPasses));
-            var totalChunks = Math.min(maxPasses, Math.ceil(totalBlocks / chunkSize));
-            var accumulatedVocabMap = new Map();
-
-            blocks.forEach(b => b.grammarExplanation = '解析中...');
-
-            for (var chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
-                var start = chunkIdx * chunkSize;
-                var end = Math.min(totalBlocks, start + chunkSize);
-                if (start >= totalBlocks) break;
-
-                var currentPct = Math.floor(((chunkIdx + 1) / totalChunks) * 100);
-                if (onProgress) onProgress(chunkIdx + 1, totalChunks, currentPct, fileNameLabel);
-
-                var chunkBlocks = blocks.slice(start, end);
-                var inputChunkText = chunkBlocks.map(b => '[ID:' + b.blockIndex + '] ' + b.indonesian + ' (JA:' + b.japanese + ')').join('\n');
-                var chunkWords = new Set();
-                chunkBlocks.forEach(b => {
-                    (b.indonesian.toLowerCase().match(/[a-zA-Z-']+/g) || []).forEach(w => { if (w.length > 1) chunkWords.add(w); });
-                });
-
-                // 高効率・極限圧縮プロンプト（トークン削減50%）
-                var prompt = 'Indonesian text analysis for Japanese learners. Return ONLY valid JSON matching schema:\n' +
-                '{\n  "grammar": [{"blockIndex": 0, "grammarExplanation": "【語句対比】...\\n【構文構造】...\\n【接辞解剖】...\\n【解説】..."}],\n' +
-                '  "vocab": [{"indonesian": "kata", "baseForm": "kata", "japanese": "意味", "pos": "noun/verb/adjective/adverb/other", "context": "...", "isKeyWord": true}]\n}\n\n' +
-                'WORDS:' + Array.from(chunkWords).join(',') + '\n\nBLOCKS:\n' + inputChunkText;
-
-                try {
-                    var resData = await fetchGeminiApi(apiKey, {
-                        contents: [{ parts: [{ text: prompt }] }],
-                        generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 }
-                    });
-                    var parsed = safeParseTruncatedJson(extractGeminiText(resData));
-
-                    if (parsed.grammar && Array.isArray(parsed.grammar)) {
-                        parsed.grammar.forEach((g, gIdx) => {
-                            var bIdx = g.blockIndex !== undefined ? Number(g.blockIndex) : (start + gIdx);
-                            var target = blocks.find(b => b.blockIndex === bIdx) || chunkBlocks[gIdx];
-                            if (target && g.grammarExplanation) target.grammarExplanation = String(g.grammarExplanation).trim();
-                        });
-                    }
-
-                    if (parsed.vocab && Array.isArray(parsed.vocab)) {
-                        parsed.vocab.forEach(v => {
-                            var key = (v.baseForm || v.indonesian || '').trim().toLowerCase();
-                            if (key && !accumulatedVocabMap.has(key)) {
-                                accumulatedVocabMap.set(key, {
-                                    id: 'vocab-' + Date.now() + '-' + accumulatedVocabMap.size,
-                                    indonesian: v.indonesian || key,
-                                    baseForm: v.baseForm || key,
-                                    japanese: v.japanese || '意味未取得',
-                                    pos: ['noun', 'verb', 'adjective', 'adverb'].includes(v.pos) ? v.pos : 'other',
-                                    context: v.context || '',
-                                    isKeyWord: Boolean(v.isKeyWord),
-                                    mastered: false
-                                });
-                            }
-                        });
-                    }
-                } catch (e) {}
-
-                chunkBlocks.forEach(cb => {
-                    if (cb.grammarExplanation === '解析中...') {
-                        cb.grammarExplanation = '【語句対比】\n・' + cb.indonesian + '=' + cb.japanese + '\n【構文構造】\n・標準構文\n【接辞解剖】\n・基本語形\n【解説】\n・標準表現';
-                    }
-                });
-                await sleep(300);
-            }
-
-            return { blocks: blocks, vocab: Array.from(accumulatedVocabMap.values()) };
-        }
-
-        window.processAudioWithGemini = async function() {
-            if (!window.fileQueue || window.fileQueue.length === 0) {
-                showToast('音声ファイルが選択されていません', 'error');
-                return;
-            }
-            var apiKey = getApiKey();
-            if (!apiKey) { openModal('apiKeyModal'); return; }
-            if (window.isQueueProcessing) return;
-            window.isQueueProcessing = true;
-
-            var progressContainer = document.getElementById('chunkProgressContainer');
-            var btnText = document.getElementById('transcribeBtnText');
-            if (progressContainer) progressContainer.classList.remove('hidden');
-
-            for (var i = 0; i < window.fileQueue.length; i++) {
-                var item = window.fileQueue[i];
-                if (item.status === 'completed') continue;
-
-                resetActiveSessionState(item.file.name);
-                item.status = 'processing';
-                renderQueueUI();
-
-                try {
-                    var wavChunks = await splitAudioFileIntoWavChunks(item.file, 120);
-                    var allBlocks = [];
-                    for (var c = 0; c < wavChunks.length; c++) {
-                        var b64 = await new Promise((res, rej) => {
-                            var r = new FileReader();
-                            r.onload = e => res(e.target.result.split(',')[1]);
-                            r.onerror = rej;
-                            r.readAsDataURL(wavChunks[c].blob);
-                        });
-
-                        var tRes = await fetchGeminiApi(apiKey, {
-                            contents: [{ role: 'user', parts: [{ text: 'Indonesian verbatim transcription JSON array: [{"speaker":"Pembicara 1","indonesian":"...","japanese":"..."}]' }, { inlineData: { mimeType: 'audio/wav', data: b64 } }] }],
-                            generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 }
-                        });
-                        var parsedTrans = safeParseTruncatedJson(extractGeminiText(tRes));
-                        (Array.isArray(parsedTrans) ? parsedTrans : []).forEach(sb => {
-                            allBlocks.push({ id: 'b-' + Date.now() + '-' + allBlocks.length, blockIndex: allBlocks.length, speaker: sb.speaker || 'Pembicara 1', indonesian: sb.indonesian || '', japanese: sb.japanese || '', grammarExplanation: '解析中...' });
-                        });
-                    }
-
-                    if (allBlocks.length === 0) throw new Error('文字起こしテキストを取得できませんでした');
-                    window.transcriptBlocks = allBlocks;
-                    renderTranscriptContainer();
-
-                    var cleanName = formatOutputFileName(item.file.name);
-                    var optimizedRes = await reanalyzeBlocksCoreOptimized(window.transcriptBlocks, apiKey, cleanName, (cIdx, totalC, pct) => {
-                        var progressLabel = document.getElementById('chunkProgressLabel');
-                        var progressBar = document.getElementById('chunkProgressBar');
-                        if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-bolt text-amber-500"></i> 高効率解析 (' + cIdx + '/' + totalC + ')';
-                        if (progressBar) progressBar.style.width = pct + '%';
-                    });
-
-                    window.transcriptBlocks = optimizedRes.blocks;
-                    window.vocabList = optimizedRes.vocab;
-                    renderTranscriptContainer();
-                    renderGrammarContainer();
-                    renderVocabContainer();
-
-                    await saveCurrentToHistory(cleanName, false);
-                    item.status = 'completed';
-                    renderQueueUI();
-                } catch (err) {
-                    item.status = 'error';
-                    renderQueueUI();
-                    showToast('エラー: ' + translateErrorMessage(err.message), 'error');
-                    break;
-                }
-            }
-
-            window.isQueueProcessing = false;
-            if (btnText) btnText.textContent = "高速・高効率解析スタート";
-            showToast('すべてのキュー処理が完了しました', 'info');
-            setTimeout(() => { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
-        };
-
-        window.reanalyzeCurrentTranscript = async function() {
-            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
-            var apiKey = getApiKey();
-            if (!apiKey) { openModal('apiKeyModal'); return; }
-
-            var progressContainer = document.getElementById('chunkProgressContainer');
-            if (progressContainer) progressContainer.classList.remove('hidden');
-
-            try {
-                var res = await reanalyzeBlocksCoreOptimized(window.transcriptBlocks, apiKey, window.currentLoadedFileName, (cIdx, totalC, pct) => {
-                    document.getElementById('chunkProgressLabel').innerHTML = '再解析中 (' + cIdx + '/' + totalC + ')';
-                    document.getElementById('chunkProgressBar').style.width = pct + '%';
-                });
-                window.transcriptBlocks = res.blocks;
-                window.vocabList = res.vocab;
-                renderGrammarContainer();
-                renderVocabContainer();
-                await saveCurrentToHistory(window.currentLoadedFileName, false);
-                showToast('再解析完了', 'info');
-            } catch (err) {
-                showToast('再解析エラー: ' + err.message, 'error');
-            } finally {
-                setTimeout(() => { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
-            }
-        };
-
-        function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById('apiKeyInput').value = getApiKey(); }
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-        function saveApiKeyFromModal() {
-            var key = document.getElementById('apiKeyInput').value.trim();
-            if (key) { localStorage.setItem('suarateks_gemini_key', key); closeModal('apiKeyModal'); showToast('API Key保存完了', 'info'); }
-        }
-
         function speakIndonesian(text) {
             if (!('speechSynthesis' in window) || !text) return;
             window.speechSynthesis.cancel();
+            if (window.availableIndoVoices.length === 0) initSpeechSynthesisVoices();
+
             var utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'id-ID';
             utterance.rate = window.speechRate || 0.85;
-            if (window.availableIndoVoices.length > 0) utterance.voice = window.availableIndoVoices[0];
+
+            if (window.availableIndoVoices.length > 0) {
+                utterance.voice = window.availableIndoVoices[0];
+            } else {
+                var voices = window.speechSynthesis.getVoices();
+                var indoVoice = voices.find(function(v) { 
+                    var lang = (v.lang || '').toLowerCase();
+                    return lang.startsWith('id') || lang.includes('id'); 
+                });
+                if (indoVoice) utterance.voice = indoVoice;
+            }
             window.speechSynthesis.speak(utterance);
         }
 
+        function stopAllSpeech() {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            if (window.activeSpeechState.blockId) updateBlockToggleUI(window.activeSpeechState.blockId, 'stopped');
+            window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
+        }
+
         function speakFromWord(blockId, wordIndex) {
-            var block = window.transcriptBlocks.find(b => 't-' + b.id === blockId || 'g-' + b.id === blockId);
-            if (!block) return;
+            var cleanId = blockId.replace(/^[tg]-/, '');
+            var block = window.transcriptBlocks.find(function(b) { return b.id === cleanId; });
+            if (!block || !block.indonesian) return;
             var words = block.indonesian.split(/\s+/);
-            speakIndonesian(words.slice(wordIndex).join(' '));
+            startSpeechBlock(blockId, words.slice(wordIndex).join(' '));
         }
 
         function toggleSpeechBlock(blockId) {
-            var block = window.transcriptBlocks.find(b => 't-' + b.id === blockId || 'g-' + b.id === blockId);
-            if (block) speakIndonesian(block.indonesian);
+            if (!('speechSynthesis' in window)) return;
+            if (window.activeSpeechState.blockId === blockId) {
+                if (window.speechSynthesis.paused || window.activeSpeechState.isPaused) {
+                    window.speechSynthesis.resume();
+                    window.activeSpeechState.isPaused = false;
+                    window.activeSpeechState.isPlaying = true;
+                    updateBlockToggleUI(blockId, 'playing');
+                } else if (window.speechSynthesis.speaking) {
+                    window.speechSynthesis.pause();
+                    window.activeSpeechState.isPaused = true;
+                    window.activeSpeechState.isPlaying = false;
+                    updateBlockToggleUI(blockId, 'paused');
+                } else {
+                    startSpeechBlock(blockId);
+                }
+            } else {
+                startSpeechBlock(blockId);
+            }
+        }
+
+        function startSpeechBlock(blockId, customText) {
+            if (!('speechSynthesis' in window)) return;
+            stopAllSpeech();
+            var cleanId = blockId.replace(/^[tg]-/, '');
+            var block = window.transcriptBlocks.find(function(b) { return b.id === cleanId; });
+            if (!block) return;
+
+            var textToSpeak = customText || block.indonesian;
+            if (window.availableIndoVoices.length === 0) initSpeechSynthesisVoices();
+
+            var utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = 'id-ID';
+            utterance.rate = window.speechRate || 0.85;
+
+            if (window.availableIndoVoices.length > 0) {
+                utterance.voice = window.availableIndoVoices[0];
+            } else {
+                var voices = window.speechSynthesis.getVoices();
+                var indoVoice = voices.find(function(v) { 
+                    var lang = (v.lang || '').toLowerCase();
+                    return lang.startsWith('id') || lang.includes('id'); 
+                });
+                if (indoVoice) utterance.voice = indoVoice;
+            }
+
+            utterance.onstart = function() {
+                window.activeSpeechState = { blockId: blockId, utterance: utterance, isPlaying: true, isPaused: false };
+                updateBlockToggleUI(blockId, 'playing');
+            };
+            utterance.onpause = function() {
+                window.activeSpeechState.isPaused = true;
+                window.activeSpeechState.isPlaying = false;
+                updateBlockToggleUI(blockId, 'paused');
+            };
+            utterance.onend = function() {
+                updateBlockToggleUI(blockId, 'stopped');
+                window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
+            };
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function updateBlockToggleUI(blockId, state) {
+            var btn = document.getElementById('btn-toggle-' + blockId);
+            if (!btn) return;
+            if (state === 'playing') btn.innerHTML = '<i class="fa-solid fa-pause text-red-500"></i><span>一時停止</span>';
+            else if (state === 'paused') btn.innerHTML = '<i class="fa-solid fa-play text-amber-500"></i><span>再開</span>';
+            else btn.innerHTML = '<i class="fa-solid fa-play"></i><span>再生</span>';
         }
 
         function renderClickableIndonesianWords(text, blockId) {
             if (!text) return '';
-            return text.split(/\s+/).map((w, idx) => '<span class="word-clickable" onclick="speakFromWord(\'' + blockId + '\', ' + idx + ')">' + escapeHtml(w) + '</span>').join(' ');
+            var words = text.split(/\s+/);
+            return words.map(function(w, idx) {
+                return '<span class="word-clickable" onclick="speakFromWord(\'' + blockId + '\', ' + idx + ')" title="ここから再生">' + escapeHtml(w) + '</span>';
+            }).join(' ');
         }
 
         function renderTranscriptContainer() {
@@ -969,14 +575,22 @@
             }
             if (emptyState) emptyState.classList.add('hidden');
             var html = '';
-            window.transcriptBlocks.forEach((block, idx) => {
-                html += '<div class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 shadow-sm space-y-2">' +
-                    '<div class="flex items-center justify-between text-xs text-slate-500 pb-1 border-b border-slate-100">' +
-                        '<span class="font-extrabold text-white bg-red-600 px-2 py-0.5 rounded text-[10px]">#' + (idx + 1) + '</span>' +
-                        '<button onclick="toggleSpeechBlock(\'t-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 text-xs font-bold"><i class="fa-solid fa-play text-[10px]"></i> 再生</button>' +
+            window.transcriptBlocks.forEach(function(block, idx) {
+                var clickableIndo = renderClickableIndonesianWords(block.indonesian, 't-' + block.id);
+                html += '<div class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">' +
+                    '<div class="flex items-center justify-between text-xs text-slate-500 pb-1 border-b border-slate-100 dark:border-slate-700">' +
+                        '<div class="flex items-center gap-1.5">' +
+                            '<span class="font-extrabold text-white bg-red-600 px-2 py-0.5 rounded-md text-[10px]">#' + (idx + 1) + '</span>' +
+                            '<span class="font-bold text-red-600 bg-red-50 dark:bg-red-950/60 px-2 py-0.5 rounded-full text-[10px]">' + escapeHtml(block.speaker) + '</span>' +
+                        '</div>' +
+                        '<button id="btn-toggle-t-' + block.id + '" onclick="toggleSpeechBlock(\'t-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1 hover:bg-slate-200">' +
+                            '<i class="fa-solid fa-play text-[10px]"></i><span>再生</span>' +
+                        '</button>' +
                     '</div>' +
-                    '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + renderClickableIndonesianWords(block.indonesian, 't-' + block.id) + '</p>' +
-                    '<div class="bg-amber-50/70 p-2.5 rounded-lg border border-amber-200/50"><p class="dynamic-text-ja font-semibold text-amber-950">' + escapeHtml(block.japanese) + '</p></div>' +
+                    '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + clickableIndo + '</p>' +
+                    '<div class="bg-amber-50/70 dark:bg-slate-900/60 p-2.5 rounded-lg border border-amber-200/50">' +
+                        '<p class="dynamic-text-ja font-semibold text-amber-950 dark:text-amber-200">' + escapeHtml(block.japanese) + '</p>' +
+                    '</div>' +
                 '</div>';
             });
             if (container) container.innerHTML = html;
@@ -992,23 +606,49 @@
             }
             if (emptyState) emptyState.classList.add('hidden');
             var html = '';
-            window.transcriptBlocks.forEach((block, idx) => {
-                html += '<div class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 shadow-sm space-y-2.5">' +
-                    '<div class="flex items-center justify-between text-xs pb-1 border-b border-slate-100"><span class="font-extrabold text-blue-700 bg-blue-100 px-2 py-0.5 rounded text-[11px]">文節 #' + (idx + 1) + '</span></div>' +
-                    '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + renderClickableIndonesianWords(block.indonesian, 'g-' + block.id) + '</p>' +
-                    '<div class="bg-blue-50/60 p-3 rounded-lg border border-blue-200 text-xs leading-relaxed text-blue-950 space-y-1">' +
-                        '<div class="dynamic-text-ja whitespace-pre-line font-medium">' + escapeHtml(block.grammarExplanation) + '</div>' +
+            window.transcriptBlocks.forEach(function(block, idx) {
+                var clickableIndo = renderClickableIndonesianWords(block.indonesian, 'g-' + block.id);
+                html += '<div class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2.5">' +
+                    '<div class="flex items-center justify-between text-xs pb-1 border-b border-slate-100 dark:border-slate-700">' +
+                        '<span class="font-extrabold text-blue-700 bg-blue-100 dark:bg-blue-950/80 px-2.5 py-0.5 rounded-full text-[11px]">文節 #' + (idx + 1) + '</span>' +
+                        '<button id="btn-toggle-g-' + block.id + '" onclick="toggleSpeechBlock(\'g-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-xs font-bold">' +
+                            '<i class="fa-solid fa-play text-[9px]"></i><span>再生</span>' +
+                        '</button>' +
+                    '</div>' +
+                    '<div class="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border-l-4 border-blue-500 space-y-1">' +
+                        '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + clickableIndo + '</p>' +
+                        '<p class="dynamic-text-ja text-slate-500 dark:text-slate-400 font-medium">' + escapeHtml(block.japanese) + '</p>' +
+                    '</div>' +
+                    '<div class="bg-blue-50/60 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200/60 text-xs leading-relaxed text-blue-950 dark:text-blue-200 space-y-1.5">' +
+                        '<h5 class="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1 text-[10px] uppercase tracking-wider"><i class="fa-solid fa-diagram-project"></i> 4段階精密構文解剖・応用解説</h5>' +
+                        '<div class="dynamic-text-ja whitespace-pre-line font-medium pt-0.5 leading-relaxed">' + escapeHtml(block.grammarExplanation || '解析データなし') + '</div>' +
                     '</div>' +
                 '</div>';
             });
             if (container) container.innerHTML = html;
         }
 
+        function highlightMatch(str, query) {
+            var safeStr = escapeHtml(str || '');
+            var q = (query || '').trim();
+            if (!q) return safeStr;
+            try {
+                var escQuery = q.replace(/[.*+?^${}()|[\]\]/g, '\\$&');
+                return safeStr.replace(new RegExp('(' + escQuery + ')', 'gi'), '<mark class="search-highlight">$1</mark>');
+            } catch (e) { return safeStr; }
+        }
+
         function getFilteredVocabList() {
-            var filtered = window.isShuffled ? [...window.vocabList].sort(() => Math.random() - 0.5) : (window.vocabList || []);
-            if (window.activeVocabPosFilter !== 'all') filtered = filtered.filter(v => v.pos === window.activeVocabPosFilter);
-            var q = (window.activeVocabSearchQuery || '').trim().toLowerCase();
-            if (q) filtered = filtered.filter(v => v.indonesian.toLowerCase().includes(q) || v.japanese.toLowerCase().includes(q));
+            var filtered = window.isShuffled ? Array.from(window.shuffledVocabList) : (window.vocabList || []);
+            if (window.activeVocabPosFilter !== 'all') {
+                filtered = filtered.filter(function(v) { return v.pos === window.activeVocabPosFilter; });
+            }
+            var query = (window.activeVocabSearchQuery || '').trim().toLowerCase();
+            if (query !== '') {
+                filtered = filtered.filter(function(v) {
+                    return (v.indonesian || '').toLowerCase().includes(query) || (v.japanese || '').toLowerCase().includes(query) || (v.baseForm || '').toLowerCase().includes(query);
+                });
+            }
             return filtered;
         }
 
@@ -1016,9 +656,12 @@
             var emptyState = document.getElementById('vocabEmptyState');
             var listContainer = document.getElementById('vocabListContainer');
             var cardContainer = document.getElementById('vocabCardContainer');
-            var badge = document.getElementById('vocabCountBadge');
+            var vocabBadge = document.getElementById('vocabCountBadge');
+
             var filtered = getFilteredVocabList();
-            if (badge) badge.textContent = (window.vocabList || []).length;
+            if (vocabBadge) vocabBadge.textContent = (window.vocabList || []).length;
+            updatePosFilterUI();
+            updateModeBtnUI();
 
             if (!filtered || filtered.length === 0) {
                 if (emptyState) emptyState.classList.remove('hidden');
@@ -1026,21 +669,32 @@
                 if (cardContainer) cardContainer.classList.add('hidden');
                 return;
             }
-            if (emptyState) emptyState.classList.add('hidden');
 
+            if (emptyState) emptyState.classList.add('hidden');
             if (window.activeVocabMode === 'list') {
                 if (cardContainer) cardContainer.classList.add('hidden');
                 if (listContainer) listContainer.classList.remove('hidden');
-                var html = '';
-                filtered.forEach(v => {
-                    html += '<div class="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 shadow-sm flex items-center justify-between gap-2">' +
-                        '<div class="space-y-0.5 flex-1">' +
-                            '<div class="flex items-center gap-1.5"><span class="text-[10px] font-bold px-1 rounded bg-slate-100 text-slate-600">' + v.pos + '</span><h4 class="dynamic-text-indo font-extrabold">' + escapeHtml(v.indonesian) + '</h4></div>' +
-                            '<p class="dynamic-text-ja text-emerald-700 font-bold">' + escapeHtml(v.japanese) + '</p>' +
+
+                var html = '', q = window.activeVocabSearchQuery;
+                filtered.forEach(function(v) {
+                    var hIndo = highlightMatch(v.indonesian, q);
+                    var hJap = highlightMatch(v.japanese, q);
+                    var keyTag = v.isKeyWord ? '<span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/50 flex items-center gap-0.5 shrink-0"><i class="fa-solid fa-star text-[8px]"></i>重要</span>' : '';
+
+                    html += '<div class="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between gap-2">' +
+                        '<div class="space-y-0.5 flex-1 min-w-0">' +
+                            '<div class="flex items-center gap-1.5 flex-wrap">' +
+                                '<span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0">' + getPosLabel(v.pos) + '</span>' +
+                                keyTag +
+                                '<h4 class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100 truncate">' + hIndo + '</h4>' +
+                                '<button onclick="speakIndonesian(\'' + escapeHtml(v.indonesian) + '\')" class="text-slate-400 hover:text-emerald-500 p-1 shrink-0"><i class="fa-solid fa-volume-high text-xs"></i></button>' +
+                            '</div>' +
+                            '<p class="dynamic-text-ja text-emerald-700 dark:text-emerald-400 font-bold">' + hJap + '</p>' +
                         '</div>' +
+                        '<button onclick="toggleVocabMastered(\'' + v.id + '\')" class="px-2 py-1 rounded ' + (v.mastered ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400') + ' text-[10px] font-bold shrink-0">' + (v.mastered ? '習得' : '未修') + '</button>' +
                     '</div>';
                 });
-                listContainer.innerHTML = html;
+                if (listContainer) listContainer.innerHTML = html;
             } else {
                 if (listContainer) listContainer.classList.add('hidden');
                 if (cardContainer) { cardContainer.classList.remove('hidden'); cardContainer.classList.add('flex'); }
@@ -1048,15 +702,76 @@
             }
         }
 
+        function getPosLabel(pos) {
+            switch(pos) {
+                case 'noun': return '名詞';
+                case 'verb': return '動詞';
+                case 'adjective': return '形容詞';
+                case 'adverb': return '副詞';
+                default: return 'その他';
+            }
+        }
+
+        function updateModeBtnUI() {
+            var btnCard = document.getElementById('btnModeCard'), btnList = document.getElementById('btnModeList');
+            if (btnCard && btnList) {
+                if (window.activeVocabMode === 'card') {
+                    btnCard.className = "px-3 py-1.5 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition";
+                    btnList.className = "px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
+                } else {
+                    btnList.className = "px-3 py-1.5 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition";
+                    btnCard.className = "px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
+                }
+            }
+        }
+
+        function updatePosFilterUI() {
+            document.querySelectorAll('.btn-pos-filter').forEach(function(btn) {
+                if (btn.dataset.pos === window.activeVocabPosFilter) {
+                    btn.className = "btn-pos-filter px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-red-600 text-white shadow-xs transition";
+                } else {
+                    btn.className = "btn-pos-filter px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
+                }
+            });
+        }
+
+        function setVocabMode(mode) { window.activeVocabMode = mode; renderVocabContainer(); }
+        function setVocabPosFilter(pos) { window.activeVocabPosFilter = pos; window.currentCardIndex = 0; renderVocabContainer(); }
+        function toggleShuffleCards() {
+            window.isShuffled = !window.isShuffled;
+            if (window.isShuffled) window.shuffledVocabList = Array.from(window.vocabList).sort(function() { return Math.random() - 0.5; });
+            window.currentCardIndex = 0;
+            renderVocabContainer();
+        }
+        function toggleVocabMastered(id) {
+            var item = window.vocabList.find(function(v) { return v.id === id; });
+            if (item) { item.mastered = !item.mastered; renderVocabContainer(); }
+        }
+
         function updateFlashcardUI() {
             var filtered = getFilteredVocabList();
-            if (!filtered.length) return;
+            if (!filtered || filtered.length === 0) return;
             if (window.currentCardIndex >= filtered.length) window.currentCardIndex = 0;
+
             var item = filtered[window.currentCardIndex];
-            document.getElementById('cardIndoText').innerText = item.indonesian;
-            document.getElementById('cardJapText').innerText = item.japanese;
-            document.getElementById('cardContextFull').innerText = item.context ? '文脈: ' + item.context : '文脈なし';
-            document.getElementById('flashcardProgressLabel').innerText = (window.currentCardIndex + 1) + ' / ' + filtered.length;
+            var q = window.activeVocabSearchQuery;
+            var cardIndo = document.getElementById('cardIndoText');
+            var cardJap = document.getElementById('cardJapText');
+            var cardContext = document.getElementById('cardContextFull');
+            var cardPosFront = document.getElementById('cardBadgeFront');
+            var cardPosBack = document.getElementById('cardPosBack');
+            var progressLabel = document.getElementById('flashcardProgressLabel');
+
+            if (cardIndo) cardIndo.innerHTML = highlightMatch(item.indonesian, q);
+            if (cardJap) cardJap.innerHTML = highlightMatch(item.japanese, q);
+            if (cardContext) cardContext.innerHTML = item.context ? ('文脈: \"' + highlightMatch(item.context, q) + '\"') : '文脈なし';
+            if (cardPosFront) cardPosFront.innerHTML = getPosLabel(item.pos) + (item.isKeyWord ? ' <span class="ml-1 px-1.5 py-0.5 bg-amber-500 text-white rounded text-[9px] font-extrabold"><i class="fa-solid fa-star text-[8px]"></i> 重要語</span>' : '');
+            if (cardPosBack) cardPosBack.innerHTML = '品詞: ' + getPosLabel(item.pos) + (item.baseForm ? (' (原形: ' + item.baseForm + ')') : '');
+            if (progressLabel) progressLabel.textContent = (window.currentCardIndex + 1) + ' / ' + filtered.length;
+
+            window.isCardFlipped = false;
+            var flashcardInner = document.getElementById('flashcardInner');
+            if (flashcardInner) flashcardInner.classList.remove('rotate-y-180');
         }
 
         function flipFlashcard() {
@@ -1066,101 +781,333 @@
             else inner.classList.remove('rotate-y-180');
         }
 
-        function nextFlashcard() {
+        function nextFlashcard(mastered) {
             var filtered = getFilteredVocabList();
-            if (!filtered.length) return;
+            if (filtered.length === 0) return;
+            if (mastered && filtered[window.currentCardIndex]) filtered[window.currentCardIndex].mastered = true;
             window.currentCardIndex = (window.currentCardIndex + 1) % filtered.length;
             updateFlashcardUI();
         }
 
-        function setVocabMode(mode) { window.activeVocabMode = mode; renderVocabContainer(); }
-        function setVocabPosFilter(pos) { window.activeVocabPosFilter = pos; window.currentCardIndex = 0; renderVocabContainer(); }
-        function toggleShuffleCards() { window.isShuffled = !window.isShuffled; renderVocabContainer(); }
-
         async function loadHistoryFromStorage() {
-            try { renderHistoryList(await dbGetAllSessions()); } catch (e) { renderHistoryList([]); }
+            try {
+                var history = await dbGetAllSessions();
+                renderHistoryList(history);
+            } catch (e) { renderHistoryList([]); }
+        }
+
+        function toggleHistorySelect(id, event) {
+            if (event) event.stopPropagation();
+            var idx = window.selectedHistoryIds.indexOf(id);
+            if (idx > -1) window.selectedHistoryIds.splice(idx, 1);
+            else window.selectedHistoryIds.push(id);
+            updateHistoryActionButtonsState();
+        }
+
+        function updateHistoryActionButtonsState() {
+            var btnMerge = document.getElementById('btnMergeSelected');
+            var btnSave = document.getElementById('btnSaveSelected');
+            var count = window.selectedHistoryIds.length;
+
+            if (btnMerge) {
+                if (count >= 2) {
+                    btnMerge.disabled = false;
+                    btnMerge.className = "px-1.5 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
+                    btnMerge.innerHTML = '<i class="fa-solid fa-code-merge"></i> 結合 (' + count + ')';
+                } else {
+                    btnMerge.disabled = true;
+                    btnMerge.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
+                    btnMerge.innerHTML = '<i class="fa-solid fa-code-merge"></i> 結合';
+                }
+            }
+
+            if (btnSave) {
+                if (count >= 1) {
+                    btnSave.disabled = false;
+                    btnSave.className = "px-1.5 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
+                    btnSave.innerHTML = '<i class="fa-solid fa-download"></i> 保存 (' + count + ')';
+                } else {
+                    btnSave.disabled = true;
+                    btnSave.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
+                    btnSave.innerHTML = '<i class="fa-solid fa-download"></i> 保存';
+                }
+            }
         }
 
         function renderHistoryList(history) {
             var container = document.getElementById('historyList');
             if (!container) return;
             if (!history || history.length === 0) {
-                container.innerHTML = '<p class="text-xs text-slate-400 py-1.5 text-center">履歴なし</p>';
+                container.innerHTML = '<p class="text-xs text-slate-400 py-1.5 text-center">履歴なし (IndexedDB)</p>';
+                window.selectedHistoryIds = [];
+                updateHistoryActionButtonsState();
                 return;
             }
             var html = '';
-            history.forEach(item => {
-                html += '<div onclick="loadHistoryItem(\'' + item.id + '\')" class="p-1.5 rounded-lg bg-slate-50 border border-slate-200 hover:bg-red-50 cursor-pointer flex justify-between items-center text-xs transition mb-1">' +
-                    '<div class="min-w-0 flex-1"><p class="font-bold truncate text-[11px]">' + escapeHtml(item.fileName) + '</p><p class="text-[8px] text-slate-400">' + escapeHtml(item.date) + '</p></div>' +
+            history.forEach(function(item) {
+                var isChecked = window.selectedHistoryIds.includes(item.id);
+                var isCurrent = window.currentLoadedSessionId === item.id;
+                html += '<div onclick="loadHistoryItem(\'' + item.id + '\')" class="p-1.5 rounded-lg ' + (isCurrent ? 'bg-red-50 dark:bg-red-950/40 border-red-300' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700') + ' border hover:bg-red-50 cursor-pointer flex justify-between items-center text-xs transition mb-1">' +
+                    '<div class="flex items-center gap-1.5 min-w-0 flex-1">' +
+                        '<input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onclick="toggleHistorySelect(\'' + item.id + '\', event)" class="rounded text-red-600 cursor-pointer shrink-0 w-3.5 h-3.5">' +
+                        '<div class="min-w-0 flex-1">' +
+                            '<p class="font-bold text-slate-800 dark:text-slate-100 truncate leading-tight text-[11px]">' + escapeHtml(item.fileName) + '</p>' +
+                            '<p class="text-[8px] text-slate-400 font-mono">' + escapeHtml(item.date) + '</p>' +
+                        '</div>' +
+                    '</div>' +
+                    '<button onclick="deleteHistoryItem(\'' + item.id + '\', event)" class="text-slate-400 hover:text-rose-500 p-1 shrink-0 ml-1"><i class="fa-solid fa-trash-can text-[10px]"></i></button>' +
                 '</div>';
             });
             container.innerHTML = html;
+            updateHistoryActionButtonsState();
+        }
+
+        async function saveSelectedHistories() {
+            if (!window.selectedHistoryIds || window.selectedHistoryIds.length === 0) return;
+            var allSessions = await dbGetAllSessions();
+            var selectedItems = window.selectedHistoryIds.map(function(id) {
+                return allSessions.find(function(h) { return h.id === id; });
+            }).filter(Boolean);
+
+            if (selectedItems.length === 0) return;
+
+            selectedItems.forEach(function(item, index) {
+                var cleanName = formatOutputFileName(item.fileName || '解析データ');
+                var exportObj = {
+                    id: item.id,
+                    fileName: cleanName,
+                    date: item.date,
+                    blocks: item.blocks || [],
+                    vocab: item.vocab || []
+                };
+                setTimeout(function() {
+                    exportDataToFile(exportObj, cleanName + '.json');
+                }, index * 300);
+            });
+            showToast(selectedItems.length + ' 件の履歴を個別JSONとして保存しました！', 'info');
+        }
+
+        async function mergeSelectedHistories() {
+            if (window.selectedHistoryIds.length < 2) return;
+            var allSessions = await dbGetAllSessions();
+            var selectedItems = window.selectedHistoryIds.map(function(id) {
+                return allSessions.find(function(h) { return h.id === id; });
+            }).filter(Boolean);
+
+            var mergedBlocks = [], mergedVocabMap = new Map(), titleParts = [];
+            var globalBlockIdx = 0;
+
+            selectedItems.forEach(function(item) {
+                titleParts.push(item.fileName.replace(/\.[^/.]+$/, ""));
+                if (Array.isArray(item.blocks)) {
+                    item.blocks.forEach(function(b) {
+                        mergedBlocks.push(Object.assign({}, b, { id: 'block-merged-' + Date.now() + '-' + globalBlockIdx, blockIndex: globalBlockIdx }));
+                        globalBlockIdx++;
+                    });
+                }
+                if (Array.isArray(item.vocab)) {
+                    item.vocab.forEach(function(v) {
+                        var key = (v.indonesian || '').trim().toLowerCase();
+                        if (key && !mergedVocabMap.has(key)) mergedVocabMap.set(key, v);
+                    });
+                }
+            });
+
+            var mergedTitle = formatOutputFileName('結合_' + titleParts.join('_').substring(0, 20));
+            window.currentLoadedSessionId = 'session-merged-' + Date.now();
+            window.currentLoadedFileName = mergedTitle;
+            window.transcriptBlocks = mergedBlocks;
+            window.vocabList = Array.from(mergedVocabMap.values());
+            updateActiveSessionBadge();
+            renderTranscriptContainer();
+            renderGrammarContainer();
+            renderVocabContainer();
+
+            var mergedDataObj = {
+                id: window.currentLoadedSessionId,
+                fileName: mergedTitle,
+                date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                timestamp: Date.now(),
+                blocks: window.transcriptBlocks,
+                vocab: window.vocabList
+            };
+            await dbSaveSession(mergedDataObj);
+            var history = await dbGetAllSessions();
+            renderHistoryList(history);
+
+            exportDataToFile(mergedDataObj, mergedTitle + '.json');
+            window.selectedHistoryIds = [];
+            showToast('選択した履歴を結合しました！', 'info');
+        }
+
+        async function clearHistory() {
+            await dbClearAll();
+            window.selectedHistoryIds = [];
+            renderHistoryList([]);
+            showToast('IndexedDB履歴をすべて消去しました', 'info');
         }
 
         async function loadHistoryItem(id) {
             var found = await dbGetSession(id);
             if (found) {
                 window.currentLoadedSessionId = found.id;
-                window.currentLoadedFileName = found.fileName;
+                window.currentLoadedFileName = found.fileName || '';
                 window.transcriptBlocks = found.blocks || [];
                 window.vocabList = found.vocab || [];
                 updateActiveSessionBadge();
                 renderTranscriptContainer();
                 renderGrammarContainer();
                 renderVocabContainer();
-                showToast('履歴を読み込みました', 'info');
+                var history = await dbGetAllSessions();
+                renderHistoryList(history);
+                showToast('「' + found.fileName + '」を読み込みました', 'info');
+                if (window.innerWidth < 768) switchMobileTab('transcript');
             }
         }
 
-        async function saveCurrentToHistory(fileName) {
-            if (!window.transcriptBlocks.length) return;
-            var sessionObj = {
-                id: window.currentLoadedSessionId || ('session-' + Date.now()),
-                fileName: formatOutputFileName(fileName),
-                date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                timestamp: Date.now(),
-                blocks: window.transcriptBlocks,
-                vocab: window.vocabList
-            };
-            await dbSaveSession(sessionObj);
-            loadHistoryFromStorage();
+        async function deleteHistoryItem(id, event) {
+            if (event) event.stopPropagation();
+            await dbDeleteSession(id);
+            window.selectedHistoryIds = window.selectedHistoryIds.filter(function(sid) { return sid !== id; });
+            var history = await dbGetAllSessions();
+            renderHistoryList(history);
+            showToast('履歴から削除しました', 'info');
         }
 
-        async function clearHistory() { await dbClearAll(); loadHistoryList([]); showToast('履歴消去完了', 'info'); }
+        function exportDataToFile(dataObj, customFilename) {
+            var blob = new Blob([JSON.stringify(dataObj, null, 2)], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = customFilename || 'suarateks_backup.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
 
-        function showToast(msg, type = 'info') {
+        async function importHistoryBackup(event) {
+            var files = event.target.files ? Array.from(event.target.files) : [];
+            if (files.length === 0) return;
+
+            var successCount = 0, lastLoadedData = null;
+
+            for (var i = 0; i < files.length; i++) {
+                try {
+                    var content = await new Promise(function(resolve, reject) {
+                        var reader = new FileReader();
+                        reader.onload = function(e) { resolve(e.target.result); };
+                        reader.onerror = reject;
+                        reader.readAsText(files[i]);
+                    });
+                    var importedData = JSON.parse(content);
+                    var singleObj = Array.isArray(importedData) ? importedData[0] : importedData;
+                    if (!singleObj || !singleObj.blocks) continue;
+
+                    var formattedName = formatOutputFileName(singleObj.fileName || files[i].name);
+                    var item = {
+                        id: singleObj.id || ('session-imported-' + Date.now() + '-' + i),
+                        fileName: formattedName,
+                        date: singleObj.date || new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                        timestamp: Date.now(),
+                        blocks: singleObj.blocks,
+                        vocab: singleObj.vocab || []
+                    };
+                    await dbSaveSession(item);
+                    lastLoadedData = item;
+                    successCount++;
+                } catch (e) {}
+            }
+
+            var history = await dbGetAllSessions();
+            renderHistoryList(history);
+
+            if (lastLoadedData) {
+                window.currentLoadedSessionId = lastLoadedData.id;
+                window.currentLoadedFileName = lastLoadedData.fileName;
+                window.transcriptBlocks = lastLoadedData.blocks;
+                window.vocabList = lastLoadedData.vocab;
+                updateActiveSessionBadge();
+                renderTranscriptContainer();
+                renderGrammarContainer();
+                renderVocabContainer();
+            }
+            showToast(successCount + ' 件のJSONを読み込みました！', 'info');
+            event.target.value = '';
+        }
+
+        function showToast(message, type) {
+            if (type === undefined) type = 'info';
             var container = document.getElementById('toastContainer');
             if (!container) return;
             var toast = document.createElement('div');
-            toast.className = (type === 'error' ? 'bg-rose-600' : 'bg-slate-800') + ' text-white px-3.5 py-2.5 rounded-xl shadow-xl text-xs font-bold transition-all';
-            toast.innerText = msg;
+            toast.className = (type === 'error' ? 'bg-rose-600' : 'bg-slate-800') + ' text-white px-3.5 py-2.5 rounded-xl shadow-xl text-xs font-bold flex items-center justify-between gap-2 transition-all duration-300 pointer-events-auto border border-white/10';
+            toast.innerHTML = '<span>' + escapeHtml(message) + '</span>';
             container.appendChild(toast);
-            setTimeout(() => toast.remove(), 4000);
+            setTimeout(function() { if (toast.parentElement) toast.remove(); }, 4000);
         }
 
         function escapeHtml(str) {
-            return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
         function switchMobileTab(tab) {
-            var pSetup = document.getElementById('panelSetup'), pTrans = document.getElementById('panelTranscript');
-            if (window.innerWidth >= 768) return;
-            if (tab === 'setup') { pSetup.style.display = 'flex'; pTrans.style.display = 'none'; }
-            else { pSetup.style.display = 'none'; pTrans.style.display = 'flex'; setStudioSubView(tab); }
+            window.activeMobileTab = tab;
+            var panelSetup = document.getElementById('panelSetup');
+            var panelTranscript = document.getElementById('panelTranscript');
+
+            if (window.innerWidth >= 768) {
+                if (panelSetup) panelSetup.style.display = 'flex';
+                if (panelTranscript) panelTranscript.style.display = 'flex';
+                return;
+            }
+
+            if (tab === 'setup') {
+                if (panelSetup) panelSetup.style.display = 'flex';
+                if (panelTranscript) panelTranscript.style.display = 'none';
+            } else {
+                if (panelSetup) panelSetup.style.display = 'none';
+                if (panelTranscript) panelTranscript.style.display = 'flex';
+                setStudioSubView(tab);
+            }
         }
 
         function setStudioSubView(subView) {
-            ['transcriptView', 'grammarView', 'vocabView'].forEach(id => document.getElementById(id).classList.add('hidden'));
-            if (subView === 'transcript') document.getElementById('transcriptView').classList.remove('hidden');
-            else if (subView === 'grammar') { document.getElementById('grammarView').classList.remove('hidden'); renderGrammarContainer(); }
-            else if (subView === 'vocab') { var v = document.getElementById('vocabView'); v.classList.remove('hidden'); v.classList.add('flex'); renderVocabContainer(); }
+            window.activeStudioSubView = subView;
+            var viewTranscript = document.getElementById('transcriptView');
+            var viewGrammar = document.getElementById('grammarView');
+            var viewVocab = document.getElementById('vocabView');
+
+            var btnTranscript = document.getElementById('navTabTranscript');
+            var btnGrammar = document.getElementById('navTabGrammar');
+            var btnVocab = document.getElementById('navTabVocab');
+
+            if (viewTranscript) viewTranscript.classList.add('hidden');
+            if (viewGrammar) viewGrammar.classList.add('hidden');
+            if (viewVocab) { viewVocab.classList.add('hidden'); viewVocab.classList.remove('flex'); }
+
+            [btnTranscript, btnGrammar, btnVocab].forEach(function(btn) {
+                if (btn) btn.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0";
+            });
+
+            if (subView === 'transcript') {
+                if (viewTranscript) viewTranscript.classList.remove('hidden');
+                if (btnTranscript) btnTranscript.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
+            } else if (subView === 'grammar') {
+                if (viewGrammar) viewGrammar.classList.remove('hidden');
+                if (btnGrammar) btnGrammar.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
+                renderGrammarContainer();
+            } else if (subView === 'vocab') {
+                if (viewVocab) { viewVocab.classList.remove('hidden'); viewVocab.classList.add('flex'); }
+                if (btnVocab) btnVocab.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
+                renderVocabContainer();
+            }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', function() {
             setFontSize(20);
             setSpeechRate(0.85);
             loadHistoryFromStorage();
-            initDropzoneEvents();
+            if ('speechSynthesis' in window) initSpeechSynthesisVoices();
         });
     </script>
 </body>
