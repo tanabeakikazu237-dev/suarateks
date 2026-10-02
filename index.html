@@ -55,7 +55,7 @@
     <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center justify-between shrink-0">
         <h1 class="font-extrabold text-sm flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block"></span>
-            SuaraTeks<span class="text-red-600">ID</span> Viewer <span class="text-[10px] text-slate-400 font-normal">v5.0 (軽量オフロード版)</span>
+            SuaraTeks<span class="text-red-600">ID</span> Viewer <span class="text-[10px] text-slate-400 font-normal">v5.1 (プロ改善版)</span>
         </h1>
         <div class="flex items-center gap-2">
             <span id="activeSessionBadge" class="hidden text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 px-2 py-0.5 rounded-full font-extrabold border border-blue-200/50 truncate max-w-[150px]"></span>
@@ -103,7 +103,7 @@
                 </div>
             </div>
 
-            <!-- JSON Import Panel (Replaces Audio Processing) -->
+            <!-- JSON Import Panel -->
             <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
                 <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
                     <span class="flex items-center gap-1.5"><i class="fa-solid fa-file-arrow-down text-red-600"></i> Geminiデータ読込</span>
@@ -147,7 +147,7 @@
             </div>
         </div>
 
-        <!-- Right Studio Panel (Transcript, Grammar, Vocab) -->
+        <!-- Right Studio Panel -->
         <div id="panelTranscript" class="hidden md:flex flex-1 flex-col bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             
             <div class="bg-white dark:bg-slate-800 px-2 sm:px-3 py-1.5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-1 shrink-0 overflow-x-auto hide-scrollbar">
@@ -633,7 +633,7 @@
             var q = (query || '').trim();
             if (!q) return safeStr;
             try {
-                var escQuery = q.replace(/[.*+?^${}()|[\]\]/g, '\\$&');
+                var escQuery = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 return safeStr.replace(new RegExp('(' + escQuery + ')', 'gi'), '<mark class="search-highlight">$1</mark>');
             } catch (e) { return safeStr; }
         }
@@ -984,6 +984,9 @@
             URL.revokeObjectURL(url);
         }
 
+        // ==========================================
+        // ROBUST JSON IMPORT PARSER (v5.1 Enhanced)
+        // ==========================================
         async function importHistoryBackup(event) {
             var files = event.target.files ? Array.from(event.target.files) : [];
             if (files.length === 0) return;
@@ -1003,39 +1006,56 @@
                     var importedData = JSON.parse(cleanContent);
                     
                     var singleObj = null;
+                    var blocksData = [];
+                    var vocabData = [];
+
                     if (Array.isArray(importedData)) {
-                        // もし配列全体がblocksのリスト、あるいはオブジェクトのリストの場合
-                        if (importedData.length > 0 && importedData[0].indonesian) {
-                            singleObj = {
-                                id: 'session-imported-' + Date.now() + '-' + i,
-                                fileName: formatOutputFileName(files[i].name),
-                                date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                                blocks: importedData,
-                                vocab: []
-                            };
+                        if (importedData.length > 0 && (importedData[0].indonesian || importedData[0].japanese || importedData[0].speaker)) {
+                            blocksData = importedData;
+                        } else if (importedData.length > 0 && importedData[0].blocks) {
+                            blocksData = importedData[0].blocks || [];
+                            vocabData = importedData[0].vocab || [];
+                        } else if (importedData.length > 0 && importedData[0].transcript) {
+                            blocksData = importedData[0].transcript || [];
+                            vocabData = importedData[0].vocab || [];
                         } else {
-                            singleObj = importedData[0];
+                            blocksData = importedData;
                         }
-                    } else {
-                        singleObj = importedData;
+                        singleObj = {
+                            id: 'session-imported-' + Date.now() + '-' + i,
+                            fileName: formatOutputFileName(files[i].name),
+                            date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                            blocks: blocksData,
+                            vocab: vocabData
+                        };
+                    } else if (importedData && typeof importedData === 'object') {
+                        blocksData = importedData.blocks || importedData.transcript || importedData.data || [];
+                        vocabData = importedData.vocab || [];
+                        
+                        if (blocksData.length === 0 && (importedData.indonesian || importedData.japanese)) {
+                            blocksData = [importedData];
+                        }
+
+                        singleObj = {
+                            id: importedData.id || ('session-imported-' + Date.now() + '-' + i),
+                            fileName: formatOutputFileName(importedData.fileName || files[i].name),
+                            date: importedData.date || new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                            blocks: blocksData,
+                            vocab: vocabData
+                        };
                     }
 
-                    if (!singleObj) {
-                        throw new Error('JSONの構造が認識できません');
-                    }
-
-                    // blocksがない場合のフォールバック
-                    if (!singleObj.blocks && singleObj.transcript) {
-                        singleObj.blocks = singleObj.transcript;
+                    if (!singleObj || (!singleObj.blocks || singleObj.blocks.length === 0)) {
+                        throw new Error('有効な対話・本文データが見つかりませんでした');
                     }
 
                     var formattedName = formatOutputFileName(singleObj.fileName || files[i].name);
                     var item = {
-                        id: singleObj.id || ('session-imported-' + Date.now() + '-' + i),
+                        id: singleObj.id,
                         fileName: formattedName,
-                        date: singleObj.date || new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                        date: singleObj.date,
                         timestamp: Date.now(),
-                        blocks: singleObj.blocks || [],
+                        blocks: singleObj.blocks,
                         vocab: singleObj.vocab || []
                     };
                     await dbSaveSession(item);
@@ -1060,6 +1080,7 @@
                 renderGrammarContainer();
                 renderVocabContainer();
                 showToast(successCount + ' 件のJSONを正常に読み込みました！', 'info');
+                if (window.innerWidth < 768) switchMobileTab('transcript');
             } else if (successCount === 0) {
                 showToast('有効なJSONデータを読み込めませんでした', 'error');
             }
