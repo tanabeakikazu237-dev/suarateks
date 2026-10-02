@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SuaraTeks ID Viewer Pro</title>
+    <title>SuaraTeks ID Pro</title>
 
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -55,15 +55,19 @@
     <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center justify-between shrink-0">
         <h1 class="font-extrabold text-sm flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block"></span>
-            SuaraTeks<span class="text-red-600">ID</span> Viewer <span class="text-[10px] text-slate-400 font-normal">v5.1 (プロ改善版)</span>
+            SuaraTeks<span class="text-red-600">ID</span> Pro <span class="text-[10px] text-slate-400 font-normal">v5.0 (Phase 1 & 2)</span>
+            <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-wifi-slash"></i> オフライン動作中</span>
         </h1>
         <div class="flex items-center gap-2">
             <span id="activeSessionBadge" class="hidden text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 px-2 py-0.5 rounded-full font-extrabold border border-blue-200/50 truncate max-w-[150px]"></span>
+            <button onclick="openModal('apiKeyModal')" class="px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-xs font-bold transition flex items-center gap-1">
+                <i class="fa-solid fa-key text-[10px]"></i> API Key
+            </button>
         </div>
     </header>
 
     <div class="md:hidden bg-slate-200 dark:bg-slate-800 p-1 flex items-center gap-1 shrink-0 border-b border-slate-300 dark:border-slate-700 text-xs font-bold">
-        <button id="btnMobSetup" onclick="switchMobileTab('setup')" class="flex-1 py-1.5 text-center bg-white dark:bg-slate-700 rounded shadow-sm text-slate-800 dark:text-slate-100">設定・インポート</button>
+        <button id="btnMobSetup" onclick="switchMobileTab('setup')" class="flex-1 py-1.5 text-center bg-white dark:bg-slate-700 rounded shadow-sm text-slate-800 dark:text-slate-100">設定・音源</button>
         <button id="btnMobTranscript" onclick="switchMobileTab('transcript')" class="flex-1 py-1.5 text-center text-slate-600 dark:text-slate-400">本文</button>
         <button id="btnMobVocab" onclick="switchMobileTab('vocab')" class="flex-1 py-1.5 text-center text-slate-600 dark:text-slate-400">単語帳</button>
     </div>
@@ -103,34 +107,61 @@
                 </div>
             </div>
 
-            <!-- JSON Import Panel -->
-            <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
+            <!-- Audio Queue Selection -->
+            <div id="playerCard" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
                 <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-file-arrow-down text-red-600"></i> Geminiデータ読込</span>
-                    <span class="text-[9px] text-slate-400">完全ローカル動作</span>
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音源キュー選択</span>
+                    <span class="text-[9px] text-slate-400">セッション完全隔離対応</span>
                 </h3>
                 
-                <label class="relative group cursor-pointer block">
-                    <input type="file" accept=".json" multiple onchange="importHistoryBackup(event)" class="hidden">
-                    <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-red-500 rounded-lg p-3 text-center bg-slate-50 dark:bg-slate-900 transition-all duration-200 group-hover:bg-red-50/30">
-                        <div class="space-y-1">
-                            <div class="w-7 h-7 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
-                                <i class="fa-solid fa-code text-xs"></i>
+                <label id="fileDropLabel" for="audioFileInput" class="relative group cursor-pointer block">
+                    <input type="file" id="audioFileInput" accept="audio/*" multiple onchange="window.handleFileChange(event)" class="hidden">
+                    
+                    <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-red-500 rounded-lg p-2 text-center bg-slate-50 dark:bg-slate-900 transition-all duration-200 group-hover:bg-red-50/30">
+                        <div id="dropzoneDefault" class="space-y-0.5">
+                            <div class="w-6 h-6 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
                             </div>
-                            <p class="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">Gemini出力JSONを選択</p>
-                            <p class="text-[9px] text-slate-400">ドラッグ＆ドロップまたはタップして読込</p>
+                            <p class="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">音声ファイルを選択（複数可）</p>
+                        </div>
+
+                        <div id="dropzoneSelected" class="hidden space-y-1 text-left">
+                            <div class="flex items-center justify-between text-emerald-600 mb-0.5">
+                                <span class="text-[9px] font-extrabold"><i class="fa-solid fa-list-check"></i> キューセット完了</span>
+                                <span class="text-[8px] text-slate-400">タップで再選択</span>
+                            </div>
+                            <div id="queueListContainer" class="max-h-24 overflow-y-auto pr-1"></div>
                         </div>
                     </div>
                 </label>
+
+                <button id="startTranscribeBtn" onclick="window.processAudioWithGemini()" class="w-full py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span id="transcribeBtnText">独立セッション順次解析スタート</span>
+                </button>
             </div>
 
-            <!-- IndexedDB History Panel -->
+            <!-- Progress Bar -->
+            <div id="chunkProgressContainer" class="hidden bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-1.5 shrink-0">
+                <div class="flex justify-between text-xs font-bold">
+                    <span id="chunkProgressLabel" class="flex items-center gap-1 text-[10px] truncate max-w-[80%]">解析実行中...</span>
+                    <span id="chunkProgressPercent" class="text-red-600 text-[10px]">0%</span>
+                </div>
+                <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                    <div id="chunkProgressBar" class="bg-red-600 h-1.5 rounded-full w-0 transition-all duration-300"></div>
+                </div>
+            </div>
+
+            <!-- IndexedDB Unlimited History Panel -->
             <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[220px]">
                 <div class="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-700 mb-1.5 gap-1 shrink-0">
                     <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1 shrink-0 truncate">
                         <i class="fa-solid fa-database text-blue-500"></i> 履歴<span class="hidden sm:inline">(無制限)</span>
                     </h4>
                     <div class="flex items-center gap-0.5 sm:gap-1 shrink-0">
+                        <button id="btnReanalyzeSelected" disabled onclick="reanalyzeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-0.5 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed">
+                            <i class="fa-solid fa-rotate-right"></i> 再解析
+                        </button>
                         <button id="btnMergeSelected" disabled onclick="mergeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-0.5 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed">
                             <i class="fa-solid fa-code-merge"></i> 結合
                         </button>
@@ -144,10 +175,17 @@
                 <div id="historyList" class="space-y-1 flex-1 overflow-y-auto max-h-[280px] pr-0.5">
                     <p class="text-xs text-slate-400 py-1.5 text-center">読み込み中...</p>
                 </div>
+
+                <div class="pt-1.5 border-t border-slate-100 dark:border-slate-700 mt-1 shrink-0">
+                    <label class="w-full py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition">
+                        <i class="fa-solid fa-file-import"></i> JSONインポート
+                        <input type="file" accept=".json" multiple onchange="importHistoryBackup(event)" class="hidden">
+                    </label>
+                </div>
             </div>
         </div>
 
-        <!-- Right Studio Panel -->
+        <!-- Right Studio Panel (Transcript, Grammar, Vocab) -->
         <div id="panelTranscript" class="hidden md:flex flex-1 flex-col bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             
             <div class="bg-white dark:bg-slate-800 px-2 sm:px-3 py-1.5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-1 shrink-0 overflow-x-auto hide-scrollbar">
@@ -160,6 +198,9 @@
                     </button>
                     <button id="navTabVocab" onclick="setStudioSubView('vocab')" class="no-wrap-tab px-2 sm:px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
                         <i class="fa-solid fa-book-open text-[10px]"></i> 単語帳 (<span id="vocabCountBadge">0</span>)
+                    </button>
+                    <button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-1.5 sm:px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] sm:text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-0.5 whitespace-nowrap" title="現在のセッションを再解析">
+                        <i class="fa-solid fa-rotate-right text-[9px]"></i> 再解析
                     </button>
                 </div>
 
@@ -175,8 +216,8 @@
             <!-- Transcript Subview -->
             <div id="transcriptView" class="flex-1 p-3 overflow-y-auto space-y-3">
                 <div id="emptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
-                    <i class="fa-solid fa-file-code text-3xl text-slate-300 dark:text-slate-700"></i>
-                    <span>左側のパネルからGemini出力のJSONファイルを読み込んでください</span>
+                    <i class="fa-solid fa-file-audio text-3xl text-slate-300 dark:text-slate-700"></i>
+                    <span>音声ファイルを選択して「独立セッション順次解析スタート」を押してください</span>
                 </div>
                 <div id="transcriptContainer" class="space-y-3"></div>
             </div>
@@ -260,11 +301,29 @@
 
     </div>
 
+    <!-- API Key Modal -->
+    <div id="apiKeyModal" class="fixed inset-0 bg-slate-900/60 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-4 max-w-sm w-full space-y-3 shadow-xl border border-slate-200 dark:border-slate-700">
+            <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                <i class="fa-solid fa-key text-amber-500"></i> Gemini API Key 設定
+            </h3>
+            <div id="apiKeyNotice" class="hidden p-2 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded text-[11px] text-amber-800 dark:text-amber-200 font-medium leading-snug">
+                <i class="fa-solid fa-triangle-exclamation mr-1 text-amber-600"></i> API利用上限に達しました。新しいAPI Keyを入力して保存してください。
+            </div>
+            <p class="text-[10px] text-slate-400">Google AI Studio で取得した API Key を入力してください</p>
+            <input type="password" id="apiKeyInput" placeholder="API Key を貼り付け" class="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 text-xs dark:bg-slate-900 font-mono text-slate-800 dark:text-slate-100 focus:outline-none focus:border-red-500">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('apiKeyModal')" class="px-3 py-1 text-xs text-slate-500 hover:text-slate-700">キャンセル</button>
+                <button onclick="saveApiKeyFromModal()" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold">保存して再開</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ==========================================
-        // INDEXEDDB HYBRID STORAGE LAYER
+        // PHASE 2: INDEXEDDB HYBRID STORAGE LAYER
         // ==========================================
-        const DB_NAME = 'SuaraTeksIDViewerDB';
+        const DB_NAME = 'SuaraTeksIDProDB';
         const DB_VERSION = 1;
         const STORE_NAME = 'sessions';
 
@@ -293,6 +352,7 @@
                     request.onerror = () => reject(request.error);
                 });
             } catch (e) {
+                console.warn('IndexedDB save failed, falling back to localStorage:', e);
                 saveToLocalStorageFallback(sessionObj);
             }
         }
@@ -312,6 +372,7 @@
                     request.onerror = () => reject(request.error);
                 });
             } catch (e) {
+                console.warn('IndexedDB getAll failed, using localStorage fallback');
                 var local = localStorage.getItem('suarateks_history');
                 return local ? JSON.parse(local) : [];
             }
@@ -373,9 +434,174 @@
         }
 
         // ==========================================
-        // APP STATE & SPEECH SYNTHESIS
+        // SERVICE WORKER & OFFLINE SETUP
+        // ==========================================
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                var swCode = `
+                    const CACHE_NAME = 'suarateks-pro-v5';
+                    const ASSETS = [
+                        '/',
+                        'https://cdn.tailwindcss.com',
+                        'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+                        'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap'
+                    ];
+                    self.addEventListener('install', event => {
+                        event.waitUntil(
+                            caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())
+                        );
+                    });
+                    self.addEventListener('activate', event => {
+                        event.waitUntil(self.clients.claim());
+                    });
+                    self.addEventListener('fetch', event => {
+                        event.respondWith(
+                            caches.match(event.request).then(response => {
+                                return response || fetch(event.request).catch(() => {
+                                    if (event.request.mode === 'navigate') {
+                                        return caches.match('/');
+                                    }
+                                });
+                            })
+                        );
+                    });
+                `;
+                var blob = new Blob([swCode], { type: 'application/javascript' });
+                var swUrl = URL.createObjectURL(blob);
+                navigator.serviceWorker.register(swUrl).catch(function(err) {
+                    console.warn('ServiceWorker registration failed:', err);
+                });
+            });
+        }
+
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        function updateOnlineStatus() {
+            var badge = document.getElementById('offlineBadge');
+            if (!badge) return;
+            if (!navigator.onLine) {
+                badge.classList.remove('hidden');
+                showToast('ネットワークがオフラインです（IndexedDB履歴・単語帳は完全に動作します）', 'info');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        // ==========================================
+        // STABLE SPEECH SYNTHESIS VOICE MANAGEMENT
         // ==========================================
         window.availableIndoVoices = [];
+
+        function initSpeechSynthesisVoices() {
+            if (!('speechSynthesis' in window)) return;
+            var voices = window.speechSynthesis.getVoices();
+            if (voices && voices.length > 0) {
+                window.availableIndoVoices = voices.filter(function(v) {
+                    var lang = (v.lang || '').toLowerCase();
+                    return lang.startsWith('id') || lang.includes('id-id') || lang.includes('indonesian');
+                });
+            }
+        }
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = initSpeechSynthesisVoices;
+            initSpeechSynthesisVoices();
+        }
+
+        async function splitAudioFileIntoWavChunks(file, maxDurationSeconds = 120) {
+            try {
+                var arrayBuffer = await file.arrayBuffer();
+                var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                var audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                await audioCtx.close();
+
+                var sampleRate = audioBuffer.sampleRate;
+                var numberOfChannels = audioBuffer.numberOfChannels;
+                var totalDuration = audioBuffer.duration;
+
+                if (totalDuration <= maxDurationSeconds) {
+                    return [{ chunkIndex: 0, blob: file, duration: totalDuration }];
+                }
+
+                var samplesPerChunk = maxDurationSeconds * sampleRate;
+                var totalChunks = Math.ceil(audioBuffer.length / samplesPerChunk);
+                var chunks = [];
+
+                for (var i = 0; i < totalChunks; i++) {
+                    var startSample = i * samplesPerChunk;
+                    var endSample = Math.min(audioBuffer.length, startSample + samplesPerChunk);
+                    var frameCount = endSample - startSample;
+
+                    var chunkBuffer = new (window.AudioContext || window.webkitAudioContext)().createBuffer(numberOfChannels, frameCount, sampleRate);
+                    for (var channel = 0; channel < numberOfChannels; channel++) {
+                        var channelData = audioBuffer.getChannelData(channel);
+                        chunkBuffer.copyToChannel(channelData.subarray(startSample, endSample), channel);
+                    }
+
+                    var wavBlob = audioBufferToWavBlob(chunkBuffer);
+                    chunks.push({
+                        chunkIndex: i,
+                        blob: wavBlob,
+                        duration: frameCount / sampleRate
+                    });
+                }
+                return chunks;
+            } catch (e) {
+                console.warn('Audio decoding/splitting failed, falling back to original file:', e);
+                return [{ chunkIndex: 0, blob: file, duration: 0 }];
+            }
+        }
+
+        function audioBufferToWavBlob(buffer) {
+            var numOfChan = buffer.numberOfChannels;
+            var length = buffer.length * numOfChan * 2 + 44;
+            var out = new DataView(new ArrayBuffer(length));
+            var channels = [];
+            var sampleRate = buffer.sampleRate;
+            var offset = 0;
+            var pos = 0;
+
+            function writeString(str) {
+                for (var i = 0; i < str.length; i++) {
+                    out.setUint8(pos++, str.charCodeAt(i));
+                }
+            }
+
+            writeString('RIFF');
+            out.setUint32(pos, length - 8, true); pos += 4;
+            writeString('WAVE');
+            writeString('fmt ');
+            out.setUint32(pos, 16, true); pos += 4;
+            out.setUint16(pos, 1, true); pos += 2;
+            out.setUint16(pos, numOfChan, true); pos += 2;
+            out.setUint32(pos, sampleRate, true); pos += 4;
+            out.setUint32(pos, sampleRate * 2 * numOfChan, true); pos += 4;
+            out.setUint16(pos, numOfChan * 2, true); pos += 2;
+            out.setUint16(pos, 16, true); pos += 2;
+            writeString('data');
+            out.setUint32(pos, length - pos - 4, true); pos += 4;
+
+            for (var i = 0; i < buffer.numberOfChannels; i++) {
+                channels.push(buffer.getChannelData(i));
+            }
+
+            while (offset < buffer.length) {
+                for (var i = 0; i < numOfChan; i++) {
+                    var sample = Math.max(-1, Math.min(1, channels[i][offset]));
+                    sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+                    out.setInt16(pos, sample, true);
+                    pos += 2;
+                }
+                offset++;
+            }
+            return new Blob([out.buffer], { type: 'audio/wav' });
+        }
+
+        // ==========================================
+        // APP STATE & PHASE 1 SESSION ISOLATION
+        // ==========================================
+        window.fileQueue = [];
+        window.isQueueProcessing = false;
         window.currentLoadedSessionId = null;
         window.currentLoadedFileName = '';
         window.transcriptBlocks = [];
@@ -394,24 +620,28 @@
 
         window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
 
-        function initSpeechSynthesisVoices() {
-            if (!('speechSynthesis' in window)) return;
-            var voices = window.speechSynthesis.getVoices();
-            if (voices && voices.length > 0) {
-                window.availableIndoVoices = voices.filter(function(v) {
-                    var lang = (v.lang || '').toLowerCase();
-                    return lang.startsWith('id') || lang.includes('id-id') || lang.includes('indonesian');
-                });
-            }
-        }
+        var sleep = function(ms) { return new Promise(function(resolve) { setTimeout(resolve, ms); }); };
 
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.onvoiceschanged = initSpeechSynthesisVoices;
-            initSpeechSynthesisVoices();
+        function translateErrorMessage(rawMessage) {
+            var str = String(rawMessage || '').toLowerCase();
+            if (str.includes('prepayment credits are depleted') || str.includes('billing#prepay') || str.includes('credit depleted')) {
+                return 'API前払いクレジットがなくなりました。Google AI Studioでチャージしてください。';
+            }
+            if (str.includes('spend cap breached') || str.includes('quota exceeded') || str.includes('resourcehasexhausted')) {
+                return 'API利用上限に達しました。時間をおくかGoogle AI Studioで設定をご確認ください。';
+            }
+            if (str.includes('invalid authentication credentials') || str.includes('api_key_invalid') || str.includes('unauthorized')) {
+                return 'API Key認証エラーです。新しいAPI Keyを発行し、設定し直してください。';
+            }
+            if (str.includes('network') || str.includes('failed to fetch')) {
+                return 'ネットワーク通信エラーが発生しました。接続状況をご確認の上、再度お試しください。';
+            }
+            return rawMessage;
         }
 
         function formatOutputFileName(baseName) {
             var clean = String(baseName || '解析データ').trim().replace(/\.[^/.]+$/, "");
+            clean = clean.replace(/^®️\s*/, '');
             return clean || '解析データ';
         }
 
@@ -439,6 +669,88 @@
             setFontSize(current + delta);
         }
 
+        function getApiKey() { 
+            var key = localStorage.getItem('suarateks_gemini_key') || '';
+            return String(key).trim();
+        }
+
+        function stripJsonCodeFence(text) {
+            return String(text || '').trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+        }
+
+        function safeParseTruncatedJson(jsonString) {
+            var raw = stripJsonCodeFence(jsonString);
+            if (!raw) throw new Error('Geminiから応答が返されませんでした');
+            try { return JSON.parse(raw); } catch (e) {}
+
+            var sanitized = raw.replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, function(match) {
+                return match.replace(/\r?\n/g, '\\n').replace(/\t/g, '\\t');
+            });
+            try { return JSON.parse(sanitized); } catch (e2) {}
+
+            var textToRepair = sanitized;
+            var firstBrace = textToRepair.indexOf('{');
+            var firstBracket = textToRepair.indexOf('[');
+            var startIdx = -1;
+
+            if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+                startIdx = firstBrace;
+            } else if (firstBracket !== -1) {
+                startIdx = firstBracket;
+            }
+
+            if (startIdx !== -1) {
+                var sub = textToRepair.substring(startIdx).replace(/,\s*$/, '').replace(/,\s*([}\]])/g, '$1');
+                var openQuotes = false, stack = [], repaired = '';
+                for (var i = 0; i < sub.length; i++) {
+                    var ch = sub[i], prevCh = i > 0 ? sub[i - 1] : '';
+                    if (ch === '"' && prevCh !== '\\') openQuotes = !openQuotes;
+                    if (!openQuotes) {
+                        if (ch === '{' || ch === '[') stack.push(ch);
+                        else if (ch === '}' || ch === ']') { if (stack.length > 0) stack.pop(); }
+                    }
+                    repaired += ch;
+                }
+                if (openQuotes) repaired += '"';
+                while (stack.length > 0) {
+                    var top = stack.pop();
+                    repaired += (top === '{' ? '}' : ']');
+                }
+                try { return JSON.parse(repaired); } catch (e3) {}
+            }
+            throw new Error('GeminiのJSON応答構造を正常に解釈できませんでした');
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            var k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            var i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        // ==========================================
+        // PHASE 1: SESSION STATE ISOLATION & CLEARANCE
+        // ==========================================
+        function resetActiveSessionState(newFileName) {
+            window.currentLoadedSessionId = 'session-' + Date.now();
+            window.currentLoadedFileName = newFileName || '新規セッション';
+            window.transcriptBlocks = [];
+            window.vocabList = [];
+            window.activeVocabSearchQuery = '';
+            window.currentCardIndex = 0;
+            window.isCardFlipped = false;
+            window.isShuffled = false;
+            window.shuffledVocabList = [];
+            
+            var searchInput = document.getElementById('vocabSearchInput');
+            if (searchInput) searchInput.value = '';
+
+            updateActiveSessionBadge();
+            renderTranscriptContainer();
+            renderGrammarContainer();
+            renderVocabContainer();
+        }
+
         function updateActiveSessionBadge() {
             var badge = document.getElementById('activeSessionBadge');
             if (!badge) return;
@@ -450,10 +762,606 @@
             }
         }
 
+        window.handleFileChange = function(event) {
+            var input = (event && event.target) ? event.target : document.getElementById('audioFileInput');
+            var files = input ? input.files : null;
+            if (!files || files.length === 0) return;
+            processSelectedFiles(Array.from(files));
+        };
+
+        function processSelectedFiles(files) {
+            var validFiles = files.filter(function(f) { return f.type.startsWith('audio/') || f.name.match(/\.(mp3|wav|m4a|aac|ogg|flac)$/i); }).slice(0, 10);
+            if (validFiles.length === 0) {
+                showToast('音声ファイルが選択されていません', 'error');
+                return;
+            }
+            window.fileQueue = validFiles.map(function(f, idx) {
+                return { id: 'queue-' + Date.now() + '-' + idx, file: f, status: 'waiting', progress: 0 };
+            });
+            renderQueueUI();
+            showToast(window.fileQueue.length + ' 件の音源をキューに隔離セットしました！', 'info');
+        }
+
+        function renderQueueUI() {
+            var dropzoneDefault = document.getElementById('dropzoneDefault');
+            var dropzoneSelected = document.getElementById('dropzoneSelected');
+            var queueListContainer = document.getElementById('queueListContainer');
+
+            if (!window.fileQueue || window.fileQueue.length === 0) {
+                if (dropzoneDefault) dropzoneDefault.classList.remove('hidden');
+                if (dropzoneSelected) dropzoneSelected.classList.add('hidden');
+                return;
+            }
+
+            if (dropzoneDefault) dropzoneDefault.classList.add('hidden');
+            if (dropzoneSelected) dropzoneSelected.classList.remove('hidden');
+
+            var html = '';
+            window.fileQueue.forEach(function(q, idx) {
+                var statusBadge = '';
+                if (q.status === 'waiting') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 font-bold">待機中</span>';
+                else if (q.status === 'processing') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500 text-white font-bold"><i class="fa-solid fa-spinner fa-spin"></i> 解析中</span>';
+                else if (q.status === 'completed') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500 text-white font-bold"><i class="fa-solid fa-check"></i> 完了</span>';
+                else if (q.status === 'error') statusBadge = '<button onclick="retryQueueItem(\'' + q.id + '\', event)" class="text-[9px] px-1.5 py-0.5 rounded bg-rose-600 hover:bg-rose-700 text-white font-bold transition flex items-center gap-1">再試行</button>';
+
+                html += '<div class="flex items-center justify-between gap-1 text-xs p-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 mb-1">' +
+                    '<div class="min-w-0 flex-1">' +
+                        '<p class="font-bold text-slate-800 dark:text-slate-100 truncate text-[10px]">' + (idx + 1) + '. ' + escapeHtml(q.file.name) + '</p>' +
+                        '<p class="text-[8px] text-slate-400 font-mono">' + formatBytes(q.file.size) + '</p>' +
+                    '</div>' +
+                    '<div class="shrink-0">' + statusBadge + '</div>' +
+                '</div>';
+            });
+            if (queueListContainer) queueListContainer.innerHTML = html;
+        }
+
+        window.retryQueueItem = function(itemId, event) {
+            if (event) event.stopPropagation();
+            var item = window.fileQueue.find(function(q) { return q.id === itemId; });
+            if (item) { item.status = 'waiting'; renderQueueUI(); window.processAudioWithGemini(); }
+        };
+
+        function initDropzoneEvents() {
+            var label = document.getElementById('fileDropLabel');
+            if (!label) return;
+            ['dragenter', 'dragover'].forEach(function(eventName) {
+                label.addEventListener(eventName, function(e) { e.preventDefault(); e.stopPropagation(); label.classList.add('dropzone-active'); }, false);
+            });
+            ['dragleave', 'drop'].forEach(function(eventName) {
+                label.addEventListener(eventName, function(e) { e.preventDefault(); e.stopPropagation(); label.classList.remove('dropzone-active'); }, false);
+            });
+            label.addEventListener('drop', function(e) {
+                var files = e.dataTransfer.files;
+                if (files && files.length > 0) processSelectedFiles(Array.from(files));
+            }, false);
+        }
+
+        async function fetchGeminiApi(apiKey, payload) {
+            var cleanKey = String(apiKey || getApiKey() || '').trim();
+            if (!cleanKey || cleanKey.length < 10) {
+                throw new Error('API Keyが正しく設定されていません。「API Key」ボタンから設定してください。');
+            }
+
+            if (!payload.generationConfig) payload.generationConfig = {};
+            payload.generationConfig.temperature = 0.1;
+            payload.generationConfig.maxOutputTokens = 8192;
+
+            var targetUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=' + cleanKey;
+
+            var response;
+            var maxAttempts = 10;
+            for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+                try {
+                    response = await fetch(targetUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.status === 429 || response.status === 503) {
+                        var errText = await response.text();
+                        var waitMs = attempt * 6000;
+                        var retryMatch = errText.match(/retry in ([0-9.]+)s/i);
+                        if (retryMatch && retryMatch[1]) waitMs = Math.ceil(parseFloat(retryMatch[1]) * 1000) + 2000;
+                        await sleep(waitMs);
+                        continue;
+                    }
+                    break;
+                } catch (netErr) {
+                    if (attempt === maxAttempts) throw new Error('ネットワーク通信エラーが発生しました: ' + netErr.message);
+                    await sleep(2000);
+                }
+            }
+
+            if (!response) throw new Error('Gemini APIへの通信に失敗しました');
+            var responseText = await response.text();
+            var data = JSON.parse(responseText);
+
+            if (!response.ok || data.error) {
+                var errDetail = (data.error && data.error.message) ? data.error.message : ('HTTP Error ' + response.status);
+                if (response.status === 400 || response.status === 401) {
+                    openModal('apiKeyModal');
+                    throw new Error('API Key認証エラーです。有効なAPI Keyを再入力してください。');
+                }
+                throw new Error(translateErrorMessage(errDetail));
+            }
+            return data;
+        }
+
+        function extractGeminiText(data) {
+            var parts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) ? data.candidates[0].content.parts : null;
+            if (!Array.isArray(parts)) throw new Error('応答にテキストデータが含まれていません');
+            return parts.map(function(p) { return p.text || ''; }).join('').trim();
+        }
+
+        async function reanalyzeBlocksCore(blocks, apiKey, fileNameLabel, onProgress) {
+            var totalBlocks = blocks.length;
+            var maxAnalysisPasses = 5;
+            var chunkSize = Math.max(2, Math.ceil(totalBlocks / maxAnalysisPasses));
+            var totalChunks = Math.min(maxAnalysisPasses, Math.ceil(totalBlocks / chunkSize));
+            var accumulatedVocabMap = new Map();
+
+            blocks.forEach(function(b) { if (!b.grammarExplanation || b.grammarExplanation === '解析中...') b.grammarExplanation = '解析中...'; });
+
+            for (var chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
+                var start = chunkIdx * chunkSize;
+                var end = Math.min(totalBlocks, start + chunkSize);
+                if (start >= totalBlocks) break;
+
+                var currentPct = Math.floor(((chunkIdx + 1) / totalChunks) * 100);
+                if (onProgress) onProgress(chunkIdx + 1, totalChunks, currentPct, fileNameLabel);
+
+                var chunkBlocks = blocks.slice(start, end);
+                var inputChunkText = chunkBlocks.map(function(b) {
+                    return '[BLOCK_ID:' + b.blockIndex + '] ' + b.indonesian + '\n(Japanese: ' + b.japanese + ')';
+                }).join('\n\n');
+
+                var chunkWords = new Set();
+                chunkBlocks.forEach(function(b) {
+                    var words = (b.indonesian || '').toLowerCase().match(/[a-zA-Z-']+/g) || [];
+                    words.forEach(function(w) { if (w.length >= 1) chunkWords.add(w); });
+                });
+
+                var wordListStr = Array.from(chunkWords).join(', ');
+
+                var combinedPrompt = 'Analyze the given Indonesian text blocks in detail for Japanese learners.\n\n' +
+'REQUIREMENTS:\n' +
+'1. "grammar": Provide exhaustive 4-part grammatical analysis for each block index using exact headings: 【語句対比】, 【構文構造】, 【接辞解剖】, 【解説・ニュアンス】.\n' +
+'2. "vocab": Process ALL of the target words listed below without omission. For EVERY single word, provide precise Japanese translation ("japanese"), dictionary base form ("baseForm"), part of speech ("pos"), and context sentence.\n' +
+'3. "isKeyWord": true if essential, false otherwise.\n' +
+'4. CRITICAL: Escape all literal newlines using \\n. Output strictly valid JSON.\n\n' +
+'TARGET WORDS TO PROCESS:\n' + wordListStr + '\n\n' +
+'Return ONLY a JSON object:\n' +
+'{\n' +
+'  "grammar": [\n' +
+'    {\n' +
+'      "blockIndex": 0,\n' +
+'      "grammarExplanation": "【語句対比】\\n...\\n【構文構造】\\n...\\n【接辞解剖】\\n...\\n【解説・ニュアンス】\\n..."\n' +
+'    }\n' +
+'  ],\n' +
+'  "vocab": [\n' +
+'    {\n' +
+'      "indonesian": "membuang",\n' +
+'      "baseForm": "buang",\n' +
+'      "japanese": "〜を捨てる",\n' +
+'      "pos": "verb",\n' +
+'      "context": "Context sentence",\n' +
+'      "isKeyWord": true\n' +
+'    }\n' +
+'  ]\n' +
+'}\n\n' +
+'INPUT BLOCKS:\n' + inputChunkText;
+
+                var chunkPayload = {
+                    contents: [{ parts: [{ text: combinedPrompt }] }],
+                    generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 }
+                };
+
+                try {
+                    var chunkResponseData = await fetchGeminiApi(apiKey, chunkPayload);
+                    var chunkRawText = extractGeminiText(chunkResponseData);
+                    var chunkParsed = safeParseTruncatedJson(chunkRawText);
+
+                    if (chunkParsed.grammar && Array.isArray(chunkParsed.grammar)) {
+                        chunkParsed.grammar.forEach(function(gItem, gIdx) {
+                            var bIdx = (gItem.blockIndex !== undefined && gItem.blockIndex !== null) ? Number(gItem.blockIndex) : (start + gIdx);
+                            var targetBlock = blocks.find(function(b) { return b.blockIndex === bIdx; }) || chunkBlocks[gIdx];
+                            if (targetBlock && gItem.grammarExplanation) {
+                                targetBlock.grammarExplanation = String(gItem.grammarExplanation).trim();
+                            }
+                        });
+                    }
+
+                    if (chunkParsed.vocab && Array.isArray(chunkParsed.vocab)) {
+                        chunkParsed.vocab.forEach(function(v) {
+                            var wordForm = (v.indonesian || '').trim();
+                            var base = (v.baseForm || wordForm).trim();
+                            var key = base.toLowerCase();
+                            var japMeaning = (v.japanese || '').trim();
+
+                            if (wordForm && key) {
+                                if (!accumulatedVocabMap.has(key) || accumulatedVocabMap.get(key).japanese === '（自動抽出語）') {
+                                    accumulatedVocabMap.set(key, {
+                                        id: 'vocab-' + Date.now() + '-' + accumulatedVocabMap.size,
+                                        indonesian: wordForm,
+                                        baseForm: base,
+                                        japanese: japMeaning || '（意味取得中）',
+                                        pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(v.pos) ? v.pos : 'other',
+                                        context: v.context || '',
+                                        isKeyWord: Boolean(v.isKeyWord),
+                                        mastered: false
+                                    });
+                                }
+                            }
+                        });
+                    }
+                } catch (chunkErr) {
+                    console.warn('[reanalyzeBlocksCore] Chunk error:', chunkErr);
+                }
+
+                var missingWords = [];
+                chunkWords.forEach(function(w) {
+                    var key = w.toLowerCase();
+                    if (!accumulatedVocabMap.has(key) || accumulatedVocabMap.get(key).japanese === '（自動抽出語）') {
+                        missingWords.push(w);
+                    }
+                });
+
+                if (missingWords.length > 0) {
+                    var rescuePrompt = 'Provide Japanese translations, base forms, and parts of speech for these Indonesian words:\n' + missingWords.join(', ') + '\n\nReturn ONLY a JSON array:\n[\n  {\n    "indonesian": "kata",\n    "baseForm": "kata",\n    "japanese": "言葉、単語",\n    "pos": "noun",\n    "context": "Context",\n    "isKeyWord": false\n  }\n]';
+                    try {
+                        var rescueRes = await fetchGeminiApi(apiKey, {
+                            contents: [{ parts: [{ text: rescuePrompt }] }],
+                            generationConfig: { responseMimeType: "application/json", maxOutputTokens: 4096 }
+                        });
+                        var rescueParsed = safeParseTruncatedJson(extractGeminiText(rescueRes));
+                        if (Array.isArray(rescueParsed)) {
+                            rescueParsed.forEach(function(rv) {
+                                var rKey = (rv.baseForm || rv.indonesian || '').trim().toLowerCase();
+                                if (rKey && rv.japanese) {
+                                    accumulatedVocabMap.set(rKey, {
+                                        id: 'vocab-rescued-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
+                                        indonesian: rv.indonesian || rKey,
+                                        baseForm: rv.baseForm || rKey,
+                                        japanese: rv.japanese,
+                                        pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(rv.pos) ? rv.pos : 'other',
+                                        context: rv.context || '',
+                                        isKeyWord: Boolean(rv.isKeyWord),
+                                        mastered: false
+                                    });
+                                }
+                            });
+                        }
+                    } catch (resErr) {}
+                }
+
+                chunkBlocks.forEach(function(cb) {
+                    if (!cb.grammarExplanation || cb.grammarExplanation === '解析中...') {
+                        cb.grammarExplanation = '【語句対比】\n・' + cb.indonesian + ' = ' + cb.japanese + '\n【構文構造】\n・標準配置構文\n【接辞解剖】\n・基本語形表現\n【解説・ニュアンス】\n・標準的な表現です。';
+                    }
+                });
+
+                await sleep(500);
+            }
+
+            return {
+                blocks: blocks,
+                vocab: Array.from(accumulatedVocabMap.values())
+            };
+        }
+
+        window.processAudioWithGemini = async function() {
+            if (!window.fileQueue || window.fileQueue.length === 0) {
+                showToast('音源ファイルがキューに追加されていません', 'error');
+                return;
+            }
+
+            var apiKey = getApiKey();
+            if (!apiKey) {
+                showToast('Gemini API Key が設定されていません。', 'error');
+                openModal('apiKeyModal');
+                return;
+            }
+
+            if (window.isQueueProcessing) return;
+            window.isQueueProcessing = true;
+
+            var btn = document.getElementById('startTranscribeBtn');
+            var btnText = document.getElementById('transcribeBtnText');
+            var progressContainer = document.getElementById('chunkProgressContainer');
+            if (btn) btn.disabled = true;
+            if (progressContainer) progressContainer.classList.remove('hidden');
+
+            for (var i = 0; i < window.fileQueue.length; i++) {
+                var item = window.fileQueue[i];
+                if (item.status === 'completed') continue;
+
+                // 【フェーズ1の徹底】新規ファイル処理開始前に必ず状態を完全隔離リセット
+                resetActiveSessionState(item.file.name);
+
+                item.status = 'processing';
+                renderQueueUI();
+                if (btnText) btnText.textContent = '独立隔離解析中 (' + (i + 1) + '/' + window.fileQueue.length + ')';
+
+                try {
+                    await processSingleFileWithLongAudioChunking(item, apiKey, i + 1, window.fileQueue.length);
+                    item.status = 'completed';
+                    renderQueueUI();
+                } catch (err) {
+                    console.error('Queue Error:', err);
+                    item.status = 'error';
+                    renderQueueUI();
+                    showToast('エラー: ' + translateErrorMessage(err.message), 'error');
+                    if (err.message.includes('Spend Cap') || err.message.includes('prepayment')) {
+                        openModal('apiKeyModal', true);
+                        break;
+                    }
+                }
+            }
+
+            window.isQueueProcessing = false;
+            if (btn) btn.disabled = false;
+            if (btnText) btnText.textContent = "独立セッション順次解析スタート";
+            showToast('すべてのキューファイルの独立解析処理が完了しました', 'info');
+            setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
+        };
+
+        async function processSingleFileWithLongAudioChunking(queueItem, apiKey, currentIdx, totalIdx) {
+            var file = queueItem.file;
+
+            var progressLabel = document.getElementById('chunkProgressLabel');
+            var progressPercent = document.getElementById('chunkProgressPercent');
+            var progressBar = document.getElementById('chunkProgressBar');
+
+            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-scissors text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 音声を2分ごとに事前分割中...</span>';
+            if (progressBar) progressBar.style.width = '10%';
+            if (progressPercent) progressPercent.textContent = '10%';
+
+            var wavChunks = await splitAudioFileIntoWavChunks(file, 120);
+            var allCombinedBlocks = [];
+
+            for (var c = 0; c < wavChunks.length; c++) {
+                var chunkObj = wavChunks[c];
+                var subPct = Math.floor(10 + ((c / wavChunks.length) * 40));
+                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> <span>パート ' + (c + 1) + '/' + wavChunks.length + ' を文字起こし中...</span>';
+                if (progressBar) progressBar.style.width = subPct + '%';
+                if (progressPercent) progressPercent.textContent = subPct + '%';
+
+                var chunkBase64 = await new Promise(function(resolve, reject) {
+                    var reader = new FileReader();
+                    reader.onload = function(e) { resolve(e.target.result.split(',')[1]); };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(chunkObj.blob);
+                });
+
+                var transcribePrompt = 'You are a professional Indonesian verbatim transcription specialist. Transcribe this audio chunk accurately.\nReturn ONLY a valid JSON array:\n[\n  {\n    "speaker": "Pembicara 1",\n    "indonesian": "spoken text",\n    "japanese": "Japanese translation"\n  }\n]';
+
+                var payload = {
+                    contents: [{ role: 'user', parts: [{ text: transcribePrompt }, { inlineData: { mimeType: 'audio/wav', data: chunkBase64 } }] }],
+                    generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 }
+                };
+
+                var resData = await fetchGeminiApi(apiKey, payload);
+                var rawText = extractGeminiText(resData);
+                var parsed = safeParseTruncatedJson(rawText);
+                var subBlocks = Array.isArray(parsed) ? parsed : (parsed.transcript || []);
+
+                subBlocks.forEach(function(sb) {
+                    allCombinedBlocks.push({
+                        id: 'block-' + Date.now() + '-' + allCombinedBlocks.length,
+                        blockIndex: allCombinedBlocks.length,
+                        speaker: sb.speaker || 'Pembicara 1',
+                        indonesian: sb.indonesian || '',
+                        japanese: sb.japanese || '',
+                        grammarExplanation: '解析中...'
+                    });
+                });
+                await sleep(300);
+            }
+
+            if (allCombinedBlocks.length === 0) throw new Error('音声からテキストが読み取れませんでした');
+
+            window.transcriptBlocks = allCombinedBlocks;
+            renderTranscriptContainer();
+            if (window.innerWidth < 768) switchMobileTab('transcript');
+
+            var cleanFileName = formatOutputFileName(file.name);
+            var finalRes = await reanalyzeBlocksCore(
+                window.transcriptBlocks,
+                apiKey,
+                cleanFileName,
+                function(chunkIdx, totalChunks, currentPct, label) {
+                    var mappedPct = Math.floor(50 + (currentPct * 0.5));
+                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-blue-500"></i> <span class="truncate">【文法・単語解析】' + chunkIdx + '/' + totalChunks + '</span>';
+                    if (progressBar) progressBar.style.width = mappedPct + '%';
+                    if (progressPercent) progressPercent.textContent = mappedPct + '%';
+                }
+            );
+
+            window.transcriptBlocks = finalRes.blocks;
+            window.vocabList = finalRes.vocab;
+
+            if (progressBar) progressBar.style.width = '100%';
+            if (progressPercent) progressPercent.textContent = '100%';
+
+            renderTranscriptContainer();
+            renderGrammarContainer();
+            renderVocabContainer();
+
+            // IndexedDB への永続化保存
+            await saveCurrentToHistory(cleanFileName, false);
+            var singleDataObj = {
+                id: window.currentLoadedSessionId,
+                fileName: cleanFileName,
+                date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                timestamp: Date.now(),
+                blocks: window.transcriptBlocks,
+                vocab: window.vocabList
+            };
+            exportDataToFile(singleDataObj, cleanFileName + '.json');
+        }
+
+        window.reanalyzeSelectedHistories = async function() {
+            if (!window.selectedHistoryIds || window.selectedHistoryIds.length === 0) return;
+
+            var apiKey = getApiKey();
+            if (!apiKey) {
+                showToast('Gemini API Key が設定されていません。', 'error');
+                openModal('apiKeyModal');
+                return;
+            }
+
+            var allSessions = await dbGetAllSessions();
+            var selectedItems = window.selectedHistoryIds.map(function(id) {
+                return allSessions.find(function(h) { return h.id === id; });
+            }).filter(Boolean);
+
+            if (selectedItems.length === 0) return;
+
+            var btnRe = document.getElementById('btnReanalyzeSelected');
+            var btnMerge = document.getElementById('btnMergeSelected');
+            var btnSave = document.getElementById('btnSaveSelected');
+            var progressContainer = document.getElementById('chunkProgressContainer');
+            var progressLabel = document.getElementById('chunkProgressLabel');
+            var progressPercent = document.getElementById('chunkProgressPercent');
+            var progressBar = document.getElementById('chunkProgressBar');
+
+            if (btnRe) btnRe.disabled = true;
+            if (btnMerge) btnMerge.disabled = true;
+            if (btnSave) btnSave.disabled = true;
+            if (progressContainer) progressContainer.classList.remove('hidden');
+
+            try {
+                for (var i = 0; i < selectedItems.length; i++) {
+                    var item = selectedItems[i];
+                    var baseName = formatOutputFileName(item.fileName);
+
+                    var res = await reanalyzeBlocksCore(
+                        item.blocks || [],
+                        apiKey,
+                        '[' + (i + 1) + '/' + selectedItems.length + '] ' + baseName,
+                        function(cIdx, totalC, pct, label) {
+                            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-rotate-right fa-spin text-amber-500"></i> <span class="truncate">' + label + ' (' + cIdx + '/' + totalC + ')</span>';
+                            if (progressBar) progressBar.style.width = pct + '%';
+                            if (progressPercent) progressPercent.textContent = pct + '%';
+                        }
+                    );
+
+                    item.fileName = baseName;
+                    item.blocks = res.blocks;
+                    item.vocab = res.vocab;
+                    item.date = new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    item.timestamp = Date.now();
+
+                    window.currentLoadedSessionId = item.id;
+                    window.currentLoadedFileName = item.fileName;
+                    window.transcriptBlocks = res.blocks;
+                    window.vocabList = res.vocab;
+                    updateActiveSessionBadge();
+                    renderTranscriptContainer();
+                    renderGrammarContainer();
+                    renderVocabContainer();
+
+                    await dbSaveSession(item);
+                }
+                showToast(selectedItems.length + ' 件の選択再解析が完了しました！', 'info');
+                window.selectedHistoryIds = [];
+                await loadHistoryFromStorage();
+            } catch (err) {
+                showToast('一括再解析エラー: ' + translateErrorMessage(err.message), 'error');
+            } finally {
+                updateHistoryActionButtonsState();
+                setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
+            }
+        };
+
+        window.reanalyzeCurrentTranscript = async function() {
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
+                showToast('再解析対象のテキストデータがありません', 'error');
+                return;
+            }
+
+            var apiKey = getApiKey();
+            if (!apiKey) {
+                showToast('Gemini API Key が設定されていません。', 'error');
+                openModal('apiKeyModal');
+                return;
+            }
+
+            var btn = document.getElementById('btnReanalyzeText');
+            var progressContainer = document.getElementById('chunkProgressContainer');
+            var progressLabel = document.getElementById('chunkProgressLabel');
+            var progressPercent = document.getElementById('chunkProgressPercent');
+            var progressBar = document.getElementById('chunkProgressBar');
+
+            if (btn) btn.disabled = true;
+            if (progressContainer) progressContainer.classList.remove('hidden');
+
+            try {
+                var rawName = window.currentLoadedFileName || '解析データ';
+                var targetName = formatOutputFileName(rawName);
+
+                var res = await reanalyzeBlocksCore(
+                    window.transcriptBlocks,
+                    apiKey,
+                    targetName,
+                    function(cIdx, totalC, pct, label) {
+                        if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-amber-500"></i> <span class="truncate">【再解析】' + label + ' (' + cIdx + '/' + totalC + ')...</span>';
+                        if (progressBar) progressBar.style.width = pct + '%';
+                        if (progressPercent) progressPercent.textContent = pct + '%';
+                    }
+                );
+
+                window.transcriptBlocks = res.blocks;
+                window.vocabList = res.vocab;
+                renderGrammarContainer();
+                renderVocabContainer();
+                await saveCurrentToHistory(targetName, false);
+                showToast('テキスト再解析が完了しました！', 'info');
+            } catch (err) {
+                showToast('再解析エラー: ' + translateErrorMessage(err.message), 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+                setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
+            }
+        };
+
+        function openModal(id, isQuotaError) {
+            var input = document.getElementById('apiKeyInput');
+            var notice = document.getElementById('apiKeyNotice');
+            if (input) input.value = getApiKey();
+            if (notice) {
+                if (isQuotaError) notice.classList.remove('hidden');
+                else notice.classList.add('hidden');
+            }
+            var modal = document.getElementById(id);
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            var modal = document.getElementById(id);
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function saveApiKeyFromModal() {
+            var input = document.getElementById('apiKeyInput');
+            var clean = String(input ? input.value : '').trim();
+            if (clean && clean.length > 5) {
+                localStorage.setItem('suarateks_gemini_key', clean);
+                showToast('API Keyを保存しました！', 'info');
+                closeModal('apiKeyModal');
+            } else {
+                showToast('有効なAPI Keyを入力してください', 'error');
+            }
+        }
+
         function speakIndonesian(text) {
             if (!('speechSynthesis' in window) || !text) return;
             window.speechSynthesis.cancel();
-            if (window.availableIndoVoices.length === 0) initSpeechSynthesisVoices();
+            
+            if (window.availableIndoVoices.length === 0) {
+                initSpeechSynthesisVoices();
+            }
 
             var utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'id-ID';
@@ -469,6 +1377,7 @@
                 });
                 if (indoVoice) utterance.voice = indoVoice;
             }
+
             window.speechSynthesis.speak(utterance);
         }
 
@@ -516,7 +1425,10 @@
             if (!block) return;
 
             var textToSpeak = customText || block.indonesian;
-            if (window.availableIndoVoices.length === 0) initSpeechSynthesisVoices();
+            
+            if (window.availableIndoVoices.length === 0) {
+                initSpeechSynthesisVoices();
+            }
 
             var utterance = new SpeechSynthesisUtterance(textToSpeak);
             utterance.lang = 'id-ID';
@@ -621,7 +1533,7 @@
                     '</div>' +
                     '<div class="bg-blue-50/60 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200/60 text-xs leading-relaxed text-blue-950 dark:text-blue-200 space-y-1.5">' +
                         '<h5 class="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1 text-[10px] uppercase tracking-wider"><i class="fa-solid fa-diagram-project"></i> 4段階精密構文解剖・応用解説</h5>' +
-                        '<div class="dynamic-text-ja whitespace-pre-line font-medium pt-0.5 leading-relaxed">' + escapeHtml(block.grammarExplanation || '解析データなし') + '</div>' +
+                        '<div class="dynamic-text-ja whitespace-pre-line font-medium pt-0.5 leading-relaxed">' + escapeHtml(block.grammarExplanation) + '</div>' +
                     '</div>' +
                 '</div>';
             });
@@ -764,7 +1676,7 @@
 
             if (cardIndo) cardIndo.innerHTML = highlightMatch(item.indonesian, q);
             if (cardJap) cardJap.innerHTML = highlightMatch(item.japanese, q);
-            if (cardContext) cardContext.innerHTML = item.context ? ('文脈: \"' + highlightMatch(item.context, q) + '\"') : '文脈なし';
+            if (cardContext) cardContext.innerHTML = item.context ? ('文脈: "' + highlightMatch(item.context, q) + '"') : '文脈なし';
             if (cardPosFront) cardPosFront.innerHTML = getPosLabel(item.pos) + (item.isKeyWord ? ' <span class="ml-1 px-1.5 py-0.5 bg-amber-500 text-white rounded text-[9px] font-extrabold"><i class="fa-solid fa-star text-[8px]"></i> 重要語</span>' : '');
             if (cardPosBack) cardPosBack.innerHTML = '品詞: ' + getPosLabel(item.pos) + (item.baseForm ? (' (原形: ' + item.baseForm + ')') : '');
             if (progressLabel) progressLabel.textContent = (window.currentCardIndex + 1) + ' / ' + filtered.length;
@@ -806,8 +1718,21 @@
 
         function updateHistoryActionButtonsState() {
             var btnMerge = document.getElementById('btnMergeSelected');
+            var btnRe = document.getElementById('btnReanalyzeSelected');
             var btnSave = document.getElementById('btnSaveSelected');
             var count = window.selectedHistoryIds.length;
+
+            if (btnRe) {
+                if (count >= 1) {
+                    btnRe.disabled = false;
+                    btnRe.className = "px-1.5 py-0.5 bg-amber-500 hover:bg-amber-600 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
+                    btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 再解析 (' + count + ')';
+                } else {
+                    btnRe.disabled = true;
+                    btnRe.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
+                    btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 再解析';
+                }
+            }
 
             if (btnMerge) {
                 if (count >= 2) {
@@ -884,7 +1809,29 @@
                     exportDataToFile(exportObj, cleanName + '.json');
                 }, index * 300);
             });
+
             showToast(selectedItems.length + ' 件の履歴を個別JSONとして保存しました！', 'info');
+        }
+
+        async function saveCurrentToHistory(fileName, showToastNotification) {
+            if (showToastNotification === undefined) showToastNotification = true;
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
+            try {
+                var formattedName = formatOutputFileName(fileName);
+                if (!window.currentLoadedSessionId) window.currentLoadedSessionId = 'session-' + Date.now();
+                var sessionObj = {
+                    id: window.currentLoadedSessionId,
+                    fileName: formattedName,
+                    date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                    timestamp: Date.now(),
+                    blocks: window.transcriptBlocks,
+                    vocab: window.vocabList
+                };
+                await dbSaveSession(sessionObj);
+                var history = await dbGetAllSessions();
+                renderHistoryList(history);
+                updateActiveSessionBadge();
+            } catch (e) {}
         }
 
         async function mergeSelectedHistories() {
@@ -960,7 +1907,7 @@
                 renderVocabContainer();
                 var history = await dbGetAllSessions();
                 renderHistoryList(history);
-                showToast('「' + found.fileName + '」を読み込みました', 'info');
+                showToast('「' + found.fileName + '」を切り替え読み込みました', 'info');
                 if (window.innerWidth < 768) switchMobileTab('transcript');
             }
         }
@@ -984,9 +1931,6 @@
             URL.revokeObjectURL(url);
         }
 
-        // ==========================================
-        // ROBUST JSON IMPORT PARSER (v5.1 Enhanced)
-        // ==========================================
         async function importHistoryBackup(event) {
             var files = event.target.files ? Array.from(event.target.files) : [];
             if (files.length === 0) return;
@@ -1001,59 +1945,15 @@
                         reader.onerror = reject;
                         reader.readAsText(files[i]);
                     });
-                    
-                    var cleanContent = content.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
-                    var importedData = JSON.parse(cleanContent);
-                    
-                    var singleObj = null;
-                    var blocksData = [];
-                    var vocabData = [];
-
-                    if (Array.isArray(importedData)) {
-                        if (importedData.length > 0 && (importedData[0].indonesian || importedData[0].japanese || importedData[0].speaker)) {
-                            blocksData = importedData;
-                        } else if (importedData.length > 0 && importedData[0].blocks) {
-                            blocksData = importedData[0].blocks || [];
-                            vocabData = importedData[0].vocab || [];
-                        } else if (importedData.length > 0 && importedData[0].transcript) {
-                            blocksData = importedData[0].transcript || [];
-                            vocabData = importedData[0].vocab || [];
-                        } else {
-                            blocksData = importedData;
-                        }
-                        singleObj = {
-                            id: 'session-imported-' + Date.now() + '-' + i,
-                            fileName: formatOutputFileName(files[i].name),
-                            date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                            blocks: blocksData,
-                            vocab: vocabData
-                        };
-                    } else if (importedData && typeof importedData === 'object') {
-                        blocksData = importedData.blocks || importedData.transcript || importedData.data || [];
-                        vocabData = importedData.vocab || [];
-                        
-                        if (blocksData.length === 0 && (importedData.indonesian || importedData.japanese)) {
-                            blocksData = [importedData];
-                        }
-
-                        singleObj = {
-                            id: importedData.id || ('session-imported-' + Date.now() + '-' + i),
-                            fileName: formatOutputFileName(importedData.fileName || files[i].name),
-                            date: importedData.date || new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                            blocks: blocksData,
-                            vocab: vocabData
-                        };
-                    }
-
-                    if (!singleObj || (!singleObj.blocks || singleObj.blocks.length === 0)) {
-                        throw new Error('有効な対話・本文データが見つかりませんでした');
-                    }
+                    var importedData = JSON.parse(content);
+                    var singleObj = Array.isArray(importedData) ? importedData[0] : importedData;
+                    if (!singleObj || !singleObj.blocks) continue;
 
                     var formattedName = formatOutputFileName(singleObj.fileName || files[i].name);
                     var item = {
-                        id: singleObj.id,
+                        id: singleObj.id || ('session-imported-' + Date.now() + '-' + i),
                         fileName: formattedName,
-                        date: singleObj.date,
+                        date: singleObj.date || new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
                         timestamp: Date.now(),
                         blocks: singleObj.blocks,
                         vocab: singleObj.vocab || []
@@ -1061,10 +1961,7 @@
                     await dbSaveSession(item);
                     lastLoadedData = item;
                     successCount++;
-                } catch (e) {
-                    console.error('Import parse error:', e);
-                    showToast('JSON読み込みエラー: ' + e.message, 'error');
-                }
+                } catch (e) {}
             }
 
             var history = await dbGetAllSessions();
@@ -1079,11 +1976,8 @@
                 renderTranscriptContainer();
                 renderGrammarContainer();
                 renderVocabContainer();
-                showToast(successCount + ' 件のJSONを正常に読み込みました！', 'info');
-                if (window.innerWidth < 768) switchMobileTab('transcript');
-            } else if (successCount === 0) {
-                showToast('有効なJSONデータを読み込めませんでした', 'error');
             }
+            showToast(successCount + ' 件のJSONをIndexedDBにインポートしました！', 'info');
             event.target.value = '';
         }
 
@@ -1160,7 +2054,10 @@
             setFontSize(20);
             setSpeechRate(0.85);
             loadHistoryFromStorage();
-            if ('speechSynthesis' in window) initSpeechSynthesisVoices();
+            initDropzoneEvents();
+            if ('speechSynthesis' in window) {
+                initSpeechSynthesisVoices();
+            }
         });
     </script>
 </body>
