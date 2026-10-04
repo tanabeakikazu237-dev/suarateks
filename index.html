@@ -848,21 +848,38 @@
             payload.generationConfig.temperature = 0.1;
             payload.generationConfig.maxOutputTokens = 8192;
 
-            var targetUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=' + cleanKey;
+            var targetUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
 
             var response;
-            var maxAttempts = 8;
+            var maxAttempts = 10;
             for (var attempt = 1; attempt <= maxAttempts; attempt++) {
                 try {
+                    // 「AQ.」形式および「AIzaSy」形式の両キーに対応するヘッダー認証
                     response = await fetch(targetUrl, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'x-goog-api-key': cleanKey,
+                            'Authorization': 'Bearer ' + cleanKey
+                        },
                         body: JSON.stringify(payload)
                     });
 
+                    // 401エラー発生時はURLパラメータ方式もフォールバック試行
+                    if (response.status === 401) {
+                        var fallbackResponse = await fetch(targetUrl + '?key=' + cleanKey, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (fallbackResponse.ok || fallbackResponse.status !== 401) {
+                            response = fallbackResponse;
+                        }
+                    }
+
                     if (response.status === 429 || response.status === 503) {
                         var errText = await response.text();
-                        var waitMs = attempt * 5000 + Math.floor(Math.random() * 2000);
+                        var waitMs = attempt * 6000;
                         var retryMatch = errText.match(/retry in ([0-9.]+)s/i);
                         if (retryMatch && retryMatch[1]) waitMs = Math.ceil(parseFloat(retryMatch[1]) * 1000) + 2000;
                         await sleep(waitMs);
@@ -871,7 +888,7 @@
                     break;
                 } catch (netErr) {
                     if (attempt === maxAttempts) throw new Error('ネットワーク通信エラーが発生しました: ' + netErr.message);
-                    await sleep(3000);
+                    await sleep(2000);
                 }
             }
 
@@ -881,7 +898,7 @@
 
             if (!response.ok || data.error) {
                 var errDetail = (data.error && data.error.message) ? data.error.message : ('HTTP Error ' + response.status);
-                if (response.status === 400 && errDetail.toLowerCase().includes('key')) {
+                if (response.status === 400 || response.status === 401) {
                     openModal('apiKeyModal');
                     throw new Error('API Key認証エラーです。有効なAPI Keyを再入力してください。');
                 }
