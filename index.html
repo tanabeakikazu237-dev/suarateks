@@ -56,7 +56,7 @@
         <h1 class="font-extrabold text-xs sm:text-sm flex items-center gap-1.5 shrink-0 truncate">
             <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block shrink-0"></span>
             <span class="truncate">SuaraTeks<span class="text-red-600">ID</span> Pro</span>
-            <span class="text-[9px] text-slate-400 font-normal shrink-0">v5.3 (Gemini 3 Flash)</span>
+            <span class="text-[9px] text-slate-400 font-normal shrink-0">v5.4 (Gemini 3 Flash Fix)</span>
             <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1 py-0.5 rounded font-bold shrink-0"><i class="fa-solid fa-wifi-slash"></i> オフライン</span>
         </h1>
         <div class="flex items-center gap-1.5 shrink-0 min-w-0">
@@ -440,7 +440,7 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 var swCode = `
-                    const CACHE_NAME = 'suarateks-pro-v5.3';
+                    const CACHE_NAME = 'suarateks-pro-v5.4';
                     const ASSETS = [
                         '/',
                         'https://cdn.tailwindcss.com',
@@ -681,12 +681,10 @@
             
             var raw = String(jsonString).trim();
 
-            // 1. Direct JSON parse
             try {
                 return JSON.parse(raw);
             } catch (e1) {}
 
-            // 2. Extract content inside markdown code blocks ```json ... ```
             var fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)(?:```|$)/i);
             if (fenceMatch && fenceMatch[1]) {
                 var fenceContent = fenceMatch[1].trim();
@@ -702,7 +700,6 @@
                 return JSON.parse(raw);
             } catch (e3) {}
 
-            // 3. Extract JSON object or array boundaries
             var firstBrace = raw.indexOf('{');
             var firstBracket = raw.indexOf('[');
             var startIdx = -1;
@@ -730,7 +727,6 @@
                 } catch (e4) {}
             }
 
-            // 4. Sanitize unescaped control characters ONLY inside string literals
             function fixStringControlChars(str) {
                 return str.replace(/"(?:[^"\\]|\\.)*"/g, function(m) {
                     return m.replace(/[\r\n\t]/g, function(c) {
@@ -752,7 +748,6 @@
                 return JSON.parse(noTrailingCommas);
             } catch (e6) {}
 
-            // 5. Repair unclosed brackets and quotes for truncated JSON
             var openQuotes = false, stack = [], repaired = '';
             for (var i = 0; i < noTrailingCommas.length; i++) {
                 var ch = noTrailingCommas[i], prevCh = i > 0 ? noTrailingCommas[i - 1] : '';
@@ -903,13 +898,13 @@
                 payload.generationConfig.maxOutputTokens = 8192;
             }
 
-            var targetUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
+            var primaryUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=' + encodeURIComponent(cleanKey);
 
             var response;
             var maxAttempts = 5;
             for (var attempt = 1; attempt <= maxAttempts; attempt++) {
                 try {
-                    response = await fetch(targetUrl, {
+                    response = await fetch(primaryUrl, {
                         method: 'POST',
                         headers: { 
                             'Content-Type': 'application/json',
@@ -918,15 +913,15 @@
                         body: JSON.stringify(payload)
                     });
 
-                    if (response.status === 401) {
-                        var fallbackUrl = targetUrl + '?key=' + encodeURIComponent(cleanKey);
-                        var fallbackResponse = await fetch(fallbackUrl, {
+                    if (response.status === 401 || response.status === 403) {
+                        var altUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + encodeURIComponent(cleanKey);
+                        var altResponse = await fetch(altUrl, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cleanKey },
                             body: JSON.stringify(payload)
                         });
-                        if (fallbackResponse.ok) {
-                            response = fallbackResponse;
+                        if (altResponse.ok) {
+                            response = altResponse;
                         }
                     }
 
@@ -956,7 +951,7 @@
 
             if (!response.ok || data.error) {
                 var errDetail = (data.error && data.error.message) ? data.error.message : ('HTTP Error ' + response.status);
-                if (response.status === 401 || (response.status === 400 && errDetail.toLowerCase().includes('key'))) {
+                if (response.status === 401 || response.status === 403 || (response.status === 400 && errDetail.toLowerCase().includes('key'))) {
                     openModal('apiKeyModal', true);
                     throw new Error('API Key認証エラー（401）です。Google AI Studioで新しいAPI Keyを作成し、再入力してください。');
                 }
