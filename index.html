@@ -56,7 +56,7 @@
         <h1 class="font-extrabold text-xs sm:text-sm flex items-center gap-1.5 shrink-0 truncate">
             <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block shrink-0"></span>
             <span class="truncate">SuaraTeks<span class="text-red-600">ID</span> Pro</span>
-            <span class="text-[9px] text-slate-400 font-normal shrink-0">v5.3</span>
+            <span class="text-[9px] text-slate-400 font-normal shrink-0">v5.3 (Gemini 3 Flash)</span>
             <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1 py-0.5 rounded font-bold shrink-0"><i class="fa-solid fa-wifi-slash"></i> オフライン</span>
         </h1>
         <div class="flex items-center gap-1.5 shrink-0 min-w-0">
@@ -309,10 +309,10 @@
                 <i class="fa-solid fa-key text-amber-500"></i> Gemini API Key 設定
             </h3>
             <div id="apiKeyNotice" class="hidden p-2 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded text-[11px] text-amber-800 dark:text-amber-200 font-medium leading-snug">
-                <i class="fa-solid fa-triangle-exclamation mr-1 text-amber-600"></i> API利用上限に達しました。新しいAPI Keyを入力して保存してください。
+                <i class="fa-solid fa-triangle-exclamation mr-1 text-amber-600"></i> APIキー認証エラーです。Google AI Studioで新しいAPI Keyを取得・作成して貼り付けてください。
             </div>
-            <p class="text-[10px] text-slate-400">Google AI Studio で取得した API Key を入力してください</p>
-            <input type="password" id="apiKeyInput" placeholder="API Key を貼り付け" class="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 text-xs dark:bg-slate-900 font-mono text-slate-800 dark:text-slate-100 focus:outline-none focus:border-red-500">
+            <p class="text-[10px] text-slate-400">Google AI Studio (https://aistudio.google.com/) で取得した API Key を入力してください</p>
+            <input type="password" id="apiKeyInput" placeholder="API Key (AQ... または AIza...)" class="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 text-xs dark:bg-slate-900 font-mono text-slate-800 dark:text-slate-100 focus:outline-none focus:border-red-500">
             <div class="flex justify-end gap-2">
                 <button onclick="closeModal('apiKeyModal')" class="px-3 py-1 text-xs text-slate-500 hover:text-slate-700">キャンセル</button>
                 <button onclick="saveApiKeyFromModal()" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold">保存して再開</button>
@@ -321,9 +321,6 @@
     </div>
 
     <script>
-        // ==========================================
-        // PHASE 2: INDEXEDDB HYBRID STORAGE LAYER
-        // ==========================================
         const DB_NAME = 'SuaraTeksIDProDB';
         const DB_VERSION = 1;
         const STORE_NAME = 'sessions';
@@ -635,8 +632,8 @@
             if (str.includes('spend cap breached') || str.includes('quota exceeded') || str.includes('resourcehasexhausted')) {
                 return 'API利用上限に達しました。時間をおくかGoogle AI Studioで設定をご確認ください。';
             }
-            if (str.includes('invalid authentication credentials') || str.includes('api_key_invalid') || str.includes('unauthorized')) {
-                return 'API Key認証エラーです。新しいAPI Keyを発行し、設定し直してください。';
+            if (str.includes('invalid authentication credentials') || str.includes('api_key_invalid') || str.includes('unauthorized') || str.includes('access_token_type_unsupported')) {
+                return 'API Key認証エラーです。Google AI Studioで新しいAPI Keyを発行し、設定し直してください。';
             }
             if (str.includes('network') || str.includes('failed to fetch')) {
                 return 'ネットワーク通信エラーが発生しました。接続状況をご確認の上、再度お試しください。';
@@ -646,7 +643,7 @@
 
         function formatOutputFileName(baseName) {
             var clean = String(baseName || '解析データ').trim().replace(/\.[^/.]+$/, "");
-            clean = clean.replace(/^®️️\s*/, '');
+            clean = clean.replace(/^®\s*/, '');
             return clean || '解析データ';
         }
 
@@ -676,26 +673,38 @@
 
         function getApiKey() { 
             var key = localStorage.getItem('suarateks_gemini_key') || '';
-            return String(key).trim();
-        }
-
-        function stripJsonCodeFence(text) {
-            return String(text || '').trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+            return String(key).trim().replace(/^["']|["']$/g, '');
         }
 
         function safeParseTruncatedJson(jsonString) {
-            var raw = stripJsonCodeFence(jsonString);
-            if (!raw) throw new Error('Geminiから応答が返されませんでした');
-            try { return JSON.parse(raw); } catch (e) {}
+            if (!jsonString) throw new Error('Geminiから応答が返されませんでした');
+            
+            var raw = String(jsonString).trim();
 
-            var sanitized = raw.replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, function(match) {
-                return match.replace(/\r?\n/g, '\\n').replace(/\t/g, '\\t');
-            });
-            try { return JSON.parse(sanitized); } catch (e2) {}
+            // 1. Direct JSON parse
+            try {
+                return JSON.parse(raw);
+            } catch (e1) {}
 
-            var textToRepair = sanitized;
-            var firstBrace = textToRepair.indexOf('{');
-            var firstBracket = textToRepair.indexOf('[');
+            // 2. Extract content inside markdown code blocks ```json ... ```
+            var fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)(?:```|$)/i);
+            if (fenceMatch && fenceMatch[1]) {
+                var fenceContent = fenceMatch[1].trim();
+                try {
+                    return JSON.parse(fenceContent);
+                } catch (e2) {}
+                raw = fenceContent;
+            } else {
+                raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+            }
+
+            try {
+                return JSON.parse(raw);
+            } catch (e3) {}
+
+            // 3. Extract JSON object or array boundaries
+            var firstBrace = raw.indexOf('{');
+            var firstBracket = raw.indexOf('[');
             var startIdx = -1;
 
             if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
@@ -704,25 +713,68 @@
                 startIdx = firstBracket;
             }
 
+            var candidate = raw;
             if (startIdx !== -1) {
-                var sub = textToRepair.substring(startIdx).replace(/,\s*$/, '').replace(/,\s*([}\]])/g, '$1');
-                var openQuotes = false, stack = [], repaired = '';
-                for (var i = 0; i < sub.length; i++) {
-                    var ch = sub[i], prevCh = i > 0 ? sub[i - 1] : '';
-                    if (ch === '"' && prevCh !== '\\') openQuotes = !openQuotes;
-                    if (!openQuotes) {
-                        if (ch === '{' || ch === '[') stack.push(ch);
-                        else if (ch === '}' || ch === ']') { if (stack.length > 0) stack.pop(); }
-                    }
-                    repaired += ch;
+                var lastBrace = raw.lastIndexOf('}');
+                var lastBracket = raw.lastIndexOf(']');
+                var endIdx = Math.max(lastBrace, lastBracket);
+
+                if (endIdx > startIdx) {
+                    candidate = raw.substring(startIdx, endIdx + 1);
+                } else {
+                    candidate = raw.substring(startIdx);
                 }
-                if (openQuotes) repaired += '"';
-                while (stack.length > 0) {
-                    var top = stack.pop();
-                    repaired += (top === '{' ? '}' : ']');
-                }
-                try { return JSON.parse(repaired); } catch (e3) {}
+
+                try {
+                    return JSON.parse(candidate);
+                } catch (e4) {}
             }
+
+            // 4. Sanitize unescaped control characters ONLY inside string literals
+            function fixStringControlChars(str) {
+                return str.replace(/"(?:[^"\\]|\\.)*"/g, function(m) {
+                    return m.replace(/[\r\n\t]/g, function(c) {
+                        if (c === '\r') return '';
+                        if (c === '\n') return '\\n';
+                        if (c === '\t') return '\\t';
+                        return c;
+                    });
+                });
+            }
+
+            var sanitized = fixStringControlChars(candidate);
+            try {
+                return JSON.parse(sanitized);
+            } catch (e5) {}
+
+            var noTrailingCommas = sanitized.replace(/,\s*([}\]])/g, '$1');
+            try {
+                return JSON.parse(noTrailingCommas);
+            } catch (e6) {}
+
+            // 5. Repair unclosed brackets and quotes for truncated JSON
+            var openQuotes = false, stack = [], repaired = '';
+            for (var i = 0; i < noTrailingCommas.length; i++) {
+                var ch = noTrailingCommas[i], prevCh = i > 0 ? noTrailingCommas[i - 1] : '';
+                if (ch === '"' && prevCh !== '\\') openQuotes = !openQuotes;
+                if (!openQuotes) {
+                    if (ch === '{' || ch === '[') stack.push(ch);
+                    else if (ch === '}' || ch === ']') { if (stack.length > 0) stack.pop(); }
+                }
+                repaired += ch;
+            }
+            if (openQuotes) repaired += '"';
+            while (stack.length > 0) {
+                var top = stack.pop();
+                repaired += (top === '{' ? '}' : ']');
+            }
+            
+            repaired = repaired.replace(/,\s*([}\]])/g, '$1');
+
+            try {
+                return JSON.parse(repaired);
+            } catch (e7) {}
+
             throw new Error('GeminiのJSON応答構造を正常に解釈できませんでした');
         }
 
@@ -839,47 +891,48 @@
         }
 
         async function fetchGeminiApi(apiKey, payload) {
-            var cleanKey = String(apiKey || getApiKey() || '').trim();
+            var cleanKey = String(apiKey || getApiKey() || '').trim().replace(/^["']|["']$/g, '');
             if (!cleanKey || cleanKey.length < 10) {
+                openModal('apiKeyModal');
                 throw new Error('API Keyが正しく設定されていません。「API Key」ボタンから設定してください。');
             }
 
             if (!payload.generationConfig) payload.generationConfig = {};
             payload.generationConfig.temperature = 0.1;
-            payload.generationConfig.maxOutputTokens = 8192;
+            if (!payload.generationConfig.maxOutputTokens) {
+                payload.generationConfig.maxOutputTokens = 8192;
+            }
 
             var targetUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
 
             var response;
-            var maxAttempts = 10;
+            var maxAttempts = 5;
             for (var attempt = 1; attempt <= maxAttempts; attempt++) {
                 try {
-                    // 「AQ.」形式および「AIzaSy」形式の両キーに対応するヘッダー認証
                     response = await fetch(targetUrl, {
                         method: 'POST',
                         headers: { 
                             'Content-Type': 'application/json',
-                            'x-goog-api-key': cleanKey,
-                            'Authorization': 'Bearer ' + cleanKey
+                            'x-goog-api-key': cleanKey
                         },
                         body: JSON.stringify(payload)
                     });
 
-                    // 401エラー発生時はURLパラメータ方式もフォールバック試行
                     if (response.status === 401) {
-                        var fallbackResponse = await fetch(targetUrl + '?key=' + cleanKey, {
+                        var fallbackUrl = targetUrl + '?key=' + encodeURIComponent(cleanKey);
+                        var fallbackResponse = await fetch(fallbackUrl, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
                         });
-                        if (fallbackResponse.ok || fallbackResponse.status !== 401) {
+                        if (fallbackResponse.ok) {
                             response = fallbackResponse;
                         }
                     }
 
                     if (response.status === 429 || response.status === 503) {
                         var errText = await response.text();
-                        var waitMs = attempt * 6000;
+                        var waitMs = attempt * 5000;
                         var retryMatch = errText.match(/retry in ([0-9.]+)s/i);
                         if (retryMatch && retryMatch[1]) waitMs = Math.ceil(parseFloat(retryMatch[1]) * 1000) + 2000;
                         await sleep(waitMs);
@@ -894,13 +947,18 @@
 
             if (!response) throw new Error('Gemini APIへの通信に失敗しました');
             var responseText = await response.text();
-            var data = JSON.parse(responseText);
+            var data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (jsonErr) {
+                throw new Error('API応答の解析に失敗しました: ' + responseText.substring(0, 100));
+            }
 
             if (!response.ok || data.error) {
                 var errDetail = (data.error && data.error.message) ? data.error.message : ('HTTP Error ' + response.status);
-                if (response.status === 400 || response.status === 401) {
-                    openModal('apiKeyModal');
-                    throw new Error('API Key認証エラーです。有効なAPI Keyを再入力してください。');
+                if (response.status === 401 || (response.status === 400 && errDetail.toLowerCase().includes('key'))) {
+                    openModal('apiKeyModal', true);
+                    throw new Error('API Key認証エラー（401）です。Google AI Studioで新しいAPI Keyを作成し、再入力してください。');
                 }
                 throw new Error(translateErrorMessage(errDetail));
             }
@@ -954,23 +1012,46 @@
 '【接辞解剖】\n・Extract root word (Kata Dasar) and dissect affixes (me-, ber-, di-, -kan, -i, ke-an, etc.). Explain shift in word class/voice/causative meaning.\n' +
 '【解説・ニュアンス】\n・Explain natural spoken usage, context, particles, register, tone, and cultural nuance.\n\n' +
 '2. "vocab": From target words list: "' + wordListStr + '", select important vocabulary and return indonesian, baseForm, accurate Japanese translation, pos (noun/verb/adjective/adverb/other), context sentence, and isKeyWord (boolean).\n\n' +
-'3. Return ONLY valid JSON format with escaped newlines (\\n):\n' +
-'{\n' +
-'  "grammar": [\n' +
-'    {\n' +
-'      "blockIndex": 0,\n' +
-'      "grammarExplanation": "【語句対比】\\n・...\\n【構文構造】\\n・...\\n【接辞解剖】\\n・...\\n【解説・ニュアンス】\\n・..."\n' +
-'    }\n' +
-'  ],\n' +
-'  "vocab": [\n' +
-'    {"indonesian": "membuang", "baseForm": "buang", "japanese": "〜を捨てる", "pos": "verb", "context": "...", "isKeyWord": true}\n' +
-'  ]\n' +
-'}\n\n' +
 'INPUT BLOCKS:\n' + inputChunkText;
 
                 var chunkPayload = {
                     contents: [{ parts: [{ text: combinedPrompt }] }],
-                    generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 }
+                    generationConfig: { 
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                grammar: {
+                                    type: "ARRAY",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            blockIndex: { type: "INTEGER" },
+                                            grammarExplanation: { type: "STRING" }
+                                        },
+                                        required: ["blockIndex", "grammarExplanation"]
+                                    }
+                                },
+                                vocab: {
+                                    type: "ARRAY",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            indonesian: { type: "STRING" },
+                                            baseForm: { type: "STRING" },
+                                            japanese: { type: "STRING" },
+                                            pos: { type: "STRING" },
+                                            context: { type: "STRING" },
+                                            isKeyWord: { type: "BOOLEAN" }
+                                        },
+                                        required: ["indonesian", "japanese", "pos"]
+                                    }
+                                }
+                            },
+                            required: ["grammar", "vocab"]
+                        },
+                        maxOutputTokens: 8192 
+                    }
                 };
 
                 try {
@@ -1071,7 +1152,7 @@
                     item.status = 'error';
                     renderQueueUI();
                     showToast('エラー: ' + translateErrorMessage(err.message), 'error');
-                    if (err.message.includes('Spend Cap') || err.message.includes('prepayment')) {
+                    if (err.message.includes('Spend Cap') || err.message.includes('prepayment') || err.message.includes('401')) {
                         openModal('apiKeyModal', true);
                         break;
                     }
@@ -1114,17 +1195,32 @@
                     reader.readAsDataURL(chunkObj.blob);
                 });
 
-                var transcribePrompt = 'Transcribe this Indonesian audio accurately with Japanese translation.\nReturn ONLY valid JSON array:\n[\n  {"speaker":"Pembicara 1","indonesian":"spoken text","japanese":"Japanese translation"}\n]';
+                var transcribePrompt = 'Transcribe this Indonesian audio accurately with Japanese translation for each sentence block.';
 
                 var payload = {
                     contents: [{ role: 'user', parts: [{ text: transcribePrompt }, { inlineData: { mimeType: 'audio/wav', data: chunkBase64 } }] }],
-                    generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 }
+                    generationConfig: { 
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "ARRAY",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    speaker: { type: "STRING" },
+                                    indonesian: { type: "STRING" },
+                                    japanese: { type: "STRING" }
+                                },
+                                required: ["speaker", "indonesian", "japanese"]
+                            }
+                        },
+                        maxOutputTokens: 8192 
+                    }
                 };
 
                 var resData = await fetchGeminiApi(apiKey, payload);
                 var rawText = extractGeminiText(resData);
                 var parsed = safeParseTruncatedJson(rawText);
-                var subBlocks = Array.isArray(parsed) ? parsed : (parsed.transcript || []);
+                var subBlocks = Array.isArray(parsed) ? parsed : (parsed.transcript || parsed.blocks || parsed.items || parsed.data || []);
 
                 subBlocks.forEach(function(sb) {
                     allCombinedBlocks.push({
@@ -1325,7 +1421,7 @@
 
         function saveApiKeyFromModal() {
             var input = document.getElementById('apiKeyInput');
-            var clean = String(input ? input.value : '').trim();
+            var clean = String(input ? input.value : '').trim().replace(/^["']|["']$/g, '');
             if (clean && clean.length > 5) {
                 localStorage.setItem('suarateks_gemini_key', clean);
                 showToast('API Keyを保存しました！', 'info');
