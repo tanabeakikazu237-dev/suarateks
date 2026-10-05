@@ -56,7 +56,7 @@
         <h1 class="font-extrabold text-xs sm:text-sm flex items-center gap-1.5 shrink-0 truncate">
             <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block shrink-0"></span>
             <span class="truncate">SuaraTeks<span class="text-red-600">ID</span> Pro</span>
-            <span class="text-[9px] text-slate-400 font-normal shrink-0">v5.6 (Stable Auth)</span>
+            <span class="text-[9px] text-slate-400 font-normal shrink-0">v6.0 (Gemini 3.8 Flash TTS Locked)</span>
             <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1 py-0.5 rounded font-bold shrink-0"><i class="fa-solid fa-wifi-slash"></i> オフライン</span>
         </h1>
         <div class="flex items-center gap-1.5 shrink-0 min-w-0">
@@ -105,6 +105,14 @@
                         <input type="range" id="speechRateSlider" min="0.6" max="1.3" step="0.05" value="0.85" oninput="setSpeechRate(this.value)" class="w-full accent-red-600 cursor-pointer h-1.5 rounded-lg bg-slate-200 dark:bg-slate-700">
                         <span class="text-[9px] text-slate-400 font-bold">1.3</span>
                     </div>
+                </div>
+
+                <div class="space-y-1 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
+                    <div class="flex items-center justify-between text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                        <span><i class="fa-solid fa-microphone-lines text-red-600 mr-1"></i>音声エンジン</span>
+                        <span class="text-emerald-600 font-extrabold">Gemini TTS (Puck固定)</span>
+                    </div>
+                    <p class="text-[9px] text-slate-400 leading-tight">文節・単語ともにメモリキャッシュ付き高音質固定モデル</p>
                 </div>
             </div>
 
@@ -270,7 +278,7 @@
                                     <p class="text-[10px] text-slate-400">タップして裏面を表示</p>
                                 </div>
                                 <div class="text-right shrink-0">
-                                    <button onclick="event.stopPropagation(); speakIndonesian(document.getElementById('cardIndoText').innerText)" class="p-1.5 text-slate-400 hover:text-emerald-500">
+                                    <button onclick="event.stopPropagation(); speakWordGeminiTTS(document.getElementById('cardIndoText').innerText)" class="p-1.5 text-slate-400 hover:text-emerald-500" title="単語音声をGemini TTSで再生">
                                         <i class="fa-solid fa-volume-high text-sm"></i>
                                     </button>
                                 </div>
@@ -283,7 +291,7 @@
                                     <p id="cardContextFull" class="text-[11px] text-slate-600 dark:text-slate-400 italic line-clamp-2">---</p>
                                 </div>
                                 <div class="text-right shrink-0">
-                                    <button onclick="event.stopPropagation(); speakIndonesian(document.getElementById('cardIndoText').innerText)" class="p-1.5 text-slate-400 hover:text-emerald-500">
+                                    <button onclick="event.stopPropagation(); speakWordGeminiTTS(document.getElementById('cardIndoText').innerText)" class="p-1.5 text-slate-400 hover:text-emerald-500" title="単語音声をGemini TTSで再生">
                                         <i class="fa-solid fa-volume-high text-sm"></i>
                                     </button>
                                 </div>
@@ -326,9 +334,9 @@
         const STORE_NAME = 'sessions';
 
         const INDO_STOP_WORDS = new Set([
-            'a','di','ke','dan','yang','ini','itu','ada','dari','pada','atau','untuk','akan','bisa','sudah',
+            'a','di','ke','dan','yang','ini','itu','ada','dari','pada','atau','untuk','agar','bisa','sudah',
             'saya','anda','mereka','kita','kami','dia','ia','ya','tidak','bukan','pula','lagi','juga','saja',
-            'dengan','oleh','maka','kalau','sebab','karena','agar','bahwa','saat','ketika','ada','adalah'
+            'dengan','oleh','maka','kalau','sebab','karena','bahwa','saat','ketika','ada','adalah'
         ]);
 
         function openIndexedDB() {
@@ -448,23 +456,6 @@
             }
         }
 
-        window.availableIndoVoices = [];
-        function initSpeechSynthesisVoices() {
-            if (!('speechSynthesis' in window)) return;
-            var voices = window.speechSynthesis.getVoices();
-            if (voices && voices.length > 0) {
-                window.availableIndoVoices = voices.filter(function(v) {
-                    var lang = (v.lang || '').toLowerCase();
-                    return lang.startsWith('id') || lang.includes('id-id') || lang.includes('indonesian');
-                });
-            }
-        }
-
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.onvoiceschanged = initSpeechSynthesisVoices;
-            initSpeechSynthesisVoices();
-        }
-
         async function splitAudioFileIntoWavChunks(file, maxDurationSeconds = 180) {
             try {
                 var arrayBuffer = await file.arrayBuffer();
@@ -578,7 +569,11 @@
         window.selectedHistoryIds = [];
         window.speechRate = 0.85;
 
-        window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
+        // In-memory caches for TTS audio blobs (Strict Puck Voice)
+        window.ttsSentenceCache = new Map();
+        window.ttsWordCache = new Map();
+
+        window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
 
         var sleep = function(ms) { return new Promise(function(resolve) { setTimeout(resolve, ms); }); };
 
@@ -591,7 +586,7 @@
                 return 'API利用上限（Quota）に達しました。時間をおいて再実行してください。';
             }
             if (str.includes('invalid authentication credentials') || str.includes('api_key_invalid') || str.includes('unauthorized') || str.includes('401')) {
-                return 'API Key認証エラー（401）です。正しいGoogle AI Studioキーを入力してください。';
+                return 'API Key認証エラー（401）です。有効なGoogle AI Studioキーを設定してください。';
             }
             if (str.includes('network') || str.includes('failed to fetch')) {
                 return 'ネットワーク接続が不安定です。通信状況をご確認ください。';
@@ -613,6 +608,9 @@
             if (display) display.textContent = window.speechRate.toFixed(2) + 'x';
             var slider = document.getElementById('speechRateSlider');
             if (slider) slider.value = window.speechRate;
+            if (window.activeSpeechState.audioEl) {
+                window.activeSpeechState.audioEl.playbackRate = window.speechRate;
+            }
         }
 
         function setFontSize(val) {
@@ -731,6 +729,8 @@
             window.isCardFlipped = false;
             window.isShuffled = false;
             window.shuffledVocabList = [];
+            window.ttsSentenceCache.clear();
+            window.ttsWordCache.clear();
             
             var searchInput = document.getElementById('vocabSearchInput');
             if (searchInput) searchInput.value = '';
@@ -826,91 +826,59 @@
             }, false);
         }
 
-        async function fetchGeminiApi(apiKey, payload) {
+        async function fetchGeminiApi(apiKey, payload, isTtsRequest) {
             var cleanKey = String(apiKey || getApiKey() || '').trim().replace(/^["']|["']$/g, '');
             if (!cleanKey || cleanKey.length < 10) {
                 openModal('apiKeyModal');
                 throw new Error('API Keyが正しく設定されていません。');
             }
 
-            if (!payload.generationConfig) payload.generationConfig = {};
-            payload.generationConfig.temperature = 0.1;
-            if (!payload.generationConfig.maxOutputTokens) {
-                payload.generationConfig.maxOutputTokens = 8192;
+            var modelName = isTtsRequest ? 'gemini-2.5-flash-preview-tts' : 'gemini-2.5-flash';
+            var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent?key=' + encodeURIComponent(cleanKey);
+
+            if (!payload.generationConfig && !isTtsRequest) {
+                payload.generationConfig = { temperature: 0.1, maxOutputTokens: 8192 };
             }
 
-            // Google AI Studio公式推奨エンドポイントとモデル配列（堅牢なフォールバック）
-            var models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-3-flash-preview'];
             var response = null;
-            var lastErrorText = '';
+            var maxAttempts = 3;
+            for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+                try {
+                    response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
 
-            for (var mIdx = 0; mIdx < models.length; mIdx++) {
-                var modelName = models[mIdx];
-                var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent?key=' + encodeURIComponent(cleanKey);
-
-                var maxAttempts = 3;
-                for (var attempt = 1; attempt <= maxAttempts; attempt++) {
-                    try {
-                        response = await fetch(url, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-
-                        if (response.status === 429 || response.status === 503) {
-                            var waitMs = attempt * 3000;
-                            await sleep(waitMs);
-                            continue;
-                        }
-                        break;
-                    } catch (netErr) {
-                        lastErrorText = netErr.message;
-                        if (attempt === maxAttempts) break;
-                        await sleep(2000);
+                    if (response.status === 429 || response.status === 503) {
+                        await sleep(attempt * 3000);
+                        continue;
                     }
-                }
-
-                if (response && response.ok) {
                     break;
-                } else if (response) {
-                    lastErrorText = await response.text();
-                    if (response.status === 401 || response.status === 403) {
-                        // 401の場合はキー自体の不備のため即座に終了してモーダルを表示
-                        break;
-                    }
+                } catch (netErr) {
+                    if (attempt === maxAttempts) break;
+                    await sleep(2000);
                 }
             }
 
             if (!response || !response.ok) {
-                var errDetail = lastErrorText;
+                var errDetail = response ? await response.text() : 'Network Error';
                 try {
-                    var parsed = JSON.parse(lastErrorText);
+                    var parsed = JSON.parse(errDetail);
                     if (parsed.error && parsed.error.message) errDetail = parsed.error.message;
                 } catch (e) {}
 
                 if (!response || response.status === 401 || response.status === 403 || (errDetail && errDetail.toLowerCase().includes('key'))) {
                     openModal('apiKeyModal', true);
-                    throw new Error('API Key認証エラー（401）です。Google AI Studioの有効なAPI Keyを設定してください。');
+                    throw new Error('API Key認証エラー（401）です。有効なAPI Keyを設定してください。');
                 }
                 throw new Error(translateErrorMessage(errDetail));
             }
 
-            var responseText = await response.text();
-            var data;
-            try {
-                data = JSON.parse(responseText);
-            } catch (jsonErr) {
-                throw new Error('API応答のJSON解析に失敗しました');
-            }
-
+            var data = await response.json();
             if (data.error) {
-                var msg = data.error.message || 'API Error';
-                if (msg.toLowerCase().includes('key') || data.error.code === 401 || data.error.code === 403) {
-                    openModal('apiKeyModal', true);
-                }
-                throw new Error(translateErrorMessage(msg));
+                throw new Error(translateErrorMessage(data.error.message));
             }
-
             return data;
         }
 
@@ -918,6 +886,54 @@
             var parts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) ? data.candidates[0].content.parts : null;
             if (!Array.isArray(parts)) throw new Error('応答にテキストデータが含まれていません');
             return parts.map(function(p) { return p.text || ''; }).join('').trim();
+        }
+
+        function base64ToArrayBuffer(base64) {
+            var binaryString = atob(base64);
+            var len = binaryString.length;
+            var bytes = new Uint8Array(len);
+            for (var i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function pcmToWav(pcm16, sampleRate) {
+            var numChannels = 1;
+            var byteRate = sampleRate * numChannels * 2;
+            var blockAlign = numChannels * 2;
+            var dataSize = pcm16.length * 2;
+            var chunkSize = 36 + dataSize;
+
+            var buffer = new ArrayBuffer(44 + dataSize);
+            var view = new DataView(buffer);
+
+            function writeString(view, offset, string) {
+                for (var i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            }
+
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, chunkSize, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, 16, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, dataSize, true);
+
+            var offset = 44;
+            for (var i = 0; i < pcm16.length; i++, offset += 2) {
+                view.setInt16(offset, pcm16[i], true);
+            }
+
+            return new Blob([buffer], { type: 'audio/wav' });
         }
 
         async function reanalyzeBlocksCore(blocks, apiKey, fileNameLabel, onProgress) {
@@ -1004,7 +1020,7 @@
                 };
 
                 try {
-                    var chunkResponseData = await fetchGeminiApi(apiKey, chunkPayload);
+                    var chunkResponseData = await fetchGeminiApi(apiKey, chunkPayload, false);
                     var chunkRawText = extractGeminiText(chunkResponseData);
                     var chunkParsed = safeParseTruncatedJson(chunkRawText);
 
@@ -1166,7 +1182,7 @@
                     }
                 };
 
-                var resData = await fetchGeminiApi(apiKey, payload);
+                var resData = await fetchGeminiApi(apiKey, payload, false);
                 var rawText = extractGeminiText(resData);
                 var parsed = safeParseTruncatedJson(rawText);
                 var subBlocks = Array.isArray(parsed) ? parsed : (parsed.transcript || parsed.blocks || parsed.items || parsed.data || []);
@@ -1380,125 +1396,223 @@
             }
         }
 
-        function speakIndonesian(text) {
-            if (!('speechSynthesis' in window) || !text) return;
-            window.speechSynthesis.cancel();
-            
-            if (window.availableIndoVoices.length === 0) {
-                initSpeechSynthesisVoices();
-            }
-
-            var utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'id-ID';
-            utterance.rate = window.speechRate || 0.85;
-
-            if (window.availableIndoVoices.length > 0) {
-                utterance.voice = window.availableIndoVoices[0];
-            } else {
-                var voices = window.speechSynthesis.getVoices();
-                var indoVoice = voices.find(function(v) { 
-                    var lang = (v.lang || '').toLowerCase();
-                    return lang.startsWith('id') || lang.includes('id'); 
-                });
-                if (indoVoice) utterance.voice = indoVoice;
-            }
-
-            window.speechSynthesis.speak(utterance);
-        }
-
         function stopAllSpeech() {
-            if (!('speechSynthesis' in window)) return;
-            window.speechSynthesis.cancel();
-            if (window.activeSpeechState.blockId) updateBlockToggleUI(window.activeSpeechState.blockId, 'stopped');
-            window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
+            if (window.activeSpeechState.audioEl) {
+                window.activeSpeechState.audioEl.pause();
+                window.activeSpeechState.audioEl = null;
+            }
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            if (window.activeSpeechState.blockId) {
+                updateBlockToggleUI(window.activeSpeechState.blockId, 'stopped');
+            }
+            window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
         }
 
-        function speakFromWord(blockId, wordIndex) {
-            var cleanId = blockId.replace(/^[tg]-/, '');
-            var block = window.transcriptBlocks.find(function(b) { return b.id === cleanId; });
-            if (!block || !block.indonesian) return;
-            var words = block.indonesian.split(/\s+/);
-            startSpeechBlock(blockId, words.slice(wordIndex).join(' '));
+        // Strict Gemini TTS (Puck Voice - Indonesian Male Model Locked) for sentences
+        async function speakSentenceGeminiTTS(textToSpeak, blockId) {
+            var apiKey = getApiKey();
+            if (!apiKey) {
+                openModal('apiKeyModal');
+                showToast('Gemini API Keyを設定してください', 'error');
+                return;
+            }
+
+            if (blockId && window.activeSpeechState.blockId === blockId) {
+                if (window.activeSpeechState.audioEl) {
+                    if (window.activeSpeechState.audioEl.paused) {
+                        window.activeSpeechState.audioEl.play();
+                        window.activeSpeechState.isPlaying = true;
+                        updateBlockToggleUI(blockId, 'playing');
+                        return;
+                    } else {
+                        window.activeSpeechState.audioEl.pause();
+                        window.activeSpeechState.isPlaying = false;
+                        updateBlockToggleUI(blockId, 'paused');
+                        return;
+                    }
+                }
+            }
+
+            stopAllSpeech();
+
+            var audioUrl = null;
+            var cacheKey = String(textToSpeak || '').trim();
+
+            if (window.ttsSentenceCache.has(cacheKey)) {
+                audioUrl = window.ttsSentenceCache.get(cacheKey);
+            } else {
+                if (blockId) updateBlockToggleUI(blockId, 'loading');
+
+                try {
+                    var ttsPrompt = 'Voice Model Locked: Indonesian Male (Puck)\n' +
+                                    'Style Preset: Narration\n' +
+                                    'Read the Indonesian text clearly and naturally as an educational native speaker for shadowing practice.\n' +
+                                    '- Maintain standard Indonesian pronunciation (Bahasa Indonesia Baku).\n' +
+                                    '- Keep a steady, clear pace without slurring.\n' +
+                                    '- Pause slightly at commas and periods to allow proper breathing space.\n\n' +
+                                    'Text to read: ' + textToSpeak;
+
+                    var ttsPayload = {
+                        contents: [{ parts: [{ text: ttsPrompt }] }],
+                        generationConfig: {
+                            responseModalities: ["AUDIO"],
+                            speechConfig: {
+                                voiceConfig: {
+                                    prebuiltVoiceConfig: { voiceName: "Puck" }
+                                }
+                            }
+                        }
+                    };
+
+                    var resData = await fetchGeminiApi(apiKey, ttsPayload, true);
+                    var part = resData.candidates && resData.candidates[0] && resData.candidates[0].content && resData.candidates[0].content.parts && resData.candidates[0].content.parts[0];
+                    var audioInline = part && part.inlineData;
+
+                    if (!audioInline || !audioInline.data) {
+                        throw new Error('Gemini TTS音声データの生成に失敗しました');
+                    }
+
+                    var mimeType = audioInline.mimeType || 'audio/L16;rate=24000';
+                    var rateMatch = mimeType.match(/rate=(\d+)/);
+                    var sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+
+                    var pcmBuffer = base64ToArrayBuffer(audioInline.data);
+                    var pcm16 = new Int16Array(pcmBuffer);
+                    var wavBlob = pcmToWav(pcm16, sampleRate);
+                    audioUrl = URL.createObjectURL(wavBlob);
+
+                    window.ttsSentenceCache.set(cacheKey, audioUrl);
+                } catch (ttsErr) {
+                    console.warn('Gemini TTS sentence error:', ttsErr);
+                    if (blockId) updateBlockToggleUI(blockId, 'stopped');
+                    showToast('音声生成エラー: ' + translateErrorMessage(ttsErr.message), 'error');
+                    return;
+                }
+            }
+
+            if (!audioUrl) return;
+
+            var audio = new Audio(audioUrl);
+            audio.playbackRate = window.speechRate || 0.85;
+
+            if (blockId) {
+                window.activeSpeechState = { blockId: blockId, audioEl: audio, isPlaying: true };
+                updateBlockToggleUI(blockId, 'playing');
+            }
+
+            audio.onended = function() {
+                if (blockId) updateBlockToggleUI(blockId, 'stopped');
+                window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
+            };
+
+            audio.onerror = function() {
+                if (blockId) updateBlockToggleUI(blockId, 'stopped');
+                showToast('音声の再生中にエラーが発生しました', 'error');
+            };
+
+            await audio.play();
+        }
+
+        // Strict Gemini TTS (Puck Voice - Indonesian Male Model Locked) for individual words
+        async function speakWordGeminiTTS(wordText) {
+            var cleanWord = String(wordText || '').trim();
+            if (!cleanWord) return;
+
+            var apiKey = getApiKey();
+            if (!apiKey) {
+                openModal('apiKeyModal');
+                showToast('Gemini API Keyを設定してください', 'error');
+                return;
+            }
+
+            stopAllSpeech();
+
+            var audioUrl = null;
+            var cacheKey = cleanWord.toLowerCase();
+
+            if (window.ttsWordCache.has(cacheKey)) {
+                audioUrl = window.ttsWordCache.get(cacheKey);
+            } else {
+                try {
+                    var wordPrompt = 'Voice Model Locked: Indonesian Male (Puck)\n' +
+                                     'Read this single Indonesian word clearly, neutrally, and distinctly at a steady pace with correct phonetics: ' + cleanWord;
+
+                    var wordPayload = {
+                        contents: [{ parts: [{ text: wordPrompt }] }],
+                        generationConfig: {
+                            responseModalities: ["AUDIO"],
+                            speechConfig: {
+                                voiceConfig: {
+                                    prebuiltVoiceConfig: { voiceName: "Puck" }
+                                }
+                            }
+                        }
+                    };
+
+                    var resData = await fetchGeminiApi(apiKey, wordPayload, true);
+                    var part = resData.candidates && resData.candidates[0] && resData.candidates[0].content && resData.candidates[0].content.parts && resData.candidates[0].content.parts[0];
+                    var audioInline = part && part.inlineData;
+
+                    if (!audioInline || !audioInline.data) {
+                        throw new Error('単語TTS音声の生成に失敗しました');
+                    }
+
+                    var mimeType = audioInline.mimeType || 'audio/L16;rate=24000';
+                    var rateMatch = mimeType.match(/rate=(\d+)/);
+                    var sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+
+                    var pcmBuffer = base64ToArrayBuffer(audioInline.data);
+                    var pcm16 = new Int16Array(pcmBuffer);
+                    var wavBlob = pcmToWav(pcm16, sampleRate);
+                    audioUrl = URL.createObjectURL(wavBlob);
+
+                    window.ttsWordCache.set(cacheKey, audioUrl);
+                } catch (wordErr) {
+                    console.warn('Gemini word TTS error:', wordErr);
+                    showToast('単語音声生成エラー: ' + translateErrorMessage(wordErr.message), 'error');
+                    return;
+                }
+            }
+
+            if (!audioUrl) return;
+
+            var audio = new Audio(audioUrl);
+            audio.playbackRate = window.speechRate || 0.85;
+            window.activeSpeechState = { blockId: null, audioEl: audio, isPlaying: true };
+
+            audio.onended = function() {
+                window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
+            };
+            audio.onerror = function() {
+                window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
+            };
+
+            await audio.play();
         }
 
         function toggleSpeechBlock(blockId) {
-            if (!('speechSynthesis' in window)) return;
-            if (window.activeSpeechState.blockId === blockId) {
-                if (window.speechSynthesis.paused || window.activeSpeechState.isPaused) {
-                    window.speechSynthesis.resume();
-                    window.activeSpeechState.isPaused = false;
-                    window.activeSpeechState.isPlaying = true;
-                    updateBlockToggleUI(blockId, 'playing');
-                } else if (window.speechSynthesis.speaking) {
-                    window.speechSynthesis.pause();
-                    window.activeSpeechState.isPaused = true;
-                    window.activeSpeechState.isPlaying = false;
-                    updateBlockToggleUI(blockId, 'paused');
-                } else {
-                    startSpeechBlock(blockId);
-                }
-            } else {
-                startSpeechBlock(blockId);
-            }
-        }
-
-        function startSpeechBlock(blockId, customText) {
-            if (!('speechSynthesis' in window)) return;
-            stopAllSpeech();
             var cleanId = blockId.replace(/^[tg]-/, '');
             var block = window.transcriptBlocks.find(function(b) { return b.id === cleanId; });
             if (!block) return;
-
-            var textToSpeak = customText || block.indonesian;
-            
-            if (window.availableIndoVoices.length === 0) {
-                initSpeechSynthesisVoices();
-            }
-
-            var utterance = new SpeechSynthesisUtterance(textToSpeak);
-            utterance.lang = 'id-ID';
-            utterance.rate = window.speechRate || 0.85;
-
-            if (window.availableIndoVoices.length > 0) {
-                utterance.voice = window.availableIndoVoices[0];
-            } else {
-                var voices = window.speechSynthesis.getVoices();
-                var indoVoice = voices.find(function(v) { 
-                    var lang = (v.lang || '').toLowerCase();
-                    return lang.startsWith('id') || lang.includes('id'); 
-                });
-                if (indoVoice) utterance.voice = indoVoice;
-            }
-
-            utterance.onstart = function() {
-                window.activeSpeechState = { blockId: blockId, utterance: utterance, isPlaying: true, isPaused: false };
-                updateBlockToggleUI(blockId, 'playing');
-            };
-            utterance.onpause = function() {
-                window.activeSpeechState.isPaused = true;
-                window.activeSpeechState.isPlaying = false;
-                updateBlockToggleUI(blockId, 'paused');
-            };
-            utterance.onend = function() {
-                updateBlockToggleUI(blockId, 'stopped');
-                window.activeSpeechState = { blockId: null, utterance: null, isPlaying: false, isPaused: false };
-            };
-            window.speechSynthesis.speak(utterance);
+            speakSentenceGeminiTTS(block.indonesian, blockId);
         }
 
         function updateBlockToggleUI(blockId, state) {
             var btn = document.getElementById('btn-toggle-' + blockId);
             if (!btn) return;
-            if (state === 'playing') btn.innerHTML = '<i class="fa-solid fa-pause text-red-500"></i><span>一時停止</span>';
+            if (state === 'loading') btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i><span>生成中</span>';
+            else if (state === 'playing') btn.innerHTML = '<i class="fa-solid fa-pause text-red-500"></i><span>一時停止</span>';
             else if (state === 'paused') btn.innerHTML = '<i class="fa-solid fa-play text-amber-500"></i><span>再開</span>';
-            else btn.innerHTML = '<i class="fa-solid fa-play"></i><span>再生</span>';
+            else btn.innerHTML = '<i class="fa-solid fa-play"></i><span>ナレーション再生</span>';
         }
 
         function renderClickableIndonesianWords(text, blockId) {
             if (!text) return '';
             var words = text.split(/\s+/);
             return words.map(function(w, idx) {
-                return '<span class="word-clickable" onclick="speakFromWord(\'' + blockId + '\', ' + idx + ')" title="ここから再生">' + escapeHtml(w) + '</span>';
+                return '<span class="word-clickable" onclick="speakWordGeminiTTS(\'' + escapeHtml(w) + '\')" title="単語音声をGemini TTSで再生">' + escapeHtml(w) + '</span>';
             }).join(' ');
         }
 
@@ -1521,7 +1635,7 @@
                             '<span class="font-bold text-red-600 bg-red-50 dark:bg-red-950/60 px-2 py-0.5 rounded-full text-[10px]">' + escapeHtml(block.speaker) + '</span>' +
                         '</div>' +
                         '<button id="btn-toggle-t-' + block.id + '" onclick="toggleSpeechBlock(\'t-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1 hover:bg-slate-200">' +
-                            '<i class="fa-solid fa-play text-[10px]"></i><span>再生</span>' +
+                            '<i class="fa-solid fa-play text-[10px]"></i><span>ナレーション再生</span>' +
                         '</button>' +
                     '</div>' +
                     '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + clickableIndo + '</p>' +
@@ -1624,7 +1738,7 @@
                                 '<span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0">' + getPosLabel(v.pos) + '</span>' +
                                 keyTag +
                                 '<h4 class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100 truncate">' + hIndo + '</h4>' +
-                                '<button onclick="speakIndonesian(\'' + escapeHtml(v.indonesian) + '\')" class="text-slate-400 hover:text-emerald-500 p-1 shrink-0"><i class="fa-solid fa-volume-high text-xs"></i></button>' +
+                                '<button onclick="speakWordGeminiTTS(\'' + escapeHtml(v.indonesian) + '\')" class="text-slate-400 hover:text-emerald-500 p-1 shrink-0" title="単語音声をGemini TTSで再生"><i class="fa-solid fa-volume-high text-xs"></i></button>' +
                             '</div>' +
                             '<p class="dynamic-text-ja text-emerald-700 dark:text-emerald-400 font-bold">' + hJap + '</p>' +
                         '</div>' +
@@ -1890,6 +2004,8 @@
             window.currentLoadedFileName = mergedTitle;
             window.transcriptBlocks = mergedBlocks;
             window.vocabList = Array.from(mergedVocabMap.values());
+            window.ttsSentenceCache.clear();
+            window.ttsWordCache.clear();
             updateActiveSessionBadge();
             renderTranscriptContainer();
             renderGrammarContainer();
@@ -1926,6 +2042,8 @@
                 window.currentLoadedFileName = found.fileName || '';
                 window.transcriptBlocks = found.blocks || [];
                 window.vocabList = found.vocab || [];
+                window.ttsSentenceCache.clear();
+                window.ttsWordCache.clear();
                 updateActiveSessionBadge();
                 renderTranscriptContainer();
                 renderGrammarContainer();
@@ -1997,6 +2115,8 @@
                 window.currentLoadedFileName = lastLoadedData.fileName;
                 window.transcriptBlocks = lastLoadedData.blocks;
                 window.vocabList = lastLoadedData.vocab;
+                window.ttsSentenceCache.clear();
+                window.ttsWordCache.clear();
                 updateActiveSessionBadge();
                 renderTranscriptContainer();
                 renderGrammarContainer();
@@ -2091,9 +2211,6 @@
             setSpeechRate(0.85);
             loadHistoryFromStorage();
             initDropzoneEvents();
-            if ('speechSynthesis' in window) {
-                initSpeechSynthesisVoices();
-            }
         });
     </script>
 </body>
