@@ -56,7 +56,7 @@
         <h1 class="font-extrabold text-xs sm:text-sm flex items-center gap-1.5 shrink-0 truncate">
             <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block shrink-0"></span>
             <span class="truncate">SuaraTeks<span class="text-red-600">ID</span> Pro</span>
-            <span class="text-[9px] text-slate-400 font-normal shrink-0">v6.2 (Whisper Re-Chunking Stable)</span>
+            <span class="text-[9px] text-slate-400 font-normal shrink-0">v6.4 (Downloads Export Integration)</span>
             <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1 py-0.5 rounded font-bold shrink-0"><i class="fa-solid fa-wifi-slash"></i> オフライン</span>
         </h1>
         <div class="flex items-center gap-1.5 shrink-0 min-w-0">
@@ -112,14 +112,14 @@
                         <span><i class="fa-solid fa-microphone-lines text-red-600 mr-1"></i>音声エンジン</span>
                         <span class="text-emerald-600 font-extrabold">Gemini TTS (Puck固定)</span>
                     </div>
-                    <p class="text-[9px] text-slate-400 leading-tight">Whisper生データ整形 ＆ 安定版Puck読み上げ</p>
+                    <p class="text-[9px] text-slate-400 leading-tight">Whisper生データ再チャンク ＆ 安定版Puck読み上げ</p>
                 </div>
             </div>
 
             <!-- Audio or Whisper Raw Data Selection -->
             <div id="playerCard" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
                 <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音源またはWhisper入力</span>
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音声またはWhisper入力</span>
                     <span class="text-[9px] text-emerald-600 font-bold"><i class="fa-solid fa-shield-halved"></i> 安定認証・自動チャンク</span>
                 </h3>
                 
@@ -144,10 +144,15 @@
                     </div>
                 </label>
 
-                <button id="startTranscribeBtn" onclick="window.processQueueOrWhisper()" class="w-full py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition flex items-center justify-center gap-1.5">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    <span id="transcribeBtnText">意味チャンク整形 ＆ 精密解剖スタート</span>
-                </button>
+                <div class="flex gap-1.5">
+                    <button id="startTranscribeBtn" onclick="window.processQueueOrWhisper()" class="flex-1 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span id="transcribeBtnText">意味チャンク整形スタート</span>
+                    </button>
+                    <button onclick="downloadCurrentSessionJson()" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow transition flex items-center gap-1 shrink-0" title="現在の解析データをダウンロードフォルダに保存">
+                        <i class="fa-solid fa-download"></i> 保存
+                    </button>
+                </div>
             </div>
 
             <!-- Progress Bar -->
@@ -833,7 +838,6 @@
                 throw new Error('API Keyが正しく設定されていません。');
             }
 
-            // Stable model fallback sequence
             var models = isTtsRequest ? ['gemini-2.5-flash-preview-tts'] : ['gemini-2.5-flash', 'gemini-1.5-flash'];
             var lastErr = null;
 
@@ -1158,7 +1162,6 @@
             });
 
             if (generatedBlocks.length === 0) {
-                // Fallback split by punctuation if AI didn't return structured array
                 var sentences = rawTextString.split(/(?<=[.?!;])\s+|\n+/).filter(Boolean);
                 sentences.forEach(function(s, idx) {
                     generatedBlocks.push({
@@ -1212,9 +1215,8 @@
                     var fileNameLower = file.name.toLowerCase();
                     var cleanFileName = formatOutputFileName(file.name);
 
-                    if (fileNameLower.endsWith('.txt') || fileNameLower.endsWith('.srt')) {
-                        // Whisper Raw Text Re-chunking workflow
-                        var rawTextContent = await new Promise(function(resolve, reject) {
+                    if (fileNameLower.endsWith('.txt') || fileNameLower.endsWith('.srt') || fileNameLower.endsWith('.json')) {
+                        var fileContent = await new Promise(function(resolve, reject) {
                             var reader = new FileReader();
                             reader.onload = function(e) { resolve(e.target.result); };
                             reader.onerror = reject;
@@ -1225,11 +1227,31 @@
                         var progressPercent = document.getElementById('chunkProgressPercent');
                         var progressBar = document.getElementById('chunkProgressBar');
 
+                        if (fileNameLower.endsWith('.json')) {
+                            try {
+                                var parsedJson = JSON.parse(fileContent);
+                                var loadedObj = Array.isArray(parsedJson) ? parsedJson[0] : parsedJson;
+                                if (loadedObj && loadedObj.blocks) {
+                                    window.transcriptBlocks = loadedObj.blocks;
+                                    window.vocabList = loadedObj.vocab || [];
+                                    window.currentLoadedFileName = formatOutputFileName(loadedObj.fileName || file.name);
+                                    updateActiveSessionBadge();
+                                    renderTranscriptContainer();
+                                    renderGrammarContainer();
+                                    renderVocabContainer();
+                                    await saveCurrentToHistory(window.currentLoadedFileName, false);
+                                    item.status = 'completed';
+                                    renderQueueUI();
+                                    continue;
+                                }
+                            } catch (eJSON) {}
+                        }
+
                         if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-puzzle-piece text-amber-500"></i> <span>Whisper生データを意味のまとまりに再チャンク中...</span>';
                         if (progressBar) progressBar.style.width = '30%';
                         if (progressPercent) progressPercent.textContent = '30%';
 
-                        var initialBlocks = await rechunkWhisperRawText(rawTextContent, apiKey, cleanFileName, function(c, t, p, l) {
+                        var initialBlocks = await rechunkWhisperRawText(fileContent, apiKey, cleanFileName, function(c, t, p, l) {
                             if (progressBar) progressBar.style.width = p + '%';
                             if (progressPercent) progressPercent.textContent = p + '%';
                         });
@@ -1261,19 +1283,11 @@
                         renderVocabContainer();
 
                         await saveCurrentToHistory(cleanFileName, false);
-                        var singleDataObj = {
-                            id: window.currentLoadedSessionId,
-                            fileName: cleanFileName,
-                            date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                            timestamp: Date.now(),
-                            blocks: window.transcriptBlocks,
-                            vocab: window.vocabList
-                        };
-                        exportDataToFile(singleDataObj, cleanFileName + '.json');
+                        downloadCurrentSessionJson(); // Automatically trigger downloads folder save
 
                     } else {
-                        // Audio file long audio chunking workflow
                         await processSingleFileWithLongAudioChunking(item, apiKey, i + 1, window.fileQueue.length);
+                        downloadCurrentSessionJson(); // Automatically trigger downloads folder save
                     }
 
                     item.status = 'completed';
@@ -1293,8 +1307,8 @@
 
             window.isQueueProcessing = false;
             if (btn) btn.disabled = false;
-            if (btnText) btnText.textContent = "意味チャンク整形 ＆ 精密解剖スタート";
-            showToast('すべてのキューファイルの処理が完了しました', 'info');
+            if (btnText) btnText.textContent = "意味チャンク整形スタート";
+            showToast('すべてのキューファイルの処理が完了し、ダウンロードに保存しました！', 'info');
             setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
         };
 
@@ -1396,15 +1410,6 @@
             renderVocabContainer();
 
             await saveCurrentToHistory(cleanFileName, false);
-            var singleDataObj = {
-                id: window.currentLoadedSessionId,
-                fileName: cleanFileName,
-                date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                timestamp: Date.now(),
-                blocks: window.transcriptBlocks,
-                vocab: window.vocabList
-            };
-            exportDataToFile(singleDataObj, cleanFileName + '.json');
         }
 
         window.reanalyzeSelectedHistories = async function() {
@@ -1524,7 +1529,8 @@
                 renderGrammarContainer();
                 renderVocabContainer();
                 await saveCurrentToHistory(targetName, false);
-                showToast('テキスト再解析が完了しました！', 'info');
+                downloadCurrentSessionJson();
+                showToast('テキスト再解析が完了し、ダウンロードに保存しました！', 'info');
             } catch (err) {
                 showToast('再解析エラー: ' + translateErrorMessage(err.message), 'error');
             } finally {
@@ -2113,7 +2119,25 @@
                 }, index * 300);
             });
 
-            showToast(selectedItems.length + ' 件の履歴を個別JSONとして保存しました！', 'info');
+            showToast(selectedItems.length + ' 件の履歴をダウンロードフォルダに保存しました！', 'info');
+        }
+
+        function downloadCurrentSessionJson() {
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
+                showToast('保存するデータがありません', 'error');
+                return;
+            }
+            var cleanName = formatOutputFileName(window.currentLoadedFileName || '解析データ');
+            var dataObj = {
+                id: window.currentLoadedSessionId || ('session-' + Date.now()),
+                fileName: cleanName,
+                date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                timestamp: Date.now(),
+                blocks: window.transcriptBlocks,
+                vocab: window.vocabList
+            };
+            exportDataToFile(dataObj, cleanName + '.json');
+            showToast('「' + cleanName + '.json」をダウンロードに保存しました！', 'info');
         }
 
         async function saveCurrentToHistory(fileName, showToastNotification) {
@@ -2189,7 +2213,7 @@
 
             exportDataToFile(mergedDataObj, mergedTitle + '.json');
             window.selectedHistoryIds = [];
-            showToast('選択した履歴を結合しました！', 'info');
+            showToast('選択した履歴を結合し、ダウンロードに保存しました！', 'info');
         }
 
         async function clearHistory() {
@@ -2234,7 +2258,9 @@
             var a = document.createElement('a');
             a.href = url;
             a.download = customFilename || 'suarateks_backup.json';
+            document.body.appendChild(a);
             a.click();
+            document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
 
@@ -2349,7 +2375,7 @@
             var btnVocab = document.getElementById('navTabVocab');
 
             if (viewTranscript) viewTranscript.classList.add('hidden');
-            if (viewGrammar) viewGrammar.classList.add('hidden');
+            if (viewGrammar) viewTranscript.classList.add('hidden');
             if (viewVocab) { viewVocab.classList.add('hidden'); viewVocab.classList.remove('flex'); }
 
             [btnTranscript, btnGrammar, btnVocab].forEach(function(btn) {
