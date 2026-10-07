@@ -1156,18 +1156,6 @@
                     return '[BLOCK_ID:' + b.blockIndex + '] ' + b.indonesian + '\n(JP: ' + b.japanese + ')';
                 }).join('\n\n');
 
-                var chunkWords = new Set();
-                chunkBlocks.forEach(function(b) {
-                    var words = (b.indonesian || '').toLowerCase().match(/[a-zA-Z-']+/g) || [];
-                    words.forEach(function(w) { 
-                        if (w.length >= 2 && !INDO_STOP_WORDS.has(w)) {
-                            chunkWords.add(w); 
-                        }
-                    });
-                });
-
-                var wordListStr = Array.from(chunkWords).join(', ');
-
                 var combinedPrompt = 'You are a master Indonesian linguist and language instructor for Japanese native speakers.\n' +
 'Analyze EVERY single given Indonesian text block with utmost precision and depth. NEVER omit, skip, or summarize any part.\n\n' +
 'REQUIREMENTS:\n' +
@@ -1176,7 +1164,7 @@
 '【構文構造】\n・Detailed SVO structure and modifier relationships.\n' +
 '【接辞解剖】\n・Extract root word (Kata Dasar) and dissect affixes (me-, ber-, di-, -kan, -i, etc.).\n' +
 '【解説・ニュアンス】\n・Explain natural spoken usage and cultural nuance.\n\n' +
-'2. "vocab": From target words list: "' + wordListStr + '", select important vocabulary and return indonesian, baseForm, Japanese translation, pos (noun/verb/adjective/adverb/other), context sentence, and isKeyWord (boolean).\n\n' +
+'2. "vocab": Select important vocabulary FROM THE GIVEN BLOCKS only. Return indonesian, baseForm, Japanese translation, pos (noun/verb/adjective/adverb/other), context sentence, and isKeyWord (boolean). Do not invent vocabulary that is not present in the blocks.\n\n' +
 'INPUT BLOCKS:\n' + inputChunkText;
 
                 var chunkPayload = {
