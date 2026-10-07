@@ -935,9 +935,19 @@
             writeString(view, 36, 'data');
             view.setUint32(40, dataSize, true);
 
+            // TTS末尾のクリック／プツッというノイズを防ぐため、
+            // 最後の短い区間を滑らかにゼロへフェードアウトする。
+            // 音声の長さや再生速度、TTS生成そのものは変更しない。
+            var fadeSamples = Math.min(pcm16.length, Math.floor(sampleRate * 0.06)); // 60ms
             var offset = 44;
             for (var i = 0; i < pcm16.length; i++, offset += 2) {
-                view.setInt16(offset, pcm16[i], true);
+                var sample = pcm16[i];
+                if (fadeSamples > 0 && i >= pcm16.length - fadeSamples) {
+                    var fadeIndex = i - (pcm16.length - fadeSamples);
+                    var gain = 1 - (fadeIndex + 1) / fadeSamples;
+                    sample = Math.round(sample * Math.max(0, gain));
+                }
+                view.setInt16(offset, sample, true);
             }
 
             return new Blob([buffer], { type: 'audio/wav' });
