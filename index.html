@@ -616,7 +616,7 @@
             var slider = document.getElementById('speechRateSlider');
             if (slider) slider.value = window.speechRate;
             if (window.activeSpeechState.audioEl) {
-                window.activeSpeechState.audioEl.playbackRate = window.speechRate;
+                setManagedTtsRate(window.activeSpeechState.audioEl, window.speechRate);
             }
         }
 
@@ -1598,6 +1598,94 @@
             window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
         }
 
+        async function decodeTtsAudioToBuffer(arrayBuffer, mimeType) {
+            var ctx = window.ttsAudioContext;
+            if (!ctx) {
+                ctx = new (window.AudioContext || window.webkitAudioContext)();
+                window.ttsAudioContext = ctx;
+            }
+
+            var isWav = mimeType.indexOf('audio/wav') === 0 || mimeType.indexOf('audio/x-wav') === 0 ||
+                (arrayBuffer.byteLength >= 12 &&
+                 new Uint8Array(arrayBuffer, 0, 4)[0] === 0x52 &&
+                 new Uint8Array(arrayBuffer, 0, 4)[1] === 0x49 &&
+                 new Uint8Array(arrayBuffer, 0, 4)[2] === 0x46 &&
+                 new Uint8Array(arrayBuffer, 0, 4)[3] === 0x46 &&
+                 new Uint8Array(arrayBuffer, 8, 4)[0] === 0x57 &&
+                 new Uint8Array(arrayBuffer, 8, 4)[1] === 0x41 &&
+                 new Uint8Array(arrayBuffer, 8, 4)[2] === 0x56 &&
+                 new Uint8Array(arrayBuffer, 8, 4)[3] === 0x45);
+
+            if (!isWav) {
+                var rateMatch = mimeType.match(/rate=(\d+)/);
+                var sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+                var pcm16 = new Int16Array(arrayBuffer);
+                var wavBlob = pcmToWav(pcm16, sampleRate);
+                arrayBuffer = await wavBlob.arrayBuffer();
+            }
+
+            return await ctx.decodeAudioData(arrayBuffer.slice(0));
+        }
+
+        function createManagedTtsPlayer(audioBuffer, initialRate, onEnded) {
+            var ctx = window.ttsAudioContext;
+            var player = {
+                paused: true,
+                playbackRate: initialRate || 0.85,
+                _source: null,
+                _offset: 0,
+                _startedAt: 0,
+                _ended: false,
+                play: function() {
+                    if (!this.paused) return Promise.resolve();
+                    if (ctx.state === 'suspended') ctx.resume();
+                    var source = ctx.createBufferSource();
+                    source.buffer = audioBuffer;
+                    source.playbackRate.value = this.playbackRate;
+                    source.connect(ctx.destination);
+                    var offset = Math.min(this._offset, Math.max(0, audioBuffer.duration - 0.001));
+                    this._source = source;
+                    this._startedAt = ctx.currentTime;
+                    this.paused = false;
+                    this._ended = false;
+                    source.onended = function() {
+                        if (player._source !== source) return;
+                        if (!player._ended && !player.paused) {
+                            player._offset = 0;
+                            player.paused = true;
+                            player._source = null;
+                            player._ended = true;
+                            if (onEnded) onEnded();
+                        }
+                    };
+                    source.start(0, offset);
+                    return Promise.resolve();
+                },
+                pause: function() {
+                    if (this.paused) return;
+                    var elapsed = (ctx.currentTime - this._startedAt) * this.playbackRate;
+                    this._offset = Math.min(audioBuffer.duration, this._offset + Math.max(0, elapsed));
+                    this.paused = true;
+                    this._ended = true;
+                    var source = this._source;
+                    this._source = null;
+                    if (source) {
+                        try { source.onended = null; source.stop(); } catch (e) {}
+                        try { source.disconnect(); } catch (e) {}
+                    }
+                }
+            };
+            return player;
+        }
+
+        function setManagedTtsRate(player, rate) {
+            if (!player) return;
+            var num = parseFloat(rate);
+            if (!isFinite(num)) num = 0.85;
+            player.playbackRate = num;
+            if (player._source) player._source.playbackRate.value = num;
+        }
+
         async function speakSentenceGeminiTTS(textToSpeak, blockId) {
             var apiKey = getApiKey();
             if (!apiKey) {
@@ -1607,62 +1695,43 @@
             }
 
             if (blockId && window.activeSpeechState.blockId === blockId) {
-                if (window.activeSpeechState.audioEl) {
-                    if (window.activeSpeechState.audioEl.paused) {
-                        window.activeSpeechState.audioEl.play();
+                var current = window.activeSpeechState.audioEl;
+                if (current) {
+                    if (current.paused) {
+                        await current.play();
                         window.activeSpeechState.isPlaying = true;
                         updateBlockToggleUI(blockId, 'playing');
-                        return;
                     } else {
-                        window.activeSpeechState.audioEl.pause();
+                        current.pause();
                         window.activeSpeechState.isPlaying = false;
                         updateBlockToggleUI(blockId, 'paused');
-                        return;
                     }
+                    return;
                 }
             }
 
             stopAllSpeech();
-
-            var audioUrl = null;
+            var audioBuffer = null;
             var cacheKey = String(textToSpeak || '').trim();
 
             if (window.ttsSentenceCache.has(cacheKey)) {
-                audioUrl = window.ttsSentenceCache.get(cacheKey);
+                audioBuffer = window.ttsSentenceCache.get(cacheKey);
             } else {
                 if (blockId) updateBlockToggleUI(blockId, 'loading');
-
                 try {
                     var ttsPayload = {
                         contents: [{ parts: [{ text: textToSpeak }] }],
                         generationConfig: {
                             responseModalities: ["AUDIO"],
-                            speechConfig: {
-                                voiceConfig: {
-                                    prebuiltVoiceConfig: { voiceName: "Puck" }
-                                }
-                            }
+                            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } }
                         }
                     };
-
                     var resData = await fetchGeminiApi(apiKey, ttsPayload, true);
                     var part = resData.candidates && resData.candidates[0] && resData.candidates[0].content && resData.candidates[0].content.parts && resData.candidates[0].content.parts[0];
                     var audioInline = part && part.inlineData;
-
-                    if (!audioInline || !audioInline.data) {
-                        throw new Error('Gemini TTS音声データの生成に失敗しました');
-                    }
-
-                    var mimeType = audioInline.mimeType || 'audio/L16;rate=24000';
-                    var rateMatch = mimeType.match(/rate=(\d+)/);
-                    var sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
-
-                    var pcmBuffer = base64ToArrayBuffer(audioInline.data);
-                    var pcm16 = new Int16Array(pcmBuffer);
-                    var wavBlob = pcmToWav(pcm16, sampleRate);
-                    audioUrl = URL.createObjectURL(wavBlob);
-
-                    window.ttsSentenceCache.set(cacheKey, audioUrl);
+                    if (!audioInline || !audioInline.data) throw new Error('Gemini TTS音声データの生成に失敗しました');
+                    audioBuffer = await decodeTtsAudioToBuffer(base64ToArrayBuffer(audioInline.data), String(audioInline.mimeType || '').toLowerCase());
+                    window.ttsSentenceCache.set(cacheKey, audioBuffer);
                 } catch (ttsErr) {
                     console.warn('Gemini TTS sentence error:', ttsErr);
                     if (blockId) updateBlockToggleUI(blockId, 'stopped');
@@ -1671,33 +1740,21 @@
                 }
             }
 
-            if (!audioUrl) return;
-
-            var audio = new Audio(audioUrl);
-            audio.playbackRate = window.speechRate || 0.85;
-
-            if (blockId) {
-                window.activeSpeechState = { blockId: blockId, audioEl: audio, isPlaying: true };
-                updateBlockToggleUI(blockId, 'playing');
-            }
-
-            audio.onended = function() {
+            if (!audioBuffer) return;
+            var player = createManagedTtsPlayer(audioBuffer, window.speechRate || 0.85, function() {
                 if (blockId) updateBlockToggleUI(blockId, 'stopped');
                 window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
-            };
-
-            audio.onerror = function() {
-                if (blockId) updateBlockToggleUI(blockId, 'stopped');
-                showToast('音声の再生中にエラーが発生しました', 'error');
-            };
-
-            await audio.play();
+            });
+            if (blockId) {
+                window.activeSpeechState = { blockId: blockId, audioEl: player, isPlaying: true };
+                updateBlockToggleUI(blockId, 'playing');
+            }
+            await player.play();
         }
 
         async function speakWordGeminiTTS(wordText) {
             var cleanWord = String(wordText || '').trim();
             if (!cleanWord) return;
-
             var apiKey = getApiKey();
             if (!apiKey) {
                 openModal('apiKeyModal');
@@ -1706,44 +1763,25 @@
             }
 
             stopAllSpeech();
-
-            var audioUrl = null;
+            var audioBuffer = null;
             var cacheKey = cleanWord.toLowerCase();
-
             if (window.ttsWordCache.has(cacheKey)) {
-                audioUrl = window.ttsWordCache.get(cacheKey);
+                audioBuffer = window.ttsWordCache.get(cacheKey);
             } else {
                 try {
                     var wordPayload = {
                         contents: [{ parts: [{ text: cleanWord }] }],
                         generationConfig: {
                             responseModalities: ["AUDIO"],
-                            speechConfig: {
-                                voiceConfig: {
-                                    prebuiltVoiceConfig: { voiceName: "Puck" }
-                                }
-                            }
+                            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } }
                         }
                     };
-
                     var resData = await fetchGeminiApi(apiKey, wordPayload, true);
                     var part = resData.candidates && resData.candidates[0] && resData.candidates[0].content && resData.candidates[0].content.parts && resData.candidates[0].content.parts[0];
                     var audioInline = part && part.inlineData;
-
-                    if (!audioInline || !audioInline.data) {
-                        throw new Error('単語TTS音声の生成に失敗しました');
-                    }
-
-                    var mimeType = audioInline.mimeType || 'audio/L16;rate=24000';
-                    var rateMatch = mimeType.match(/rate=(\d+)/);
-                    var sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
-
-                    var pcmBuffer = base64ToArrayBuffer(audioInline.data);
-                    var pcm16 = new Int16Array(pcmBuffer);
-                    var wavBlob = pcmToWav(pcm16, sampleRate);
-                    audioUrl = URL.createObjectURL(wavBlob);
-
-                    window.ttsWordCache.set(cacheKey, audioUrl);
+                    if (!audioInline || !audioInline.data) throw new Error('単語TTS音声の生成に失敗しました');
+                    audioBuffer = await decodeTtsAudioToBuffer(base64ToArrayBuffer(audioInline.data), String(audioInline.mimeType || '').toLowerCase());
+                    window.ttsWordCache.set(cacheKey, audioBuffer);
                 } catch (wordErr) {
                     console.warn('Gemini word TTS error:', wordErr);
                     showToast('単語音声生成エラー: ' + translateErrorMessage(wordErr.message), 'error');
@@ -1751,20 +1789,12 @@
                 }
             }
 
-            if (!audioUrl) return;
-
-            var audio = new Audio(audioUrl);
-            audio.playbackRate = window.speechRate || 0.85;
-            window.activeSpeechState = { blockId: null, audioEl: audio, isPlaying: true };
-
-            audio.onended = function() {
+            if (!audioBuffer) return;
+            var player = createManagedTtsPlayer(audioBuffer, window.speechRate || 0.85, function() {
                 window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
-            };
-            audio.onerror = function() {
-                window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
-            };
-
-            await audio.play();
+            });
+            window.activeSpeechState = { blockId: null, audioEl: player, isPlaying: true };
+            await player.play();
         }
 
         function toggleSpeechBlock(blockId) {
