@@ -1624,7 +1624,31 @@
                 arrayBuffer = await wavBlob.arrayBuffer();
             }
 
-            return await ctx.decodeAudioData(arrayBuffer.slice(0));
+            var decodedBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+
+            // Gemini TTSがWAVを返す場合も含め、再生直前の最終AudioBufferに
+            // ごく短いフェードアウトを適用して、末尾サンプルの急激な断絶による
+            // 「プツッ」というクリックノイズを防ぐ。
+            // 生成音声そのものや再生速度は変更しない。
+            var fadeDuration = 0.04; // 40ms
+            var fadeFrames = Math.min(decodedBuffer.length, Math.floor(decodedBuffer.sampleRate * fadeDuration));
+            if (fadeFrames > 1) {
+                for (var ch = 0; ch < decodedBuffer.numberOfChannels; ch++) {
+                    var channel = decodedBuffer.getChannelData(ch);
+                    var fadeStart = decodedBuffer.length - fadeFrames;
+                    for (var j = fadeStart; j < decodedBuffer.length; j++) {
+                        var t = (j - fadeStart + 1) / fadeFrames;
+                        // 線形より自然に聞こえる短いイージング
+                        var gain = 1 - t;
+                        gain = gain * gain;
+                        channel[j] *= gain;
+                    }
+                    // 最終サンプルは確実に無音にする
+                    channel[decodedBuffer.length - 1] = 0;
+                }
+            }
+
+            return decodedBuffer;
         }
 
         function createManagedTtsPlayer(audioBuffer, initialRate, onEnded) {
