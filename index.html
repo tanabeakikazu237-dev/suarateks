@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SuaraTeks ID Pro (Qwen 2.5 RAG + Gemini TTS)</title>
+    <title>SuaraTeks ID Pro v8.5</title>
 
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SuaraTeks">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎙️</text></svg>">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2991/2991148.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -26,7 +27,7 @@
 
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
+    
     <style>
         :root { --transcript-font-size: 20px; }
         .dynamic-text-indo { font-size: var(--transcript-font-size, 20px); line-height: 1.4; }
@@ -41,6 +42,7 @@
         .word-clickable:hover { color: #e70011; border-bottom-color: #e70011; background-color: rgba(231, 0, 17, 0.08); border-radius: 2px; }
         .search-highlight { background-color: #fef08a; color: #854d0e; font-weight: bold; padding: 0 2px; border-radius: 2px; }
 
+        .dropzone-active { border-color: #e70011 !important; background-color: rgba(231, 0, 17, 0.05) !important; }
         .no-wrap-tab { whitespace: nowrap !important; word-break: keep-all !important; flex-shrink: 0 !important; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -52,17 +54,14 @@
 
     <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-3 py-2 flex items-center justify-between shrink-0 gap-2 overflow-hidden">
         <h1 class="font-extrabold text-xs sm:text-sm flex items-center gap-1.5 shrink-0 truncate">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block shrink-0"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block shrink-0"></span>
             <span class="truncate">SuaraTeks<span class="text-red-600">ID</span> Pro</span>
-            <span class="text-[9px] text-slate-400 font-normal shrink-0">v8.3 (Qwen 2.5 RAG + Gemini 2.5 TTS)</span>
+            <span class="text-[9px] text-slate-400 font-normal shrink-0">v8.5 (Qwen 2.5 + Gemini 2.5 TTS)</span>
             <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1 py-0.5 rounded font-bold shrink-0"><i class="fa-solid fa-wifi-slash"></i> オフライン</span>
         </h1>
         <div class="flex items-center gap-1.5 shrink-0 min-w-0">
             <span id="activeSessionBadge" class="hidden text-[9px] bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 px-2 py-0.5 rounded-full font-extrabold border border-blue-200/50 truncate max-w-[120px] sm:max-w-[180px]"></span>
-            <button onclick="openModal('ollamaModal')" class="px-2 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-lg text-xs font-bold transition flex items-center gap-1 shrink-0 whitespace-nowrap">
-                <i class="fa-solid fa-server text-[10px]"></i> Ollama (RAG)
-            </button>
-            <button onclick="openModal('apiKeyModal')" class="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-xs font-bold transition flex items-center gap-1 shrink-0 whitespace-nowrap">
+            <button onclick="openModal('apiKeyModal')" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-xs font-bold transition flex items-center gap-1 shrink-0 whitespace-nowrap">
                 <i class="fa-solid fa-key text-[10px]"></i> Gemini TTS Key
             </button>
         </div>
@@ -98,7 +97,7 @@
 
                 <div class="space-y-1 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
                     <div class="flex items-center justify-between text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                        <span><i class="fa-solid fa-gauge-high text-slate-400 mr-1"></i>Gemini TTS 速度</span>
+                        <span><i class="fa-solid fa-gauge-high text-slate-400 mr-1"></i>音声再生速度</span>
                         <span id="speechRateDisplay" class="text-red-600 font-extrabold">0.85x</span>
                     </div>
                     <div class="flex items-center gap-1.5">
@@ -110,32 +109,69 @@
 
                 <div class="space-y-1 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
                     <div class="flex items-center justify-between text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                        <span><i class="fa-solid fa-brain text-emerald-600 mr-1"></i>解析 (RAG) / TTS</span>
-                        <span class="text-emerald-600 font-extrabold" id="engineStatusLabel">Qwen 2.5 RAG + Gemini TTS</span>
+                        <span><i class="fa-solid fa-microphone-lines text-red-600 mr-1"></i>音声エンジン</span>
+                        <span class="text-emerald-600 font-extrabold">Gemini 2.5 TTS (Puck)</span>
                     </div>
-                    <p class="text-[9px] text-slate-400 leading-tight">スラング変換 & KBBI辞書ヒントをプロンプト自動注入して Ollama で解析</p>
+                    <p class="text-[9px] text-slate-400 leading-tight">文節・単語ともにメモリキャッシュ付き高音質固定モデル</p>
+                </div>
+
+                <div class="space-y-1 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
+                    <div class="flex items-center justify-between text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                        <span><i class="fa-solid fa-book text-blue-600 mr-1"></i>RAG 辞書同期</span>
+                        <button onclick="window.fetchKamusAlay()" class="px-2 py-0.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-[9px] font-bold transition flex items-center gap-1">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> Kamus Alay取得
+                        </button>
+                    </div>
+                    <p class="text-[9px] text-slate-400 leading-tight">現在収録語数: <span id="kamusWordCount" class="font-bold">0</span>語</p>
                 </div>
             </div>
 
+            <!-- Audio Queue Selection -->
             <div id="playerCard" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
                 <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> テキスト解析 Studio</span>
-                    <span class="text-[9px] text-emerald-600 font-bold"><i class="fa-solid fa-book-atlas"></i> Kamus Alay / KBBI RAG</span>
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音源/テキスト解析</span>
+                    <span class="text-[9px] text-emerald-600 font-bold"><i class="fa-solid fa-shield-halved"></i> 全構文精密解剖</span>
                 </h3>
                 
-                <div class="border-t border-slate-100 dark:border-slate-700 pt-1">
-                    <label class="w-full py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-lg text-[10px] font-bold shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer">
-                        <i class="fa-solid fa-file-code text-blue-500 text-xs"></i> <span>Whisper JSONをRAG拡張解析</span>
+                <label id="fileDropLabel" for="audioFileInput" class="relative group cursor-pointer block">
+                    <input type="file" id="audioFileInput" accept="audio/*" multiple onchange="window.handleFileChange(event)" class="hidden">
+                    
+                    <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-red-500 rounded-lg p-2 text-center bg-slate-50 dark:bg-slate-900 transition-all duration-200 group-hover:bg-red-50/30">
+                        <div id="dropzoneDefault" class="space-y-0.5">
+                            <div class="w-6 h-6 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
+                            </div>
+                            <p class="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">音声ファイルを選択（複数可）</p>
+                        </div>
+
+                        <div id="dropzoneSelected" class="hidden space-y-1 text-left">
+                            <div class="flex items-center justify-between text-emerald-600 mb-0.5">
+                                <span class="text-[9px] font-extrabold"><i class="fa-solid fa-list-check"></i> キューセット完了</span>
+                                <span class="text-[8px] text-slate-400">タップで再選択</span>
+                            </div>
+                            <div id="queueListContainer" class="max-h-24 overflow-y-auto pr-1"></div>
+                        </div>
+                    </div>
+                </label>
+
+                <button id="startTranscribeBtn" onclick="window.processAudioWithGemini()" class="w-full py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span id="transcribeBtnText">全ブロック深掘り解析スタート</span>
+                </button>
+
+                <div class="border-t border-slate-100 dark:border-slate-700 pt-2 mt-2">
+                    <label class="w-full py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-lg text-[10px] font-bold shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-file-code text-blue-500 text-xs"></i> <span>Whisper JSONを意味のまとまりで再解析</span>
                         <input type="file" accept=".json" multiple onchange="window.handleWhisperJsonChange(event)" class="hidden">
                     </label>
-                    <p class="text-[8px] text-slate-400 text-center mt-1 leading-tight">全テキストに Kamus Alay/KBBI ルールを前処理マッピング → ローカルLLM (qwen2.5:3b) へ注入解析</p>
+                    <p class="text-[8px] text-slate-400 text-center mt-1 leading-tight">チャンク再構築 → 翻訳 → 文法・単語解剖 → 自動保存</p>
                 </div>
             </div>
 
-            <!-- Chunk Analysis Progress Bar -->
+            <!-- Progress Bar -->
             <div id="chunkProgressContainer" class="hidden bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-1.5 shrink-0">
                 <div class="flex justify-between text-xs font-bold">
-                    <span id="chunkProgressLabel" class="flex items-center gap-1 text-[10px] truncate max-w-[80%]">Ollama RAG 解析中...</span>
+                    <span id="chunkProgressLabel" class="flex items-center gap-1 text-[10px] truncate max-w-[80%]">解析実行中...</span>
                     <span id="chunkProgressPercent" class="text-red-600 text-[10px]">0%</span>
                 </div>
                 <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
@@ -143,28 +179,7 @@
                 </div>
             </div>
 
-            <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
-                <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-book-bookmark text-emerald-600"></i> RAG 辞書・Kamus Alay</span>
-                    <span id="dictCountBadge" class="text-[9px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 px-1.5 py-0.5 rounded font-extrabold">組み込み済 (完全自己完結)</span>
-                </h3>
-                <p class="text-[9px] text-slate-400 leading-tight">広範な口語スラング・縮約語・接辞形態素データベースがコード内に完全埋め込みされています（外部ロード不要）。</p>
-                
-                <div class="flex items-center gap-1.5 pt-0.5">
-                    <label class="flex-1 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-lg text-[10px] font-bold shadow-sm transition flex items-center justify-center gap-1 cursor-pointer truncate">
-                        <i class="fa-solid fa-file-import text-emerald-500"></i>
-                        <span class="truncate">追加 JSON 辞書読み込み</span>
-                        <input type="file" accept=".json" onchange="handleExternalDictFileUpload(event)" class="hidden">
-                    </label>
-                    <button onclick="loadPresetNasalsabilaDict()" class="px-2 py-1.5 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-bold transition shrink-0 flex items-center gap-1 shadow-xs hover:bg-slate-300">
-                        <i class="fa-solid fa-cloud-arrow-down"></i> オンライン再同期
-                    </button>
-                </div>
-                <div id="dictResetContainer" class="hidden flex justify-end pt-0.5">
-                    <button onclick="resetCustomDictionary()" class="text-[9px] text-rose-500 hover:underline font-bold"><i class="fa-solid fa-trash-can mr-0.5"></i> 追加辞書を削除して初期組み込みに戻す</button>
-                </div>
-            </div>
-
+            <!-- IndexedDB Unlimited History Panel -->
             <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[180px]">
                 <div class="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-700 mb-1.5 gap-1 shrink-0">
                     <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1 shrink-0 truncate">
@@ -197,6 +212,7 @@
             </div>
         </div>
 
+        <!-- Right Studio Panel (Transcript, Grammar, Vocab) -->
         <div id="panelTranscript" class="hidden md:flex flex-1 flex-col bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm min-h-0">
             
             <div class="bg-white dark:bg-slate-800 px-2 sm:px-3 py-1.5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-1 shrink-0 overflow-x-auto hide-scrollbar">
@@ -210,8 +226,8 @@
                     <button id="navTabVocab" onclick="setStudioSubView('vocab')" class="no-wrap-tab px-2 sm:px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
                         <i class="fa-solid fa-book-open text-[10px]"></i> 単語帳 (<span id="vocabCountBadge">0</span>)
                     </button>
-                    <button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-1.5 sm:px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] sm:text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-0.5 whitespace-nowrap" title="現在のセッションをOllama RAGで再解析">
-                        <i class="fa-solid fa-rotate-right text-[9px]"></i> Ollama RAG 再解析
+                    <button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-1.5 sm:px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] sm:text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-0.5 whitespace-nowrap" title="現在のセッションを深掘り再解析">
+                        <i class="fa-solid fa-rotate-right text-[9px]"></i> 再解析
                     </button>
                 </div>
 
@@ -224,16 +240,16 @@
                 </div>
             </div>
 
-            <!-- Transcript View Container -->
+            <!-- Transcript Subview -->
             <div id="transcriptView" class="flex-1 p-3 overflow-y-auto space-y-3">
                 <div id="emptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
-                    <i class="fa-solid fa-file-code text-3xl text-slate-300 dark:text-slate-700"></i>
-                    <span>Whisper JSON ファイルを選択して Ollama RAG で解析を開始してください</span>
+                    <i class="fa-solid fa-file-audio text-3xl text-slate-300 dark:text-slate-700"></i>
+                    <span>音声またはJSONファイルを選択して「解析スタート」を押してください</span>
                 </div>
                 <div id="transcriptContainer" class="space-y-3"></div>
             </div>
 
-            <!-- Grammar View Container -->
+            <!-- Grammar Subview -->
             <div id="grammarView" class="hidden flex-1 p-3 overflow-y-auto space-y-3">
                 <div id="grammarEmptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
                     <i class="fa-solid fa-diagram-project text-3xl text-slate-300 dark:text-slate-700"></i>
@@ -242,6 +258,7 @@
                 <div id="grammarContainer" class="space-y-3"></div>
             </div>
 
+            <!-- Vocab Subview -->
             <div id="vocabView" class="hidden flex-1 flex-col overflow-y-auto p-2 sm:p-3 space-y-2">
                 <div class="bg-white dark:bg-slate-800 p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 shrink-0">
                     <div class="flex items-center gap-2">
@@ -279,7 +296,7 @@
                                     <p class="text-[10px] text-slate-400">タップして裏面を表示</p>
                                 </div>
                                 <div class="text-right shrink-0">
-                                    <button onclick="event.stopPropagation(); speakWordGeminiTTS(document.getElementById('cardIndoText').innerText)" class="p-1.5 text-slate-400 hover:text-emerald-500" title="Gemini TTS単語音声再生">
+                                    <button onclick="event.stopPropagation(); speakWordGeminiTTS(document.getElementById('cardIndoText').innerText)" class="p-1.5 text-slate-400 hover:text-emerald-500" title="単語音声をGemini TTSで再生">
                                         <i class="fa-solid fa-volume-high text-sm"></i>
                                     </button>
                                 </div>
@@ -292,7 +309,7 @@
                                     <p id="cardContextFull" class="text-[11px] text-slate-600 dark:text-slate-400 italic line-clamp-2">---</p>
                                 </div>
                                 <div class="text-right shrink-0">
-                                    <button onclick="event.stopPropagation(); speakWordGeminiTTS(document.getElementById('cardIndoText').innerText)" class="p-1.5 text-slate-400 hover:text-emerald-500" title="Gemini TTS単語音声再生">
+                                    <button onclick="event.stopPropagation(); speakWordGeminiTTS(document.getElementById('cardIndoText').innerText)" class="p-1.5 text-slate-400 hover:text-emerald-500" title="単語音声をGemini TTSで再生">
                                         <i class="fa-solid fa-volume-high text-sm"></i>
                                     </button>
                                 </div>
@@ -311,304 +328,62 @@
 
     </div>
 
-    <!-- Ollama Server Config Modal -->
-    <div id="ollamaModal" class="fixed inset-0 bg-slate-900/60 hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-white dark:bg-slate-800 rounded-xl p-4 max-w-sm w-full space-y-3 shadow-xl border border-slate-200 dark:border-slate-700">
-            <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-                <i class="fa-solid fa-server text-emerald-500"></i> Ollama 設定 (LLM RAG)
-            </h3>
-            <p class="text-[10px] text-slate-400">ローカル Ollama の URL とモデル名を指定します。(`qwen2.5:3b` 推奨)</p>
-            <div>
-                <label class="block text-[10px] font-bold text-slate-600 dark:text-slate-300 mb-1">Ollama Base URL</label>
-                <input type="text" id="apiBaseUrlInput" placeholder="http://localhost:11434/v1" class="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-600 text-xs dark:bg-slate-900 font-mono text-slate-800 dark:text-slate-100 focus:outline-none focus:border-red-500">
-            </div>
-            <div>
-                <label class="block text-[10px] font-bold text-slate-600 dark:text-slate-300 mb-1">Model Name</label>
-                <input type="text" id="apiModelInput" placeholder="qwen2.5:3b" class="w-full px-3 py-1.5 rounded border border-slate-300 dark:border-slate-600 text-xs dark:bg-slate-900 font-mono text-slate-800 dark:text-slate-100 focus:outline-none focus:border-red-500">
-            </div>
-            <div class="flex justify-end gap-2 pt-2">
-                <button onclick="closeModal('ollamaModal')" class="px-3 py-1 text-xs text-slate-500 hover:text-slate-700">キャンセル</button>
-                <button onclick="saveOllamaConfigFromModal()" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold">保存して適用</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Gemini TTS Key Modal -->
+    <!-- API Key Modal -->
     <div id="apiKeyModal" class="fixed inset-0 bg-slate-900/60 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white dark:bg-slate-800 rounded-xl p-4 max-w-sm w-full space-y-3 shadow-xl border border-slate-200 dark:border-slate-700">
             <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-                <i class="fa-solid fa-key text-amber-500"></i> Gemini API Key 設定 (TTS用)
+                <i class="fa-solid fa-key text-amber-500"></i> Gemini TTS Key 設定
             </h3>
+            <div id="apiKeyNotice" class="hidden p-2 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded text-[11px] text-amber-800 dark:text-amber-200 font-medium leading-snug">
+                <i class="fa-solid fa-triangle-exclamation mr-1 text-amber-600"></i> APIキー認証エラーです。Google AI Studioで新しいAPI Keyを取得・作成して貼り付けてください。
+            </div>
             <p class="text-[10px] text-slate-400">Google AI Studio (https://aistudio.google.com/) で取得した API Key を入力してください</p>
-            <input type="password" id="apiKeyInput" placeholder="API Key (AIza...)" class="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 text-xs dark:bg-slate-900 font-mono text-slate-800 dark:text-slate-100 focus:outline-none focus:border-red-500">
+            <input type="password" id="apiKeyInput" placeholder="API Key (AQ... または AIza...)" class="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 text-xs dark:bg-slate-900 font-mono text-slate-800 dark:text-slate-100 focus:outline-none focus:border-red-500">
             <div class="flex justify-end gap-2">
                 <button onclick="closeModal('apiKeyModal')" class="px-3 py-1 text-xs text-slate-500 hover:text-slate-700">キャンセル</button>
-                <button onclick="saveApiKeyFromModal()" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold">保存して適用</button>
+                <button onclick="saveApiKeyFromModal()" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold">保存して再開</button>
             </div>
         </div>
     </div>
 
     <script>
-        // ==========================================
-        // FULLY EMBEDDED RAG DICTIONARY & MORPHOLOGY ENGINE
-        // ==========================================
-        const KAMUS_ALAY_DICT = {
-            // Pronouns, Particles & Informal Terms
-            "gimana": "bagaimana", "gak": "tidak", "ga": "tidak", "nggak": "tidak", "kalo": "kalau",
-            "pake": "pakai", "udah": "sudah", "banget": "sangat", "bgt": "sangat", "tetep": "tetap",
-            "makasih": "terima kasih", "emang": "memang", "cuma": "hanya", "kayak": "seperti",
-            "dapet": "dapat", "biar": "supaya", "aja": "saja", "karna": "karena", "skrg": "sekarang",
-            "dgn": "dengan", "utk": "untuk", "pikirin": "pikirkan", "bisa aja": "bisa saja",
-            "sampe": "sampai", "bikin": "membuat", "tau": "tahu", "minta": "meminta", "ngomong": "berbicara",
-            "aku": "saya", "kamu": "anda", "lu": "kamu", "gue": "saya", "gw": "saya", "eloo": "kamu", "elo": "kamu",
-            "doi": "dia", "mereka": "mereka", "kalian": "kalian", "dia": "dia", "babeh": "ayah", "nyokap": "ibu",
-            "bokap": "ayah", "doi": "pasangan", "beb": "sayang", "bro": "saudara", "sis": "saudari",
-            "guys": "teman-teman", "gengs": "teman-teman", "gaes": "teman-teman",
-
-            // Spoken Verbs & Slang Extensions
-            "ngelakuin": "melakukan", "ngeliat": "melihat", "liat": "melihat", "ngambil": "mengambil",
-            "ngasih": "memberi", "kasih": "memberi", "ngitung": "menghitung", "nanya": "bertanya",
-            "nanya-nanya": "bertanya-tanya", "nyari": "mencari", "cari": "mencari", "nemu": "menemukan",
-            "nemuin": "menemukan", "ngajak": "mengajak", "ngikut": "mengikuti", "ikut": "mengikuti",
-            "ngumpul": "berkumpul", "kumpul": "berkumpul", "nongkrong": "bersantai", "gabut": "tidak ada pekerjaan",
-            "mager": "malas bergerak", "baper": "bawa perasaan", "kepo": "rasa ingin tahu", "curhat": "curahan hati",
-            "rempong": "merepotkan", "lebay": "berlebihan", "alay": "berlebihan", "julid": "dengki",
-            "hoaks": "berita bohong", "pansos": "panjat sosial", "halu": "halusinasi", "bucin": "budak cinta",
-            "mabar": "main bareng", "nobar": "nonton bareng", "fyi": "sebagai informasi", "otw": "dalam perjalanan",
-            "asap": "secepatnya", "co": "check out", "cod": "cash on delivery", "po": "pre order",
-
-            // Adjectives, Intensifiers & Adverbs
-            "keren": "bagus", "kece": "keren", "mantap": "sangat bagus", "mantul": "mantap betul",
-            "gokil": "luar biasa", "parah": "sangat parah", "zonk": "gagal", "apes": "sial",
-            "sabi": "bisa", "bisaa": "bisa", "takutnya": "khawatir", "soalnya": "karena",
-            "sebenarnya": "sebenarnya", "sebenarnye": "sebenarnya", "sebenernya": "sebenarnya",
-            "mungkin": "mungkin", "mungken": "mungkin", "kayaknya": "sepertinya", "agak": "agak",
-            "sedikit": "sedikit", "dikit": "sedikit", "banyak": "banyak", "bnyak": "banyak",
-            "cepet": "cepat", "lambat": "lambat", "pelan": "pelan", "paling": "paling",
-
-            // Time & Conversational Particles
-            "kemaren": "kemarin", "besok": "besok", "lusa": "lusa", "nanti": "nanti", "ntar": "nanti",
-            "tar": "nanti", "sebentar": "sebentar", "bentar": "sebentar", "sekarang": "sekarang",
-            "sok": "silakan", "deh": "partikel penegas", "dong": "partikel himbauan", "sih": "partikel penjelas",
-            "kok": "partikel keheranan", "nih": "partikel penunjuk", "tuh": "partikel penunjuk",
-            "ya": "ya", "kan": "bukankah", "lah": "partikel penegas", "kah": "partikel tanya"
-        };
-
-        const AFFIX_PATTERNS = [
-            // Active me- Prefix Series
-            { word: "memikirkan", root: "pikir", affixes: "me-kan", pos: "動詞" },
-            { word: "memikir", root: "pikir", affixes: "me-", pos: "動詞" },
-            { word: "pemikiran", root: "pikir", affixes: "pe-an", pos: "名詞" },
-            { word: "berpikir", root: "pikir", affixes: "ber-", pos: "動詞" },
-            { word: "terpikir", root: "pikir", affixes: "ter-", pos: "動詞" },
-            { word: "dipikirkan", root: "pikir", affixes: "di-kan", pos: "動詞" },
-            { word: "membuat", root: "buat", affixes: "me-", pos: "動詞" },
-            { word: "pembuatan", root: "buat", affixes: "pe-an", pos: "名詞" },
-            { word: "menggunakan", root: "guna", affixes: "meng-kan", pos: "動詞" },
-            { word: "penggunaan", root: "guna", affixes: "peng-an", pos: "名詞" },
-            { word: "menjelaskan", root: "jelas", affixes: "men-kan", pos: "動詞" },
-            { word: "penjelasan", root: "jelas", affixes: "pe-an", pos: "名詞" },
-            { word: "membantu", root: "bantu", affixes: "mem-", pos: "動詞" },
-            { word: "bantuan", root: "bantu", affixes: "-an", pos: "名詞" },
-            { word: "memahami", root: "paham", affixes: "me-i", pos: "動詞" },
-            { word: "pemahaman", root: "paham", affixes: "pe-an", pos: "名詞" },
-            { word: "berbicara", root: "bicara", affixes: "ber-", pos: "動詞" },
-            { word: "membicarakan", root: "bicara", affixes: "mem-kan", pos: "動詞" },
-            { word: "pembicaraan", root: "bicara", affixes: "pe-an", pos: "名詞" },
-            { word: "mencari", root: "cari", affixes: "men-", pos: "動詞" },
-            { word: "pencarian", root: "cari", affixes: "pen-an", pos: "名詞" },
-            { word: "menulis", root: "tulis", affixes: "me-", pos: "動詞" },
-            { word: "tulisan", root: "tulis", affixes: "-an", pos: "名詞" },
-            { word: "penulis", root: "tulis", affixes: "pe-", pos: "名詞" },
-            { word: "membaca", root: "baca", affixes: "mem-", pos: "動詞" },
-            { word: "bacaan", root: "baca", affixes: "-an", pos: "名詞" },
-            { word: "melihat", root: "lihat", affixes: "me-", pos: "動詞" },
-            { word: "kelihatan", root: "lihat", affixes: "ke-an", pos: "形容詞" },
-            { word: "mengarahkan", root: "arah", affixes: "meng-kan", pos: "動詞" },
-            { word: "pengarahan", root: "arah", affixes: "peng-an", pos: "名詞" },
-            { word: "searah", root: "arah", affixes: "se-", pos: "副詞" }
-        ];
-
-        window.customKamusDict = {};
-        window.customAffixList = [];
-
-        function loadStoredCustomDict() {
-            try {
-                var stored = localStorage.getItem('suarateks_custom_dict');
-                if (stored) {
-                    var parsed = JSON.parse(stored);
-                    if (parsed.kamus) window.customKamusDict = parsed.kamus;
-                    if (parsed.affixes) window.customAffixList = parsed.affixes;
-                }
-            } catch (e) {}
-            updateDictBadgeUI();
-        }
-
-        function saveCustomDictToStorage() {
-            try {
-                var data = { kamus: window.customKamusDict, affixes: window.customAffixList };
-                localStorage.setItem('suarateks_custom_dict', JSON.stringify(data));
-                updateDictBadgeUI();
-            } catch (e) {
-                showToast('追加辞書の容量が大きすぎるため、一時保存のみ適用します', 'error');
-            }
-        }
-
-        function updateDictBadgeUI() {
-            var badge = document.getElementById('dictCountBadge');
-            var resetBtn = document.getElementById('dictResetContainer');
-            if (!badge) return;
-            
-            var customKeys = Object.keys(window.customKamusDict).length + window.customAffixList.length;
-            var baseKeys = Object.keys(KAMUS_ALAY_DICT).length + AFFIX_PATTERNS.length;
-            
-            if (customKeys > 0) {
-                badge.textContent = '拡張 (' + (baseKeys + customKeys).toLocaleString() + '語)';
-                badge.className = "text-[9px] bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200 px-1.5 py-0.5 rounded font-extrabold";
-                if (resetBtn) resetBtn.classList.remove('hidden');
-            } else {
-                badge.textContent = '組み込み済 (' + baseKeys + '語)';
-                badge.className = "text-[9px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 px-1.5 py-0.5 rounded font-extrabold";
-                if (resetBtn) resetBtn.classList.add('hidden');
-            }
-        }
-
-        function parseAndMergeDictJson(jsonObj) {
-            var addedCount = 0;
-            var targetDict = {};
-            var targetAffixes = [];
-
-            if (!Array.isArray(jsonObj) && typeof jsonObj === 'object') {
-                Object.keys(jsonObj).forEach(function(key) {
-                    var val = jsonObj[key];
-                    if (typeof val === 'string') {
-                        targetDict[key.toLowerCase().trim()] = val.trim();
-                        addedCount++;
-                    } else if (typeof val === 'object' && val !== null) {
-                        var formalVal = val.formal || val.standard || val.id || val.meaning || val.kata_baku;
-                        if (formalVal) {
-                            targetDict[key.toLowerCase().trim()] = String(formalVal).trim();
-                            addedCount++;
-                        }
-                    }
-                });
-            } else if (Array.isArray(jsonObj)) {
-                jsonObj.forEach(function(item) {
-                    if (typeof item === 'object' && item !== null) {
-                        var slang = item.slang || item.word || item.alay || item.informal || item.kata_alay;
-                        var formal = item.formal || item.standard || item.id || item.kata_baku || item.meaning;
-                        if (slang && formal && typeof slang === 'string' && typeof formal === 'string') {
-                            targetDict[slang.toLowerCase().trim()] = formal.trim();
-                            addedCount++;
-                        }
-                        if (item.root || item.affixes) {
-                            targetAffixes.push({
-                                word: (slang || item.word || '').toLowerCase().trim(),
-                                root: (item.root || item.kata_dasar || '').toLowerCase().trim(),
-                                affixes: item.affixes || '',
-                                pos: item.pos || '語句'
-                            });
-                        }
-                    }
-                });
-            }
-
-            if (addedCount === 0 && targetAffixes.length === 0) {
-                throw new Error('対応する辞書構造（slang/formal マッピング）が見つかりませんでした。');
-            }
-
-            window.customKamusDict = Object.assign({}, window.customKamusDict, targetDict);
-            if (targetAffixes.length > 0) {
-                window.customAffixList = window.customAffixList.concat(targetAffixes);
-            }
-
-            saveCustomDictToStorage();
-            return addedCount + targetAffixes.length;
-        }
-
-        async function handleExternalDictFileUpload(event) {
-            var files = event.target.files;
-            if (!files || files.length === 0) return;
-            try {
-                var content = await new Promise(function(resolve, reject) {
-                    var reader = new FileReader();
-                    reader.onload = function(e) { resolve(e.target.result); };
-                    reader.onerror = reject;
-                    reader.readAsText(files[0]);
-                });
-                var parsed = JSON.parse(content);
-                var totalAdded = parseAndMergeDictJson(parsed);
-                showToast('外部辞書 (' + totalAdded.toLocaleString() + '項目) をロードしました！', 'info');
-            } catch (e) {
-                showToast('辞書読み込みエラー: ' + e.message, 'error');
-            }
-            event.target.value = '';
-        }
-
-        async function loadPresetNasalsabilaDict() {
-            showToast('nasalsabila/kamus-alay 辞書をダウンロード中...', 'info');
-            var rawUrl = 'https://raw.githubusercontent.com/nasalsabila/kamus-alay/master/kamusalay.json';
-            try {
-                var res = await fetch(rawUrl);
-                if (!res.ok) throw new Error('GitHub からデータを取得できませんでした');
-                var data = await res.json();
-                var totalAdded = parseAndMergeDictJson(data);
-                showToast('nasalsabila/kamus-alay (' + totalAdded.toLocaleString() + '語) を適用しました！', 'info');
-            } catch (e) {
-                showToast('プリセット辞書取得エラー: ' + translateErrorMessage(e.message), 'error');
-            }
-        }
-
-        function resetCustomDictionary() {
-            window.customKamusDict = {};
-            window.customAffixList = [];
-            localStorage.removeItem('suarateks_custom_dict');
-            updateDictBadgeUI();
-            showToast('外部辞書を解除し、標準辞書に戻しました', 'info');
-        }
-
-        function generateRagDictionaryHints(text) {
-            if (!text) return "";
-            var words = text.toLowerCase().match(/\b[a-z\-]+\b/g) || [];
-            var slangFound = [];
-            var morphologyFound = [];
-            var uniqueWords = Array.from(new Set(words));
-
-            // MERGE BUILT-IN DICTIONARY WITH CUSTOM EXTENDED DICTIONARY
-            var mergedDict = Object.assign({}, KAMUS_ALAY_DICT, window.customKamusDict || {});
-            var mergedAffixes = AFFIX_PATTERNS.concat(window.customAffixList || []);
-
-            uniqueWords.forEach(function(w) {
-                if (mergedDict[w]) {
-                    slangFound.push('- "' + w + '" → 標準語: "' + mergedDict[w] + '"');
-                }
-                
-                var match = mergedAffixes.find(function(a) { return a.word === w; });
-                if (match) {
-                    morphologyFound.push('- "' + w + '" → 原形(Kata Dasar): "' + match.root + '", 接辞: "' + match.affixes + '", 品詞: ' + match.pos);
-                } else {
-                    if (w.startsWith("mem") && w.endsWith("kan")) {
-                        morphologyFound.push('- "' + w + '" → 推測構造: 接辞 "me-kan", 推定原形: "' + w.slice(3, -3) + '"');
-                    } else if (w.startsWith("ber")) {
-                        morphologyFound.push('- "' + w + '" → 推測構造: 接辞 "ber-", 推定原形: "' + w.slice(3) + '"');
-                    } else if (w.startsWith("peng") && w.endsWith("an")) {
-                        morphologyFound.push('- "' + w + '" → 推測構造: 接辞 "pe-an", 推定原形: "' + w.slice(4, -2) + '"');
-                    }
-                }
-            });
-
-            if (slangFound.length === 0 && morphologyFound.length === 0) return "";
-
-            var hints = "\n[DICTIONARY_HINTS / RAG CONTEXT]\n";
-            if (slangFound.length > 0) hints += "・口語・スラング変換:\n" + slangFound.join("\n") + "\n";
-            if (morphologyFound.length > 0) hints += "・形態素・接辞構造解析:\n" + morphologyFound.join("\n") + "\n";
-            hints += "Use these dictionary facts to guarantee accurate standard forms, affixes, and root words in your grammatical analysis.\n";
-            return hints;
-        }
-
         const DB_NAME = 'SuaraTeksIDProDB';
         const DB_VERSION = 1;
         const STORE_NAME = 'sessions';
+
+        window.kamusAlayDict = JSON.parse(localStorage.getItem('suarateks_kamus_alay') || '{}');
+
+        window.fetchKamusAlay = async function() {
+            try {
+                showToast('Kamus Alay 辞書データを取得中...', 'info');
+                var res = await fetch('https://raw.githubusercontent.com/nasalsabila/kamus-alay/master/colloquial-indonesian-lexicon.csv');
+                if (!res.ok) throw new Error('取得失敗');
+                var text = await res.text();
+                var lines = text.split('\n');
+                var dict = {};
+                for (var i = 1; i < lines.length; i++) {
+                    var cols = lines[i].split(',');
+                    if (cols.length >= 2) {
+                        var slang = cols[0].trim().toLowerCase();
+                        var formal = cols[1].trim().toLowerCase();
+                        if (slang && formal) dict[slang] = formal;
+                    }
+                }
+                window.kamusAlayDict = dict;
+                localStorage.setItem('suarateks_kamus_alay', JSON.stringify(dict));
+                var countEl = document.getElementById('kamusWordCount');
+                if (countEl) countEl.textContent = Object.keys(dict).length;
+                showToast(Object.keys(dict).length + ' 語の辞書を同期しました', 'info');
+            } catch (e) {
+                showToast('辞書の取得に失敗しました: ' + e.message, 'error');
+            }
+        };
+
+        const INDO_STOP_WORDS = new Set([
+            'a','di','ke','dan','yang','ini','itu','ada','dari','pada','atau','untuk','agar','bisa','sudah',
+            'saya','anda','mereka','kita','kami','dia','ia','ya','tidak','bukan','pula','lagi','juga','saja',
+            'dengan','oleh','maka','kalau','sebab','karena','bahwa','saat','ketika','ada','adalah'
+        ]);
 
         function openIndexedDB() {
             return new Promise((resolve, reject) => {
@@ -634,7 +409,9 @@
                     request.onsuccess = () => resolve(true);
                     request.onerror = () => reject(request.error);
                 });
-            } catch (e) { saveToLocalStorageFallback(sessionObj); }
+            } catch (e) {
+                saveToLocalStorageFallback(sessionObj);
+            }
         }
 
         async function dbGetAllSessions() {
@@ -697,7 +474,9 @@
                     request.onsuccess = () => resolve(true);
                     request.onerror = () => reject(request.error);
                 });
-            } catch (e) { localStorage.removeItem('suarateks_history'); }
+            } catch (e) {
+                localStorage.removeItem('suarateks_history');
+            }
         }
 
         function saveToLocalStorageFallback(sessionObj) {
@@ -715,10 +494,111 @@
         function updateOnlineStatus() {
             var badge = document.getElementById('offlineBadge');
             if (!badge) return;
-            if (!navigator.onLine) badge.classList.remove('hidden');
-            else badge.classList.add('hidden');
+            if (!navigator.onLine) {
+                badge.classList.remove('hidden');
+                showToast('ネットワークがオフラインです', 'info');
+            } else {
+                badge.classList.add('hidden');
+            }
         }
 
+        async function splitAudioFileIntoWavChunks(file, maxDurationSeconds = 180) {
+            try {
+                var arrayBuffer = await file.arrayBuffer();
+                var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                var audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                await audioCtx.close();
+
+                var targetSampleRate = 16000;
+                var totalDuration = audioBuffer.duration;
+
+                if (totalDuration <= maxDurationSeconds) {
+                    var singleWav = await resampleAndExportWav(audioBuffer, 0, audioBuffer.length, targetSampleRate);
+                    return [{ chunkIndex: 0, blob: singleWav, duration: totalDuration }];
+                }
+
+                var origSampleRate = audioBuffer.sampleRate;
+                var samplesPerChunk = maxDurationSeconds * origSampleRate;
+                var totalChunks = Math.ceil(audioBuffer.length / samplesPerChunk);
+                var chunks = [];
+
+                for (var i = 0; i < totalChunks; i++) {
+                    var startSample = Math.floor(i * samplesPerChunk);
+                    var endSample = Math.min(audioBuffer.length, Math.floor(startSample + samplesPerChunk));
+                    var chunkWavBlob = await resampleAndExportWav(audioBuffer, startSample, endSample, targetSampleRate);
+                    
+                    chunks.push({
+                        chunkIndex: i,
+                        blob: chunkWavBlob,
+                        duration: (endSample - startSample) / origSampleRate
+                    });
+                }
+                return chunks;
+            } catch (e) {
+                return [{ chunkIndex: 0, blob: file, duration: 0 }];
+            }
+        }
+
+        async function resampleAndExportWav(audioBuffer, startSample, endSample, targetSampleRate) {
+            var frameCount = endSample - startSample;
+            var duration = frameCount / audioBuffer.sampleRate;
+            var targetLength = Math.ceil(duration * targetSampleRate);
+
+            var offlineCtx = new OfflineAudioContext(1, targetLength, targetSampleRate);
+            var src = offlineCtx.createBufferSource();
+
+            var tempBuffer = offlineCtx.createBuffer(audioBuffer.numberOfChannels, frameCount, audioBuffer.sampleRate);
+            for (var c = 0; c < audioBuffer.numberOfChannels; c++) {
+                tempBuffer.copyToChannel(audioBuffer.getChannelData(c).subarray(startSample, endSample), c);
+            }
+
+            src.buffer = tempBuffer;
+            src.connect(offlineCtx.destination);
+            src.start(0);
+
+            var renderedBuffer = await offlineCtx.startRendering();
+            return monoAudioBufferToWavBlob(renderedBuffer);
+        }
+
+        function monoAudioBufferToWavBlob(buffer) {
+            var length = buffer.length * 2 + 44;
+            var out = new DataView(new ArrayBuffer(length));
+            var sampleRate = buffer.sampleRate;
+            var channelData = buffer.getChannelData(0);
+            var pos = 0;
+
+            function writeString(str) {
+                for (var i = 0; i < str.length; i++) {
+                    out.setUint8(pos++, str.charCodeAt(i));
+                }
+            }
+
+            writeString('RIFF');
+            out.setUint32(pos, length - 8, true); pos += 4;
+            writeString('WAVE');
+            writeString('fmt ');
+            out.setUint32(pos, 16, true); pos += 4;
+            out.setUint16(pos, 1, true); pos += 2;
+            out.setUint16(pos, 1, true); pos += 2;
+            out.setUint32(pos, sampleRate, true); pos += 4;
+            out.setUint32(pos, sampleRate * 2, true); pos += 4;
+            out.setUint16(pos, 2, true); pos += 2;
+            out.setUint16(pos, 16, true); pos += 2;
+            writeString('data');
+            out.setUint32(pos, length - pos - 4, true); pos += 4;
+
+            for (var i = 0; i < channelData.length; i++) {
+                var sample = Math.max(-1, Math.min(1, channelData[i]));
+                sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+                out.setInt16(pos, sample, true);
+                pos += 2;
+            }
+
+            return new Blob([out.buffer], { type: 'audio/wav' });
+        }
+
+        window.fileQueue = [];
+        window.isQueueProcessing = false;
         window.currentLoadedSessionId = null;
         window.currentLoadedFileName = '';
         window.transcriptBlocks = [];
@@ -737,14 +617,24 @@
 
         window.ttsSentenceCache = new Map();
         window.ttsWordCache = new Map();
+
         window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
 
         var sleep = function(ms) { return new Promise(function(resolve) { setTimeout(resolve, ms); }); };
 
         function translateErrorMessage(rawMessage) {
             var str = String(rawMessage || '').toLowerCase();
-            if (str.includes('failed to fetch') || str.includes('network')) {
-                return 'ローカルの Ollama サーバー (http://localhost:11434) に接続できません。Ollamaが起動しているか確認してください。';
+            if (str.includes('prepayment credits are depleted') || str.includes('billing#prepay')) {
+                return 'API前払いクレジットが不足しています。Google AI Studioでチャージしてください。';
+            }
+            if (str.includes('spend cap breached') || str.includes('quota exceeded') || str.includes('resourcehasexhausted')) {
+                return 'API利用上限（Quota）に達しました。時間をおいて再実行してください。';
+            }
+            if (str.includes('invalid authentication credentials') || str.includes('api_key_invalid') || str.includes('unauthorized') || str.includes('401')) {
+                return 'API Key認証エラー（401）です。有効なGoogle AI Studioキーを設定してください。';
+            }
+            if (str.includes('network') || str.includes('failed to fetch')) {
+                return 'ネットワーク接続が不安定です。通信状況をご確認ください。';
             }
             return rawMessage;
         }
@@ -763,6 +653,9 @@
             if (display) display.textContent = window.speechRate.toFixed(2) + 'x';
             var slider = document.getElementById('speechRateSlider');
             if (slider) slider.value = window.speechRate;
+            if (window.activeSpeechState.audioEl) {
+                window.activeSpeechState.audioEl.playbackRate = window.speechRate;
+            }
         }
 
         function setFontSize(val) {
@@ -779,52 +672,96 @@
             setFontSize(current + delta);
         }
 
-        function getOllamaConfig() {
-            var baseUrl = localStorage.getItem('suarateks_ollama_baseurl') || 'http://localhost:11434/v1';
-            var modelName = localStorage.getItem('suarateks_ollama_model') || 'qwen2.5:3b';
-            return { baseUrl: baseUrl.replace(/\/+$/, ''), modelName: modelName };
-        }
-
-        function getGeminiKey() {
+        function getApiKey() { 
             var key = localStorage.getItem('suarateks_gemini_key') || '';
             return String(key).trim().replace(/^["']|["']$/g, '');
         }
 
         function safeParseTruncatedJson(jsonString) {
-            if (!jsonString) throw new Error('モデルからの応答本文が空です');
-            var cleanStr = jsonString.replace(/<\|think\|>[\s\S]*?<\/\|think\|>/gi, '').trim();
+            if (!jsonString) throw new Error('応答が返されませんでした');
+            var raw = String(jsonString).trim();
 
-            try { return JSON.parse(cleanStr); } catch (e1) {}
+            try { return JSON.parse(raw); } catch (e1) {}
 
-            var fenceMatch = cleanStr.match(/```(?:json)?\s*([\s\S]*?)(?:```|$)/i);
+            var fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)(?:```|$)/i);
             if (fenceMatch && fenceMatch[1]) {
                 var fenceContent = fenceMatch[1].trim();
                 try { return JSON.parse(fenceContent); } catch (e2) {}
-                cleanStr = fenceContent;
+                raw = fenceContent;
             } else {
-                cleanStr = cleanStr.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+                raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
             }
 
-            try { return JSON.parse(cleanStr); } catch (e3) {}
+            try { return JSON.parse(raw); } catch (e3) {}
 
-            var firstBrace = cleanStr.indexOf('{');
-            var firstBracket = cleanStr.indexOf('[');
+            var firstBrace = raw.indexOf('{');
+            var firstBracket = raw.indexOf('[');
             var startIdx = -1;
 
-            if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) startIdx = firstBrace;
-            else if (firstBracket !== -1) startIdx = firstBracket;
+            if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+                startIdx = firstBrace;
+            } else if (firstBracket !== -1) {
+                startIdx = firstBracket;
+            }
 
-            var candidate = cleanStr;
+            var candidate = raw;
             if (startIdx !== -1) {
-                var lastBrace = cleanStr.lastIndexOf('}');
-                var lastBracket = cleanStr.lastIndexOf(']');
+                var lastBrace = raw.lastIndexOf('}');
+                var lastBracket = raw.lastIndexOf(']');
                 var endIdx = Math.max(lastBrace, lastBracket);
-                if (endIdx > startIdx) candidate = cleanStr.substring(startIdx, endIdx + 1);
-                else candidate = cleanStr.substring(startIdx);
+
+                if (endIdx > startIdx) {
+                    candidate = raw.substring(startIdx, endIdx + 1);
+                } else {
+                    candidate = raw.substring(startIdx);
+                }
+
                 try { return JSON.parse(candidate); } catch (e4) {}
             }
 
-            throw new Error('LLM からの出力の JSON 構造パースに失敗しました。');
+            function fixStringControlChars(str) {
+                return str.replace(/"(?:[^"\\]|\\.)*"/g, function(m) {
+                    return m.replace(/[\r\n\t]/g, function(c) {
+                        if (c === '\r') return '';
+                        if (c === '\n') return '\\n';
+                        if (c === '\t') return '\\t';
+                        return c;
+                    });
+                });
+            }
+
+            var sanitized = fixStringControlChars(candidate);
+            try { return JSON.parse(sanitized); } catch (e5) {}
+
+            var noTrailingCommas = sanitized.replace(/,\s*([}\]])/g, '$1');
+            try { return JSON.parse(noTrailingCommas); } catch (e6) {}
+
+            var openQuotes = false, stack = [], repaired = '';
+            for (var i = 0; i < noTrailingCommas.length; i++) {
+                var ch = noTrailingCommas[i], prevCh = i > 0 ? noTrailingCommas[i - 1] : '';
+                if (ch === '"' && prevCh !== '\\') openQuotes = !openQuotes;
+                if (!openQuotes) {
+                    if (ch === '{' || ch === '[') stack.push(ch);
+                    else if (ch === '}' || ch === ']') { if (stack.length > 0) stack.pop(); }
+                }
+                repaired += ch;
+            }
+            if (openQuotes) repaired += '"';
+            while (stack.length > 0) {
+                var top = stack.pop();
+                repaired += (top === '{' ? '}' : ']');
+            }
+            repaired = repaired.replace(/,\s*([}\]])/g, '$1');
+
+            try { return JSON.parse(repaired); } catch (e7) {}
+            throw new Error('JSONの構造解析に失敗しました');
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            var k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            var i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
         }
 
         function resetActiveSessionState(newFileName) {
@@ -855,39 +792,222 @@
             if (window.currentLoadedFileName) {
                 badge.textContent = '表示中: ' + window.currentLoadedFileName;
                 badge.classList.remove('hidden');
-            } else { badge.classList.add('hidden'); }
+            } else {
+                badge.classList.add('hidden');
+            }
         }
 
-        async function fetchLlmApi(systemPrompt, userPrompt) {
-            var config = getOllamaConfig();
-            var endpoint = config.baseUrl + '/chat/completions';
+        window.handleFileChange = function(event) {
+            var input = (event && event.target) ? event.target : document.getElementById('audioFileInput');
+            var files = input ? input.files : null;
+            if (!files || files.length === 0) return;
+            processSelectedFiles(Array.from(files));
+        };
 
-            var payload = {
-                model: config.modelName,
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: userPrompt }
-                ],
-                temperature: 0.6,
-                response_format: { type: "json_object" }
-            };
-
-            var response = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+        function processSelectedFiles(files) {
+            var validFiles = files.filter(function(f) { return f.type.startsWith('audio/') || f.name.match(/\.(mp3|wav|m4a|aac|ogg|flac)$/i); }).slice(0, 10);
+            if (validFiles.length === 0) {
+                showToast('音声ファイルが選択されていません', 'error');
+                return;
+            }
+            window.fileQueue = validFiles.map(function(f, idx) {
+                return { id: 'queue-' + Date.now() + '-' + idx, file: f, status: 'waiting', progress: 0 };
             });
+            renderQueueUI();
+            showToast(window.fileQueue.length + ' 件の音源をキューにセットしました！', 'info');
+        }
 
-            if (!response.ok) {
-                var errText = await response.text();
-                throw new Error('Ollama API エラー: ' + errText);
+        function renderQueueUI() {
+            var dropzoneDefault = document.getElementById('dropzoneDefault');
+            var dropzoneSelected = document.getElementById('dropzoneSelected');
+            var queueListContainer = document.getElementById('queueListContainer');
+
+            if (!window.fileQueue || window.fileQueue.length === 0) {
+                if (dropzoneDefault) dropzoneDefault.classList.remove('hidden');
+                if (dropzoneSelected) dropzoneSelected.classList.add('hidden');
+                return;
+            }
+
+            if (dropzoneDefault) dropzoneDefault.classList.add('hidden');
+            if (dropzoneSelected) dropzoneSelected.classList.remove('hidden');
+
+            var html = '';
+            window.fileQueue.forEach(function(q, idx) {
+                var statusBadge = '';
+                if (q.status === 'waiting') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 font-bold">待機中</span>';
+                else if (q.status === 'processing') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500 text-white font-bold"><i class="fa-solid fa-spinner fa-spin"></i> 解析中</span>';
+                else if (q.status === 'completed') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500 text-white font-bold"><i class="fa-solid fa-check"></i> 完了</span>';
+                else if (q.status === 'error') statusBadge = '<button onclick="retryQueueItem(\'' + q.id + '\', event)" class="text-[9px] px-1.5 py-0.5 rounded bg-rose-600 hover:bg-rose-700 text-white font-bold transition flex items-center gap-1">再試行</button>';
+
+                html += '<div class="flex items-center justify-between gap-1 text-xs p-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 mb-1">' +
+                    '<div class="min-w-0 flex-1">' +
+                        '<p class="font-bold text-slate-800 dark:text-slate-100 truncate text-[10px]">' + (idx + 1) + '. ' + escapeHtml(q.file.name) + '</p>' +
+                        '<p class="text-[8px] text-slate-400 font-mono">' + formatBytes(q.file.size) + '</p>' +
+                    '</div>' +
+                    '<div class="shrink-0">' + statusBadge + '</div>' +
+                '</div>';
+            });
+            if (queueListContainer) queueListContainer.innerHTML = html;
+        }
+
+        window.retryQueueItem = function(itemId, event) {
+            if (event) event.stopPropagation();
+            var item = window.fileQueue.find(function(q) { return q.id === itemId; });
+            if (item) { item.status = 'waiting'; renderQueueUI(); window.processAudioWithGemini(); }
+        };
+
+        function initDropzoneEvents() {
+            var label = document.getElementById('fileDropLabel');
+            if (!label) return;
+            ['dragenter', 'dragover'].forEach(function(eventName) {
+                label.addEventListener(eventName, function(e) { e.preventDefault(); e.stopPropagation(); label.classList.add('dropzone-active'); }, false);
+            });
+            ['dragleave', 'drop'].forEach(function(eventName) {
+                label.addEventListener(eventName, function(e) { e.preventDefault(); e.stopPropagation(); label.classList.remove('dropzone-active'); }, false);
+            });
+            label.addEventListener('drop', function(e) {
+                var files = e.dataTransfer.files;
+                if (files && files.length > 0) processSelectedFiles(Array.from(files));
+            }, false);
+        }
+
+        async function fetchOllamaApi(prompt) {
+            try {
+                var response = await fetch('http://localhost:11434/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'qwen2.5:3b',
+                        prompt: prompt,
+                        stream: false,
+                        format: 'json',
+                        options: { temperature: 0.3, repeat_penalty: 1.1 }
+                    })
+                });
+                if (!response.ok) throw new Error('Ollama connection error');
+                var data = await response.json();
+                return data.response;
+            } catch (err) {
+                console.warn('Ollama unavailable, falling back to Gemini API:', err);
+                return null;
+            }
+        }
+
+        async function fetchGeminiApi(apiKey, payload, isTtsRequest) {
+            var cleanKey = String(apiKey || getApiKey() || '').trim().replace(/^["']|["']$/g, '');
+            if (!cleanKey || cleanKey.length < 10) {
+                openModal('apiKeyModal');
+                throw new Error('API Keyが正しく設定されていません。');
+            }
+
+            var modelName = isTtsRequest ? 'gemini-2.5-flash-preview-tts' : 'gemini-2.5-flash';
+            var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent?key=' + encodeURIComponent(cleanKey);
+
+            if (!payload.generationConfig && !isTtsRequest) {
+                payload.generationConfig = { temperature: 0.1, maxOutputTokens: 8192 };
+            }
+
+            var response = null;
+            var maxAttempts = 3;
+            for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+                try {
+                    response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.status === 429 || response.status === 503) {
+                        await sleep(attempt * 3000);
+                        continue;
+                    }
+                    break;
+                } catch (netErr) {
+                    if (attempt === maxAttempts) break;
+                    await sleep(2000);
+                }
+            }
+
+            if (!response || !response.ok) {
+                var errDetail = response ? await response.text() : 'Network Error';
+                try {
+                    var parsed = JSON.parse(errDetail);
+                    if (parsed.error && parsed.error.message) errDetail = parsed.error.message;
+                } catch (e) {}
+
+                if (!response || response.status === 401 || response.status === 403 || (errDetail && errDetail.toLowerCase().includes('key'))) {
+                    openModal('apiKeyModal', true);
+                    throw new Error('API Key認証エラー（401）です。有効なAPI Keyを設定してください。');
+                }
+                throw new Error(translateErrorMessage(errDetail));
             }
 
             var data = await response.json();
-            if (data.choices && data.choices[0] && data.choices[0].message) {
-                return data.choices[0].message.content;
+            if (data.error) {
+                throw new Error(translateErrorMessage(data.error.message));
             }
-            throw new Error('LLM からレスポンスを取得できませんでした。');
+            return data;
+        }
+
+        function extractGeminiText(data) {
+            var parts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) ? data.candidates[0].content.parts : null;
+            if (!Array.isArray(parts)) throw new Error('応答にテキストデータが含まれていません');
+            return parts.map(function(p) { return p.text || ''; }).join('').trim();
+        }
+
+        function base64ToArrayBuffer(base64) {
+            var binaryString = atob(base64);
+            var len = binaryString.length;
+            var bytes = new Uint8Array(len);
+            for (var i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function pcmToWav(pcm16, sampleRate) {
+            var numChannels = 1;
+            var byteRate = sampleRate * numChannels * 2;
+            var blockAlign = numChannels * 2;
+            var dataSize = pcm16.length * 2;
+            var chunkSize = 36 + dataSize;
+
+            var buffer = new ArrayBuffer(44 + dataSize);
+            var view = new DataView(buffer);
+
+            function writeString(view, offset, string) {
+                for (var i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            }
+
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, chunkSize, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, 16, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, dataSize, true);
+
+            var fadeSamples = Math.min(pcm16.length, Math.floor(sampleRate * 0.06)); // 60ms
+            var offset = 44;
+            for (var i = 0; i < pcm16.length; i++, offset += 2) {
+                var sample = pcm16[i];
+                if (fadeSamples > 0 && i >= pcm16.length - fadeSamples) {
+                    var fadeIndex = i - (pcm16.length - fadeSamples);
+                    var gain = 1 - (fadeIndex + 1) / fadeSamples;
+                    sample = Math.round(sample * Math.max(0, gain));
+                }
+                view.setInt16(offset, sample, true);
+            }
+
+            return new Blob([buffer], { type: 'audio/wav' });
         }
 
         function extractAllTextValues(obj) {
@@ -903,23 +1023,48 @@
             return texts;
         }
 
+        function getDictionaryRAGContext(text) {
+            if (!window.kamusAlayDict || Object.keys(window.kamusAlayDict).length === 0) return '';
+            var words = (text || '').toLowerCase().match(/[a-zA-Z-']+/g) || [];
+            var hints = [];
+            var seen = new Set();
+            words.forEach(function(w) {
+                if (!seen.has(w) && window.kamusAlayDict[w]) {
+                    seen.add(w);
+                    hints.push(w + ' -> ' + window.kamusAlayDict[w]);
+                }
+            });
+            if (hints.length === 0) return '';
+            return '[DICTIONARY_HINTS / RAG CONTEXT]\nColloquial/Slang mappings:\n' + hints.join('\n') + '\n\n';
+        }
+
         window.handleWhisperJsonChange = async function(event) {
             var files = event.target.files ? Array.from(event.target.files) : [];
             if (files.length === 0) return;
 
+            var MAX_WHISPER_JSON_QUEUE = 15;
+            if (files.length > MAX_WHISPER_JSON_QUEUE) {
+                showToast('Whisper JSONは最大15件まで選択できます。先頭15件を再解析します。', 'info');
+                files = files.slice(0, MAX_WHISPER_JSON_QUEUE);
+            }
+
+            var apiKey = getApiKey();
+
+            var btn = document.getElementById('startTranscribeBtn');
             var progressContainer = document.getElementById('chunkProgressContainer');
             var progressLabel = document.getElementById('chunkProgressLabel');
             var progressPercent = document.getElementById('chunkProgressPercent');
             var progressBar = document.getElementById('chunkProgressBar');
 
+            if (btn) btn.disabled = true;
             if (progressContainer) progressContainer.classList.remove('hidden');
 
             for (var i = 0; i < files.length; i++) {
                 var file = files[i];
                 try {
-                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-file-code text-blue-500"></i> <span class="truncate">[' + (i+1) + '/' + files.length + '] Whisper JSON読み込み中...</span>';
-                    if (progressBar) progressBar.style.width = '10%';
-                    if (progressPercent) progressPercent.textContent = '10%';
+                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-file-code text-blue-500"></i> <span class="truncate">[' + (i+1) + '/' + files.length + '] JSON読み込み中...</span>';
+                    if (progressBar) progressBar.style.width = '5%';
+                    if (progressPercent) progressPercent.textContent = '5%';
 
                     var content = await new Promise(function(resolve, reject) {
                         var reader = new FileReader();
@@ -928,7 +1073,13 @@
                         reader.readAsText(file);
                     });
 
-                    var parsedJson = JSON.parse(content);
+                    var parsedJson;
+                    try {
+                        parsedJson = JSON.parse(content);
+                    } catch (err) {
+                        throw new Error('無効なJSONファイルです。パースに失敗しました。');
+                    }
+
                     var rawText = '';
                     if (parsedJson.text && typeof parsedJson.text === 'string') {
                         rawText = parsedJson.text;
@@ -938,26 +1089,55 @@
                         rawText = extractAllTextValues(parsedJson).join(' ');
                     }
 
-                    if (!rawText.trim()) throw new Error('JSONからテキストを抽出できませんでした。');
+                    if (!rawText.trim()) throw new Error('JSONからテキストデータを抽出できませんでした');
 
                     var cleanFileName = formatOutputFileName(file.name);
                     resetActiveSessionState(cleanFileName);
 
-                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-emerald-500"></i> <span>Ollama RAG でチャンク分割・事前辞書照合中...</span>';
-                    if (progressBar) progressBar.style.width = '30%';
-                    if (progressPercent) progressPercent.textContent = '30%';
+                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-align-left text-amber-500"></i> <span>意味のまとまり（チャンク）に分割・翻訳中...</span>';
+                    if (progressBar) progressBar.style.width = '20%';
+                    if (progressPercent) progressPercent.textContent = '20%';
 
-                    // RAG PRE-PROCESSING
-                    var ragHints = generateRagDictionaryHints(rawText);
+                    var chunkingPrompt = 'You are an expert Indonesian-Japanese translator and linguist.\n' +
+                                         'I have a raw Indonesian transcript from an ASR tool (like Whisper). It might lack proper punctuation or sentence boundaries.\n' +
+                                         'Please reconstruct the text into meaningful sentence blocks (or logical chunks based on context) and provide the corresponding Japanese translation for each block.\n\n' +
+                                         'Input Text:\n' + rawText;
+                    
+                    var resultText = await fetchOllamaApi(chunkingPrompt);
+                    if (!resultText && apiKey) {
+                        var payload = {
+                            contents: [{ parts: [{ text: chunkingPrompt }] }],
+                            generationConfig: {
+                                responseMimeType: "application/json",
+                                responseSchema: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        blocks: {
+                                            type: "ARRAY",
+                                            items: {
+                                                type: "OBJECT",
+                                                properties: {
+                                                    indonesian: { type: "STRING" },
+                                                    japanese: { type: "STRING" }
+                                                },
+                                                required: ["indonesian", "japanese"]
+                                            }
+                                        }
+                                    },
+                                    required: ["blocks"]
+                                },
+                                maxOutputTokens: 8192
+                            }
+                        };
+                        var resData = await fetchGeminiApi(apiKey, payload, false);
+                        resultText = extractGeminiText(resData);
+                    }
 
-                    var systemPrompt = "You are an expert Indonesian-Japanese linguist. Reconstruct raw transcript into JSON with key 'blocks' (array of objects with 'indonesian' and 'japanese'). Retain natural spoken nuances. Output strictly valid JSON only.";
-                    var userPrompt = "Input Text:\n" + rawText + "\n" + ragHints;
+                    if (!resultText) throw new Error('解析サービスに接続できませんでした');
 
-                    var rawResponse = await fetchLlmApi(systemPrompt, userPrompt);
-                    var parsedRes = safeParseTruncatedJson(rawResponse);
-
-                    var chunkedBlocks = parsedRes.blocks || [];
-                    if (!Array.isArray(chunkedBlocks) || chunkedBlocks.length === 0) throw new Error('チャンク分割に失敗しました');
+                    var parsedRes = safeParseTruncatedJson(resultText);
+                    var chunkedBlocks = parsedRes.blocks || (Array.isArray(parsedRes) ? parsedRes : []);
+                    if (!Array.isArray(chunkedBlocks) || chunkedBlocks.length === 0) throw new Error('テキストのチャンク分割・再構築に失敗しました');
 
                     var formattedBlocks = chunkedBlocks.map(function(b, idx) {
                         return {
@@ -977,10 +1157,11 @@
 
                     var finalRes = await reanalyzeBlocksCore(
                         window.transcriptBlocks,
+                        apiKey,
                         cleanFileName,
-                        function(chunkIdx, totalChunks, currentPct) {
-                            var mappedPct = Math.floor(40 + (currentPct * 0.6));
-                            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-diagram-project text-blue-500"></i> <span class="truncate">【Ollama RAG 文法・単語解剖】' + chunkIdx + '/' + totalChunks + '</span>';
+                        function(chunkIdx, totalChunks, currentPct, label) {
+                            var mappedPct = Math.floor(30 + (currentPct * 0.7));
+                            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-blue-500"></i> <span class="truncate">【文法・単語解析】' + chunkIdx + '/' + totalChunks + '</span>';
                             if (progressBar) progressBar.style.width = mappedPct + '%';
                             if (progressPercent) progressPercent.textContent = mappedPct + '%';
                         }
@@ -1006,22 +1187,23 @@
                         blocks: window.transcriptBlocks,
                         vocab: window.vocabList
                     };
-                    exportDataToFile(singleDataObj, cleanFileName + '_rag_analyzed.json');
+                    exportDataToFile(singleDataObj, cleanFileName + '_analyzed.json');
 
-                    showToast(file.name + ' の Ollama RAG 解析が完了しました', 'info');
+                    showToast(file.name + ' の解析と保存が完了しました', 'info');
 
                 } catch (e) {
-                    console.error('Processing error:', e);
+                    console.error('Whisper JSON error:', e);
                     showToast('エラー: ' + translateErrorMessage(e.message), 'error');
                 }
-                await sleep(1000);
+                await sleep(1500);
             }
 
+            if (btn) btn.disabled = false;
             setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
             event.target.value = ''; 
         };
 
-        async function reanalyzeBlocksCore(blocks, fileNameLabel, onProgress) {
+        async function reanalyzeBlocksCore(blocks, apiKey, fileNameLabel, onProgress) {
             var totalBlocks = blocks.length;
             var chunkSize = 3;
             var totalChunks = Math.ceil(totalBlocks / chunkSize);
@@ -1034,58 +1216,121 @@
                 var end = Math.min(totalBlocks, start + chunkSize);
 
                 var currentPct = Math.floor(((chunkIdx + 1) / totalChunks) * 100);
-                if (onProgress) onProgress(chunkIdx + 1, totalChunks, currentPct);
+                if (onProgress) onProgress(chunkIdx + 1, totalChunks, currentPct, fileNameLabel);
 
                 var chunkBlocks = blocks.slice(start, end);
                 var inputChunkText = chunkBlocks.map(function(b) {
                     return '[BLOCK_ID:' + b.blockIndex + '] ' + b.indonesian + '\n(JP: ' + b.japanese + ')';
                 }).join('\n\n');
 
-                var ragHints = generateRagDictionaryHints(inputChunkText);
+                var chunkWords = new Set();
+                chunkBlocks.forEach(function(b) {
+                    var words = (b.indonesian || '').toLowerCase().match(/[a-zA-Z-']+/g) || [];
+                    words.forEach(function(w) { 
+                        if (w.length >= 2 && !INDO_STOP_WORDS.has(w)) {
+                            chunkWords.add(w); 
+                        }
+                    });
+                });
 
-                var systemPrompt = "You are a master Indonesian linguist. Analyze given blocks carefully into JSON with 'grammar' array and 'vocab' array.\n" +
-                "Requirements:\n" +
-                "1. 'grammar': array of objects with 'blockIndex' and 'grammarExplanation' (containing 【語句対比】, 【構文構造】, 【接辞解剖】, 【解説・ニュアンス】).\n" +
-                "2. 'vocab': array of objects with 'indonesian', 'baseForm', 'japanese', 'pos' (noun/verb/adjective/adverb/other), 'context', 'isKeyWord'. Output strictly JSON.";
+                var wordListStr = Array.from(chunkWords).join(', ');
+                var ragContext = getDictionaryRAGContext(inputChunkText);
 
-                var fullUserPrompt = "INPUT BLOCKS:\n" + inputChunkText + "\n" + ragHints;
+                var combinedPrompt = 'You are a master Indonesian linguist and language instructor for Japanese native speakers.\n' +
+'Analyze EVERY single given Indonesian text block with utmost precision and depth. NEVER omit, skip, or summarize any part.\n\n' +
+(ragContext ? ragContext : '') +
+'REQUIREMENTS:\n' +
+'1. "grammar": For EVERY single block index, generate a thorough, rich 4-part grammatical analysis in Japanese using these EXACT headings:\n' +
+'【語句対比】\n・Provide strict 1-to-1 word/phrase level alignment.\n' +
+'【構文構造】\n・Detailed SVO structure and modifier relationships.\n' +
+'【接辞解剖】\n・Extract root word (Kata Dasar) and dissect affixes (me-, ber-, di-, -kan, -i, etc.).\n' +
+'【解説・ニュアンス】\n・Explain natural spoken usage and cultural nuance.\n\n' +
+'2. "vocab": From target words list: "' + wordListStr + '", select important vocabulary and return indonesian, baseForm, Japanese translation, pos (noun/verb/adjective/adverb/other), context sentence, and isKeyWord (boolean).\n\n' +
+'Return strictly valid JSON with top-level keys "grammar" and "vocab":\n' +
+'INPUT BLOCKS:\n' + inputChunkText;
 
                 try {
-                    var chunkResponseText = await fetchLlmApi(systemPrompt, fullUserPrompt);
-                    var chunkParsed = safeParseTruncatedJson(chunkResponseText);
-
-                    if (chunkParsed.grammar && Array.isArray(chunkParsed.grammar)) {
-                        chunkParsed.grammar.forEach(function(gItem, gIdx) {
-                            var bIdx = (gItem.blockIndex !== undefined && gItem.blockIndex !== null) ? Number(gItem.blockIndex) : (start + gIdx);
-                            var targetBlock = blocks.find(function(b) { return b.blockIndex === bIdx; }) || chunkBlocks[gIdx];
-                            if (targetBlock && gItem.grammarExplanation) {
-                                targetBlock.grammarExplanation = String(gItem.grammarExplanation).trim();
+                    var chunkRawText = await fetchOllamaApi(combinedPrompt);
+                    if (!chunkRawText && apiKey) {
+                        var chunkPayload = {
+                            contents: [{ parts: [{ text: combinedPrompt }] }],
+                            generationConfig: { 
+                                responseMimeType: "application/json",
+                                responseSchema: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        grammar: {
+                                            type: "ARRAY",
+                                            items: {
+                                                type: "OBJECT",
+                                                properties: {
+                                                    blockIndex: { type: "INTEGER" },
+                                                    grammarExplanation: { type: "STRING" }
+                                                },
+                                                required: ["blockIndex", "grammarExplanation"]
+                                            }
+                                        },
+                                        vocab: {
+                                            type: "ARRAY",
+                                            items: {
+                                                type: "OBJECT",
+                                                properties: {
+                                                    indonesian: { type: "STRING" },
+                                                    baseForm: { type: "STRING" },
+                                                    japanese: { type: "STRING" },
+                                                    pos: { type: "STRING" },
+                                                    context: { type: "STRING" },
+                                                    isKeyWord: { type: "BOOLEAN" }
+                                                },
+                                                required: ["indonesian", "japanese", "pos"]
+                                            }
+                                        }
+                                    },
+                                    required: ["grammar", "vocab"]
+                                },
+                                maxOutputTokens: 8192 
                             }
-                        });
+                        };
+                        var chunkResponseData = await fetchGeminiApi(apiKey, chunkPayload, false);
+                        chunkRawText = extractGeminiText(chunkResponseData);
                     }
 
-                    if (chunkParsed.vocab && Array.isArray(chunkParsed.vocab)) {
-                        chunkParsed.vocab.forEach(function(v) {
-                            var wordForm = (v.indonesian || '').trim();
-                            var base = (v.baseForm || wordForm).trim();
-                            var key = base.toLowerCase();
-                            var japMeaning = (v.japanese || '').trim();
+                    if (chunkRawText) {
+                        var chunkParsed = safeParseTruncatedJson(chunkRawText);
 
-                            if (wordForm && key) {
-                                if (!accumulatedVocabMap.has(key)) {
-                                    accumulatedVocabMap.set(key, {
-                                        id: 'vocab-' + Date.now() + '-' + accumulatedVocabMap.size,
-                                        indonesian: wordForm,
-                                        baseForm: base,
-                                        japanese: japMeaning || '（意味取得）',
-                                        pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(v.pos) ? v.pos : 'other',
-                                        context: v.context || '',
-                                        isKeyWord: Boolean(v.isKeyWord),
-                                        mastered: false
-                                    });
+                        if (chunkParsed.grammar && Array.isArray(chunkParsed.grammar)) {
+                            chunkParsed.grammar.forEach(function(gItem, gIdx) {
+                                var bIdx = (gItem.blockIndex !== undefined && gItem.blockIndex !== null) ? Number(gItem.blockIndex) : (start + gIdx);
+                                var targetBlock = blocks.find(function(b) { return b.blockIndex === bIdx; }) || chunkBlocks[gIdx];
+                                if (targetBlock && gItem.grammarExplanation) {
+                                    targetBlock.grammarExplanation = String(gItem.grammarExplanation).trim();
                                 }
-                            }
-                        });
+                            });
+                        }
+
+                        if (chunkParsed.vocab && Array.isArray(chunkParsed.vocab)) {
+                            chunkParsed.vocab.forEach(function(v) {
+                                var wordForm = (v.indonesian || '').trim();
+                                var base = (v.baseForm || wordForm).trim();
+                                var key = base.toLowerCase();
+                                var japMeaning = (v.japanese || '').trim();
+
+                                if (wordForm && key) {
+                                    if (!accumulatedVocabMap.has(key)) {
+                                        accumulatedVocabMap.set(key, {
+                                            id: 'vocab-' + Date.now() + '-' + accumulatedVocabMap.size,
+                                            indonesian: wordForm,
+                                            baseForm: base,
+                                            japanese: japMeaning || '（意味取得）',
+                                            pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(v.pos) ? v.pos : 'other',
+                                            context: v.context || '',
+                                            isKeyWord: Boolean(v.isKeyWord),
+                                            mastered: false
+                                        });
+                                    }
+                                }
+                            });
+                        }
                     }
                 } catch (chunkErr) {
                     console.warn('[reanalyzeBlocksCore] Chunk error:', chunkErr);
@@ -1093,11 +1338,11 @@
 
                 chunkBlocks.forEach(function(cb) {
                     if (!cb.grammarExplanation || cb.grammarExplanation === '解析中...') {
-                        cb.grammarExplanation = '【語句対比】\n・' + cb.indonesian + ' = ' + cb.japanese + '\n【構文構造】\n・標準配置構造\n【接辞解剖】\n・基本形\n【解説・ニュアンス】\n・日常会話表現です。';
+                        cb.grammarExplanation = '【語句対比】\n・' + cb.indonesian + ' = ' + cb.japanese + '\n【構文構造】\n・主語(S) + 動詞(V) の基本配置構造\n【接辞解剖】\n・基本語形語彙\n【解説・ニュアンス】\n・日常会話でよく用いられる標準的表現です。';
                     }
                 });
 
-                await sleep(500);
+                await sleep(1000);
             }
 
             return {
@@ -1106,8 +1351,170 @@
             };
         }
 
+        window.processAudioWithGemini = async function() {
+            if (!window.fileQueue || window.fileQueue.length === 0) {
+                showToast('音源ファイルがキューに追加されていません', 'error');
+                return;
+            }
+
+            var apiKey = getApiKey();
+
+            if (window.isQueueProcessing) return;
+            window.isQueueProcessing = true;
+
+            var btn = document.getElementById('startTranscribeBtn');
+            var btnText = document.getElementById('transcribeBtnText');
+            var progressContainer = document.getElementById('chunkProgressContainer');
+            if (btn) btn.disabled = true;
+            if (progressContainer) progressContainer.classList.remove('hidden');
+
+            for (var i = 0; i < window.fileQueue.length; i++) {
+                var item = window.fileQueue[i];
+                if (item.status === 'completed') continue;
+
+                resetActiveSessionState(item.file.name);
+
+                item.status = 'processing';
+                renderQueueUI();
+                if (btnText) btnText.textContent = '解析中 (' + (i + 1) + '/' + window.fileQueue.length + ')';
+
+                try {
+                    await processSingleFileWithLongAudioChunking(item, apiKey, i + 1, window.fileQueue.length);
+                    item.status = 'completed';
+                    renderQueueUI();
+                } catch (err) {
+                    console.error('Queue Error:', err);
+                    item.status = 'error';
+                    renderQueueUI();
+                    showToast('エラー: ' + translateErrorMessage(err.message), 'error');
+                    if (err.message.includes('401') || err.message.includes('認証エラー') || err.message.includes('Key')) {
+                        openModal('apiKeyModal', true);
+                        break;
+                    }
+                }
+                await sleep(2000);
+            }
+
+            window.isQueueProcessing = false;
+            if (btn) btn.disabled = false;
+            if (btnText) btnText.textContent = "全ブロック深掘り解析スタート";
+            showToast('すべてのキューファイルの解析処理が完了しました', 'info');
+            setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
+        };
+
+        async function processSingleFileWithLongAudioChunking(queueItem, apiKey, currentIdx, totalIdx) {
+            var file = queueItem.file;
+
+            var progressLabel = document.getElementById('chunkProgressLabel');
+            var progressPercent = document.getElementById('chunkProgressPercent');
+            var progressBar = document.getElementById('chunkProgressBar');
+
+            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-scissors text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 音声を軽量化・分割処理中...</span>';
+            if (progressBar) progressBar.style.width = '10%';
+            if (progressPercent) progressPercent.textContent = '10%';
+
+            var wavChunks = await splitAudioFileIntoWavChunks(file, 180);
+            var allCombinedBlocks = [];
+
+            for (var c = 0; c < wavChunks.length; c++) {
+                var chunkObj = wavChunks[c];
+                var subPct = Math.floor(10 + ((c / wavChunks.length) * 40));
+                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> <span>パート ' + (c + 1) + '/' + wavChunks.length + ' を文字起こし中...</span>';
+                if (progressBar) progressBar.style.width = subPct + '%';
+                if (progressPercent) progressPercent.textContent = subPct + '%';
+
+                var chunkBase64 = await new Promise(function(resolve, reject) {
+                    var reader = new FileReader();
+                    reader.onload = function(e) { resolve(e.target.result.split(',')[1]); };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(chunkObj.blob);
+                });
+
+                var transcribePrompt = 'Transcribe this Indonesian audio accurately with Japanese translation for each sentence block.';
+
+                var payload = {
+                    contents: [{ role: 'user', parts: [{ text: transcribePrompt }, { inlineData: { mimeType: 'audio/wav', data: chunkBase64 } }] }],
+                    generationConfig: { 
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "ARRAY",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    speaker: { type: "STRING" },
+                                    indonesian: { type: "STRING" },
+                                    japanese: { type: "STRING" }
+                                },
+                                required: ["speaker", "indonesian", "japanese"]
+                            }
+                        },
+                        maxOutputTokens: 8192 
+                    }
+                };
+
+                var resData = await fetchGeminiApi(apiKey, payload, false);
+                var rawText = extractGeminiText(resData);
+                var parsed = safeParseTruncatedJson(rawText);
+                var subBlocks = Array.isArray(parsed) ? parsed : (parsed.transcript || parsed.blocks || parsed.items || parsed.data || []);
+
+                subBlocks.forEach(function(sb) {
+                    allCombinedBlocks.push({
+                        id: 'block-' + Date.now() + '-' + allCombinedBlocks.length,
+                        blockIndex: allCombinedBlocks.length,
+                        speaker: sb.speaker || 'Pembicara 1',
+                        indonesian: sb.indonesian || '',
+                        japanese: sb.japanese || '',
+                        grammarExplanation: '解析中...'
+                    });
+                });
+                await sleep(1500);
+            }
+
+            if (allCombinedBlocks.length === 0) throw new Error('音声からテキストが読み取れませんでした');
+
+            window.transcriptBlocks = allCombinedBlocks;
+            renderTranscriptContainer();
+            if (window.innerWidth < 768) switchMobileTab('transcript');
+
+            var cleanFileName = formatOutputFileName(file.name);
+            var finalRes = await reanalyzeBlocksCore(
+                window.transcriptBlocks,
+                apiKey,
+                cleanFileName,
+                function(chunkIdx, totalChunks, currentPct, label) {
+                    var mappedPct = Math.floor(50 + (currentPct * 0.5));
+                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-blue-500"></i> <span class="truncate">【文法・単語解析】' + chunkIdx + '/' + totalChunks + '</span>';
+                    if (progressBar) progressBar.style.width = mappedPct + '%';
+                    if (progressPercent) progressPercent.textContent = mappedPct + '%';
+                }
+            );
+
+            window.transcriptBlocks = finalRes.blocks;
+            window.vocabList = finalRes.vocab;
+
+            if (progressBar) progressBar.style.width = '100%';
+            if (progressPercent) progressPercent.textContent = '100%';
+
+            renderTranscriptContainer();
+            renderGrammarContainer();
+            renderVocabContainer();
+
+            await saveCurrentToHistory(cleanFileName, false);
+            var singleDataObj = {
+                id: window.currentLoadedSessionId,
+                fileName: cleanFileName,
+                date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                timestamp: Date.now(),
+                blocks: window.transcriptBlocks,
+                vocab: window.vocabList
+            };
+            exportDataToFile(singleDataObj, cleanFileName + '.json');
+        }
+
         window.reanalyzeSelectedHistories = async function() {
             if (!window.selectedHistoryIds || window.selectedHistoryIds.length === 0) return;
+
+            var apiKey = getApiKey();
 
             var allSessions = await dbGetAllSessions();
             var selectedItems = window.selectedHistoryIds.map(function(id) {
@@ -1116,11 +1523,17 @@
 
             if (selectedItems.length === 0) return;
 
+            var btnRe = document.getElementById('btnReanalyzeSelected');
+            var btnMerge = document.getElementById('btnMergeSelected');
+            var btnSave = document.getElementById('btnSaveSelected');
             var progressContainer = document.getElementById('chunkProgressContainer');
             var progressLabel = document.getElementById('chunkProgressLabel');
             var progressPercent = document.getElementById('chunkProgressPercent');
             var progressBar = document.getElementById('chunkProgressBar');
 
+            if (btnRe) btnRe.disabled = true;
+            if (btnMerge) btnMerge.disabled = true;
+            if (btnSave) btnSave.disabled = true;
             if (progressContainer) progressContainer.classList.remove('hidden');
 
             try {
@@ -1130,9 +1543,10 @@
 
                     var res = await reanalyzeBlocksCore(
                         item.blocks || [],
+                        apiKey,
                         '[' + (i + 1) + '/' + selectedItems.length + '] ' + baseName,
-                        function(cIdx, totalC, pct) {
-                            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-rotate-right fa-spin text-amber-500"></i> <span class="truncate">' + baseName + ' (' + cIdx + '/' + totalC + ')</span>';
+                        function(cIdx, totalC, pct, label) {
+                            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-rotate-right fa-spin text-amber-500"></i> <span class="truncate">' + label + ' (' + cIdx + '/' + totalC + ')</span>';
                             if (progressBar) progressBar.style.width = pct + '%';
                             if (progressPercent) progressPercent.textContent = pct + '%';
                         }
@@ -1154,9 +1568,9 @@
                     renderVocabContainer();
 
                     await dbSaveSession(item);
-                    await sleep(500);
+                    await sleep(1500);
                 }
-                showToast(selectedItems.length + ' 件の Ollama RAG 選択再解析が完了しました！', 'info');
+                showToast(selectedItems.length + ' 件の選択再解析が完了しました！', 'info');
                 window.selectedHistoryIds = [];
                 await loadHistoryFromStorage();
             } catch (err) {
@@ -1173,11 +1587,15 @@
                 return;
             }
 
+            var apiKey = getApiKey();
+
+            var btn = document.getElementById('btnReanalyzeText');
             var progressContainer = document.getElementById('chunkProgressContainer');
             var progressLabel = document.getElementById('chunkProgressLabel');
             var progressPercent = document.getElementById('chunkProgressPercent');
             var progressBar = document.getElementById('chunkProgressBar');
 
+            if (btn) btn.disabled = true;
             if (progressContainer) progressContainer.classList.remove('hidden');
 
             try {
@@ -1186,9 +1604,10 @@
 
                 var res = await reanalyzeBlocksCore(
                     window.transcriptBlocks,
+                    apiKey,
                     targetName,
-                    function(cIdx, totalC, pct) {
-                        if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-amber-500"></i> <span class="truncate">【Ollama RAG 再解析】' + targetName + ' (' + cIdx + '/' + totalC + ')...</span>';
+                    function(cIdx, totalC, pct, label) {
+                        if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-amber-500"></i> <span class="truncate">【再解析】' + label + ' (' + cIdx + '/' + totalC + ')...</span>';
                         if (progressBar) progressBar.style.width = pct + '%';
                         if (progressPercent) progressPercent.textContent = pct + '%';
                     }
@@ -1199,112 +1618,42 @@
                 renderGrammarContainer();
                 renderVocabContainer();
                 await saveCurrentToHistory(targetName, false);
-                showToast('Ollama RAG 再解析が完了しました！', 'info');
+                showToast('テキスト再解析が完了しました！', 'info');
             } catch (err) {
                 showToast('再解析エラー: ' + translateErrorMessage(err.message), 'error');
             } finally {
+                if (btn) btn.disabled = false;
                 setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
             }
         };
 
-        async function fetchGeminiTtsApi(apiKey, payload) {
-            var cleanKey = String(apiKey || getGeminiKey() || '').trim().replace(/^["']|["']$/g, '');
-            if (!cleanKey) {
-                openModal('apiKeyModal');
-                throw new Error('Gemini API Keyが正しく設定されていません。');
+        function openModal(id, isQuotaError) {
+            var input = document.getElementById('apiKeyInput');
+            var notice = document.getElementById('apiKeyNotice');
+            if (input) input.value = getApiKey();
+            if (notice) {
+                if (isQuotaError) notice.classList.remove('hidden');
+                else notice.classList.add('hidden');
             }
-
-            var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=' + encodeURIComponent(cleanKey);
-
-            var response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                var errDetail = await response.text();
-                throw new Error('Gemini TTS Error: ' + errDetail);
-            }
-            return await response.json();
+            var modal = document.getElementById(id);
+            if (modal) modal.classList.remove('hidden');
         }
 
-        function base64ToArrayBuffer(base64) {
-            var binaryString = atob(base64);
-            var len = binaryString.length;
-            var bytes = new Uint8Array(len);
-            for (var i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
-            return bytes.buffer;
+        function closeModal(id) {
+            var modal = document.getElementById(id);
+            if (modal) modal.classList.add('hidden');
         }
 
-        function pcmToWav(pcm16, sampleRate) {
-            var numChannels = 1, byteRate = sampleRate * 2, blockAlign = 2, dataSize = pcm16.length * 2, chunkSize = 36 + dataSize;
-            var buffer = new ArrayBuffer(44 + dataSize), view = new DataView(buffer);
-
-            function writeString(view, offset, string) {
-                for (var i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+        function saveApiKeyFromModal() {
+            var input = document.getElementById('apiKeyInput');
+            var clean = String(input ? input.value : '').trim().replace(/^["']|["']$/g, '');
+            if (clean && clean.length > 5) {
+                localStorage.setItem('suarateks_gemini_key', clean);
+                showToast('API Keyを保存しました！', 'info');
+                closeModal('apiKeyModal');
+            } else {
+                showToast('有効なAPI Keyを入力してください', 'error');
             }
-
-            writeString(view, 0, 'RIFF'); view.setUint32(4, chunkSize, true); writeString(view, 8, 'WAVE'); writeString(view, 12, 'fmt ');
-            view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, numChannels, true);
-            view.setUint32(24, sampleRate, true); view.setUint32(28, byteRate, true); view.setUint16(32, blockAlign, true);
-            view.setUint16(34, 16, true); writeString(view, 36, 'data'); view.setUint32(40, dataSize, true);
-
-            var offset = 44;
-            for (var i = 0; i < pcm16.length; i++, offset += 2) view.setInt16(offset, pcm16[i], true);
-            return new Blob([buffer], { type: 'audio/wav' });
-        }
-
-        async function decodeTtsAudioToBuffer(arrayBuffer, mimeType) {
-            var ctx = window.ttsAudioContext || new (window.AudioContext || window.webkitAudioContext)();
-            window.ttsAudioContext = ctx;
-
-            var isWav = mimeType.indexOf('audio/wav') === 0 || mimeType.indexOf('audio/x-wav') === 0;
-            if (!isWav) {
-                var rateMatch = mimeType.match(/rate=(\d+)/);
-                var sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
-                var pcm16 = new Int16Array(arrayBuffer);
-                var wavBlob = pcmToWav(pcm16, sampleRate);
-                arrayBuffer = await wavBlob.arrayBuffer();
-            }
-
-            return await ctx.decodeAudioData(arrayBuffer.slice(0));
-        }
-
-        function createManagedTtsPlayer(audioBuffer, initialRate, onEnded) {
-            var ctx = window.ttsAudioContext;
-            var player = {
-                paused: true,
-                playbackRate: initialRate || 0.85,
-                _source: null,
-                _offset: 0,
-                _startedAt: 0,
-                play: function() {
-                    if (!this.paused) return Promise.resolve();
-                    if (ctx.state === 'suspended') ctx.resume();
-                    var source = ctx.createBufferSource();
-                    source.buffer = audioBuffer;
-                    source.playbackRate.value = this.playbackRate;
-                    source.connect(ctx.destination);
-                    this._source = source;
-                    this._startedAt = ctx.currentTime;
-                    this.paused = false;
-                    source.onended = function() {
-                        if (player._source !== source) return;
-                        player.paused = true; player._source = null;
-                        if (onEnded) onEnded();
-                    };
-                    source.start(0, this._offset);
-                    return Promise.resolve();
-                },
-                pause: function() {
-                    if (this.paused) return;
-                    this._offset += (ctx.currentTime - this._startedAt) * this.playbackRate;
-                    this.paused = true;
-                    if (this._source) { try { this._source.stop(); } catch (e) {} this._source = null; }
-                }
-            };
-            return player;
         }
 
         function stopAllSpeech() {
@@ -1312,103 +1661,182 @@
                 window.activeSpeechState.audioEl.pause();
                 window.activeSpeechState.audioEl = null;
             }
-            if (window.activeSpeechState.blockId) updateBlockToggleUI(window.activeSpeechState.blockId, 'stopped');
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            if (window.activeSpeechState.blockId) {
+                updateBlockToggleUI(window.activeSpeechState.blockId, 'stopped');
+            }
             window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
         }
 
         async function speakSentenceGeminiTTS(textToSpeak, blockId) {
-            var apiKey = getGeminiKey();
-            if (!apiKey) { openModal('apiKeyModal'); return; }
+            var apiKey = getApiKey();
+            if (!apiKey) {
+                openModal('apiKeyModal');
+                showToast('Gemini API Keyを設定してください', 'error');
+                return;
+            }
 
             if (blockId && window.activeSpeechState.blockId === blockId) {
-                var current = window.activeSpeechState.audioEl;
-                if (current) {
-                    if (current.paused) {
-                        await current.play();
+                if (window.activeSpeechState.audioEl) {
+                    if (window.activeSpeechState.audioEl.paused) {
+                        window.activeSpeechState.audioEl.play();
                         window.activeSpeechState.isPlaying = true;
                         updateBlockToggleUI(blockId, 'playing');
+                        return;
                     } else {
-                        current.pause();
+                        window.activeSpeechState.audioEl.pause();
                         window.activeSpeechState.isPlaying = false;
                         updateBlockToggleUI(blockId, 'paused');
+                        return;
                     }
-                    return;
                 }
             }
 
             stopAllSpeech();
-            var audioBuffer = null, cacheKey = String(textToSpeak || '').trim();
+
+            var audioUrl = null;
+            var cacheKey = String(textToSpeak || '').trim();
 
             if (window.ttsSentenceCache.has(cacheKey)) {
-                audioBuffer = window.ttsSentenceCache.get(cacheKey);
+                audioUrl = window.ttsSentenceCache.get(cacheKey);
             } else {
                 if (blockId) updateBlockToggleUI(blockId, 'loading');
+
                 try {
                     var ttsPayload = {
                         contents: [{ parts: [{ text: textToSpeak }] }],
                         generationConfig: {
                             responseModalities: ["AUDIO"],
-                            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } }
+                            speechConfig: {
+                                voiceConfig: {
+                                    prebuiltVoiceConfig: { voiceName: "Puck" }
+                                }
+                            }
                         }
                     };
-                    var resData = await fetchGeminiTtsApi(apiKey, ttsPayload);
-                    var part = resData.candidates[0].content.parts[0];
-                    audioBuffer = await decodeTtsAudioToBuffer(base64ToArrayBuffer(part.inlineData.data), part.inlineData.mimeType || '');
-                    window.ttsSentenceCache.set(cacheKey, audioBuffer);
+
+                    var resData = await fetchGeminiApi(apiKey, ttsPayload, true);
+                    var part = resData.candidates && resData.candidates[0] && resData.candidates[0].content && resData.candidates[0].content.parts && resData.candidates[0].content.parts[0];
+                    var audioInline = part && part.inlineData;
+
+                    if (!audioInline || !audioInline.data) {
+                        throw new Error('Gemini TTS音声データの生成に失敗しました');
+                    }
+
+                    var mimeType = audioInline.mimeType || 'audio/L16;rate=24000';
+                    var rateMatch = mimeType.match(/rate=(\d+)/);
+                    var sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+
+                    var pcmBuffer = base64ToArrayBuffer(audioInline.data);
+                    var pcm16 = new Int16Array(pcmBuffer);
+                    var wavBlob = pcmToWav(pcm16, sampleRate);
+                    audioUrl = URL.createObjectURL(wavBlob);
+
+                    window.ttsSentenceCache.set(cacheKey, audioUrl);
                 } catch (ttsErr) {
+                    console.warn('Gemini TTS sentence error:', ttsErr);
                     if (blockId) updateBlockToggleUI(blockId, 'stopped');
-                    showToast('TTS生成エラー: ' + translateErrorMessage(ttsErr.message), 'error');
+                    showToast('音声生成エラー: ' + translateErrorMessage(ttsErr.message), 'error');
                     return;
                 }
             }
 
-            var player = createManagedTtsPlayer(audioBuffer, window.speechRate || 0.85, function() {
-                if (blockId) updateBlockToggleUI(blockId, 'stopped');
-                window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
-            });
+            if (!audioUrl) return;
+
+            var audio = new Audio(audioUrl);
+            audio.playbackRate = window.speechRate || 0.85;
 
             if (blockId) {
-                window.activeSpeechState = { blockId: blockId, audioEl: player, isPlaying: true };
+                window.activeSpeechState = { blockId: blockId, audioEl: audio, isPlaying: true };
                 updateBlockToggleUI(blockId, 'playing');
             }
-            await player.play();
+
+            audio.onended = function() {
+                if (blockId) updateBlockToggleUI(blockId, 'stopped');
+                window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
+            };
+
+            audio.onerror = function() {
+                if (blockId) updateBlockToggleUI(blockId, 'stopped');
+                showToast('音声の再生中にエラーが発生しました', 'error');
+            };
+
+            await audio.play();
         }
 
         async function speakWordGeminiTTS(wordText) {
             var cleanWord = String(wordText || '').trim();
             if (!cleanWord) return;
-            var apiKey = getGeminiKey();
-            if (!apiKey) { openModal('apiKeyModal'); return; }
+
+            var apiKey = getApiKey();
+            if (!apiKey) {
+                openModal('apiKeyModal');
+                showToast('Gemini API Keyを設定してください', 'error');
+                return;
+            }
 
             stopAllSpeech();
-            var audioBuffer = null, cacheKey = cleanWord.toLowerCase();
+
+            var audioUrl = null;
+            var cacheKey = cleanWord.toLowerCase();
 
             if (window.ttsWordCache.has(cacheKey)) {
-                audioBuffer = window.ttsWordCache.get(cacheKey);
+                audioUrl = window.ttsWordCache.get(cacheKey);
             } else {
                 try {
                     var wordPayload = {
                         contents: [{ parts: [{ text: cleanWord }] }],
                         generationConfig: {
                             responseModalities: ["AUDIO"],
-                            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } }
+                            speechConfig: {
+                                voiceConfig: {
+                                    prebuiltVoiceConfig: { voiceName: "Puck" }
+                                }
+                            }
                         }
                     };
-                    var resData = await fetchGeminiTtsApi(apiKey, wordPayload);
-                    var part = resData.candidates[0].content.parts[0];
-                    audioBuffer = await decodeTtsAudioToBuffer(base64ToArrayBuffer(part.inlineData.data), part.inlineData.mimeType || '');
-                    window.ttsWordCache.set(cacheKey, audioBuffer);
-                } catch (err) {
-                    showToast('単語TTS再生エラー', 'error');
+
+                    var resData = await fetchGeminiApi(apiKey, wordPayload, true);
+                    var part = resData.candidates && resData.candidates[0] && resData.candidates[0].content && resData.candidates[0].content.parts && resData.candidates[0].content.parts[0];
+                    var audioInline = part && part.inlineData;
+
+                    if (!audioInline || !audioInline.data) {
+                        throw new Error('単語TTS音声の生成に失敗しました');
+                    }
+
+                    var mimeType = audioInline.mimeType || 'audio/L16;rate=24000';
+                    var rateMatch = mimeType.match(/rate=(\d+)/);
+                    var sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+
+                    var pcmBuffer = base64ToArrayBuffer(audioInline.data);
+                    var pcm16 = new Int16Array(pcmBuffer);
+                    var wavBlob = pcmToWav(pcm16, sampleRate);
+                    audioUrl = URL.createObjectURL(wavBlob);
+
+                    window.ttsWordCache.set(cacheKey, audioUrl);
+                } catch (wordErr) {
+                    console.warn('Gemini word TTS error:', wordErr);
+                    showToast('単語音声生成エラー: ' + translateErrorMessage(wordErr.message), 'error');
                     return;
                 }
             }
 
-            var player = createManagedTtsPlayer(audioBuffer, window.speechRate || 0.85, function() {
+            if (!audioUrl) return;
+
+            var audio = new Audio(audioUrl);
+            audio.playbackRate = window.speechRate || 0.85;
+            window.activeSpeechState = { blockId: null, audioEl: audio, isPlaying: true };
+
+            audio.onended = function() {
                 window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
-            });
-            window.activeSpeechState = { blockId: null, audioEl: player, isPlaying: true };
-            await player.play();
+            };
+            audio.onerror = function() {
+                window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
+            };
+
+            await audio.play();
         }
 
         function toggleSpeechBlock(blockId) {
@@ -1427,50 +1855,11 @@
             else btn.innerHTML = '<i class="fa-solid fa-play"></i><span>ナレーション再生</span>';
         }
 
-        function openModal(id) {
-            if (id === 'ollamaModal') {
-                var config = getOllamaConfig();
-                document.getElementById('apiBaseUrlInput').value = config.baseUrl;
-                document.getElementById('apiModelInput').value = config.modelName;
-            } else if (id === 'apiKeyModal') {
-                document.getElementById('apiKeyInput').value = getGeminiKey();
-            }
-            var modal = document.getElementById(id);
-            if (modal) modal.classList.remove('hidden');
-        }
-
-        function closeModal(id) {
-            var modal = document.getElementById(id);
-            if (modal) modal.classList.add('hidden');
-        }
-
-        function saveOllamaConfigFromModal() {
-            var baseUrl = String(document.getElementById('apiBaseUrlInput').value).trim();
-            var modelName = String(document.getElementById('apiModelInput').value).trim();
-
-            if (baseUrl && modelName) {
-                localStorage.setItem('suarateks_ollama_baseurl', baseUrl);
-                localStorage.setItem('suarateks_ollama_model', modelName);
-                showToast('Ollama 設定を保存しました！', 'info');
-                document.getElementById('engineStatusLabel').textContent = 'Ollama RAG (' + modelName + ')';
-                closeModal('ollamaModal');
-            } else { showToast('有効な URL とモデル名を入力してください', 'error'); }
-        }
-
-        function saveApiKeyFromModal() {
-            var clean = String(document.getElementById('apiKeyInput').value).trim().replace(/^["']|["']$/g, '');
-            if (clean && clean.length > 5) {
-                localStorage.setItem('suarateks_gemini_key', clean);
-                showToast('Gemini TTS Keyを保存しました！', 'info');
-                closeModal('apiKeyModal');
-            } else { showToast('有効なAPI Keyを入力してください', 'error'); }
-        }
-
-        function renderClickableIndonesianWords(text) {
+        function renderClickableIndonesianWords(text, blockId) {
             if (!text) return '';
             var words = text.split(/\s+/);
             return words.map(function(w) {
-                return '<span class="word-clickable" onclick="speakWordGeminiTTS(\'' + escapeHtml(w) + '\')" title="Gemini TTS単語音声再生">' + escapeHtml(w) + '</span>';
+                return '<span class="word-clickable" onclick="speakWordGeminiTTS(\'' + escapeHtml(w) + '\')" title="単語音声をGemini TTSで再生">' + escapeHtml(w) + '</span>';
             }).join(' ');
         }
 
@@ -1485,7 +1874,7 @@
             if (emptyState) emptyState.classList.add('hidden');
             var html = '';
             window.transcriptBlocks.forEach(function(block, idx) {
-                var clickableIndo = renderClickableIndonesianWords(block.indonesian);
+                var clickableIndo = renderClickableIndonesianWords(block.indonesian, 't-' + block.id);
                 html += '<div class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">' +
                     '<div class="flex items-center justify-between text-xs text-slate-500 pb-1 border-b border-slate-100 dark:border-slate-700">' +
                         '<div class="flex items-center gap-1.5">' +
@@ -1516,7 +1905,7 @@
             if (emptyState) emptyState.classList.add('hidden');
             var html = '';
             window.transcriptBlocks.forEach(function(block, idx) {
-                var clickableIndo = renderClickableIndonesianWords(block.indonesian);
+                var clickableIndo = renderClickableIndonesianWords(block.indonesian, 'g-' + block.id);
                 html += '<div class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2.5">' +
                     '<div class="flex items-center justify-between text-xs pb-1 border-b border-slate-100 dark:border-slate-700">' +
                         '<span class="font-extrabold text-blue-700 bg-blue-100 dark:bg-blue-950/80 px-2.5 py-0.5 rounded-full text-[11px]">文節 #' + (idx + 1) + '</span>' +
@@ -1529,7 +1918,7 @@
                         '<p class="dynamic-text-ja text-slate-500 dark:text-slate-400 font-medium">' + escapeHtml(block.japanese) + '</p>' +
                     '</div>' +
                     '<div class="bg-blue-50/60 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200/60 text-xs leading-relaxed text-blue-950 dark:text-blue-200 space-y-1.5">' +
-                        '<h5 class="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1 text-[10px] uppercase tracking-wider"><i class="fa-solid fa-diagram-project"></i> Ollama RAG 精密構文解剖・応用解説</h5>' +
+                        '<h5 class="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1 text-[10px] uppercase tracking-wider"><i class="fa-solid fa-diagram-project"></i> 4段階精密構文解剖・応用解説</h5>' +
                         '<div class="dynamic-text-ja whitespace-pre-line font-medium pt-0.5 leading-relaxed">' + escapeHtml(block.grammarExplanation) + '</div>' +
                     '</div>' +
                 '</div>';
@@ -1613,7 +2002,11 @@
 
         function getPosLabel(pos) {
             switch(pos) {
-                case 'noun': return '名詞'; case 'verb': return '動詞'; case 'adjective': return '形容詞'; case 'adverb': return '副詞'; default: return 'その他';
+                case 'noun': return '名詞';
+                case 'verb': return '動詞';
+                case 'adjective': return '形容詞';
+                case 'adverb': return '副詞';
+                default: return 'その他';
             }
         }
 
@@ -1791,9 +2184,18 @@
 
             selectedItems.forEach(function(item, index) {
                 var cleanName = formatOutputFileName(item.fileName || '解析データ');
-                var exportObj = { id: item.id, fileName: cleanName, date: item.date, blocks: item.blocks || [], vocab: item.vocab || [] };
-                setTimeout(function() { exportDataToFile(exportObj, cleanName + '.json'); }, index * 300);
+                var exportObj = {
+                    id: item.id,
+                    fileName: cleanName,
+                    date: item.date,
+                    blocks: item.blocks || [],
+                    vocab: item.vocab || []
+                };
+                setTimeout(function() {
+                    exportDataToFile(exportObj, cleanName + '.json');
+                }, index * 300);
             });
+
             showToast(selectedItems.length + ' 件の履歴を個別JSONとして保存しました！', 'info');
         }
 
@@ -1849,6 +2251,8 @@
             window.currentLoadedFileName = mergedTitle;
             window.transcriptBlocks = mergedBlocks;
             window.vocabList = Array.from(mergedVocabMap.values());
+            window.ttsSentenceCache.clear();
+            window.ttsWordCache.clear();
             updateActiveSessionBadge();
             renderTranscriptContainer();
             renderGrammarContainer();
@@ -1885,6 +2289,8 @@
                 window.currentLoadedFileName = found.fileName || '';
                 window.transcriptBlocks = found.blocks || [];
                 window.vocabList = found.vocab || [];
+                window.ttsSentenceCache.clear();
+                window.ttsWordCache.clear();
                 updateActiveSessionBadge();
                 renderTranscriptContainer();
                 renderGrammarContainer();
@@ -1956,6 +2362,8 @@
                 window.currentLoadedFileName = lastLoadedData.fileName;
                 window.transcriptBlocks = lastLoadedData.blocks;
                 window.vocabList = lastLoadedData.vocab;
+                window.ttsSentenceCache.clear();
+                window.ttsWordCache.clear();
                 updateActiveSessionBadge();
                 renderTranscriptContainer();
                 renderGrammarContainer();
@@ -2049,11 +2457,9 @@
             setFontSize(20);
             setSpeechRate(0.85);
             loadHistoryFromStorage();
-            loadStoredCustomDict();
-
-            var config = getOllamaConfig();
-            var label = document.getElementById('engineStatusLabel');
-            if (label) label.textContent = 'Ollama RAG (' + config.modelName + ')';
+            initDropzoneEvents();
+            var countEl = document.getElementById('kamusWordCount');
+            if (countEl) countEl.textContent = Object.keys(window.kamusAlayDict || {}).length;
         });
     </script>
 </body>
