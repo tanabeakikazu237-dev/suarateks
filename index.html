@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SuaraTeks">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>ðŸŽ™ï¸</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎙️</text></svg>">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2991/2991148.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -57,7 +57,7 @@
             <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block shrink-0"></span>
             <span class="truncate">SuaraTeks<span class="text-red-600">ID</span> Pro</span>
             <span class="text-[9px] text-slate-400 font-normal shrink-0">v6.1 (Gemini 3.8 Flash TTS Locked)</span>
-            <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1 py-0.5 rounded font-bold shrink-0"><i class="fa-solid fa-wifi-slash"></i> ã‚ªãƒ•ãƒ©ã‚¤ãƒ³</span>
+            <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1 py-0.5 rounded font-bold shrink-0"><i class="fa-solid fa-wifi-slash"></i> オフライン</span>
         </h1>
         <div class="flex items-center gap-1.5 shrink-0 min-w-0">
             <span id="activeSessionBadge" class="hidden text-[9px] bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 px-2 py-0.5 rounded-full font-extrabold border border-blue-200/50 truncate max-w-[120px] sm:max-w-[180px]"></span>
@@ -68,9 +68,9 @@
     </header>
 
     <div class="md:hidden bg-slate-200 dark:bg-slate-800 p-1 flex items-center gap-1 shrink-0 border-b border-slate-300 dark:border-slate-700 text-xs font-bold">
-        <button id="btnMobSetup" onclick="switchMobileTab('setup')" class="flex-1 py-1.5 text-center bg-white dark:bg-slate-700 rounded shadow-sm text-slate-800 dark:text-slate-100">è¨­å®šãƒ»éŸ³æº</button>
-        <button id="btnMobTranscript" onclick="switchMobileTab('transcript')" class="flex-1 py-1.5 text-center text-slate-600 dark:text-slate-400">æœ¬æ–‡</button>
-        <button id="btnMobVocab" onclick="switchMobileTab('vocab')" class="flex-1 py-1.5 text-center text-slate-600 dark:text-slate-400">å˜èªžå¸³</button>
+        <button id="btnMobSetup" onclick="switchMobileTab('setup')" class="flex-1 py-1.5 text-center bg-white dark:bg-slate-700 rounded shadow-sm text-slate-800 dark:text-slate-100">設定・音源</button>
+        <button id="btnMobTranscript" onclick="switchMobileTab('transcript')" class="flex-1 py-1.5 text-center text-slate-600 dark:text-slate-400">本文</button>
+        <button id="btnMobVocab" onclick="switchMobileTab('vocab')" class="flex-1 py-1.5 text-center text-slate-600 dark:text-slate-400">単語帳</button>
     </div>
 
     <div class="flex-1 flex overflow-hidden p-2 sm:p-3 gap-3 max-w-7xl mx-auto w-full min-h-0">
@@ -80,12 +80,12 @@
             
             <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
                 <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-                    <i class="fa-solid fa-sliders text-red-600"></i> è¡¨ç¤ºãƒ»éŸ³å£°èª¿æ•´
+                    <i class="fa-solid fa-sliders text-red-600"></i> 表示・音声調整
                 </h3>
                 
                 <div class="space-y-1 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
                     <div class="flex items-center justify-between text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                        <span><i class="fa-solid fa-font text-slate-400 mr-1"></i>æ–‡å­—ã‚µã‚¤ã‚º</span>
+                        <span><i class="fa-solid fa-font text-slate-400 mr-1"></i>文字サイズ</span>
                         <span class="fontSizeDisplayPt text-red-600 font-extrabold">20pt</span>
                     </div>
                     <div class="flex items-center gap-1.5">
@@ -97,7 +97,7 @@
 
                 <div class="space-y-1 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
                     <div class="flex items-center justify-between text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                        <span><i class="fa-solid fa-gauge-high text-slate-400 mr-1"></i>éŸ³å£°å†ç”Ÿé€Ÿåº¦</span>
+                        <span><i class="fa-solid fa-gauge-high text-slate-400 mr-1"></i>音声再生速度</span>
                         <span id="speechRateDisplay" class="text-red-600 font-extrabold">0.85x</span>
                     </div>
                     <div class="flex items-center gap-1.5">
@@ -109,18 +109,18 @@
 
                 <div class="space-y-1 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
                     <div class="flex items-center justify-between text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                        <span><i class="fa-solid fa-microphone-lines text-red-600 mr-1"></i>éŸ³å£°ã‚¨ãƒ³ã‚¸ãƒ³</span>
-                        <span class="text-emerald-600 font-extrabold">Gemini TTS (Puckå›ºå®š)</span>
+                        <span><i class="fa-solid fa-microphone-lines text-red-600 mr-1"></i>音声エンジン</span>
+                        <span class="text-emerald-600 font-extrabold">Gemini TTS (Puck固定)</span>
                     </div>
-                    <p class="text-[9px] text-slate-400 leading-tight">æ–‡ç¯€ãƒ»å˜èªžã¨ã‚‚ã«ãƒ¡ãƒ¢ãƒªã‚­ãƒ£ãƒƒã‚·ãƒ¥ä»˜ãé«˜éŸ³è³ªå›ºå®šãƒ¢ãƒ‡ãƒ«</p>
+                    <p class="text-[9px] text-slate-400 leading-tight">文節・単語ともにメモリキャッシュ付き高音質固定モデル</p>
                 </div>
             </div>
 
             <!-- Audio Queue Selection -->
             <div id="playerCard" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
                 <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> éŸ³æº/ãƒ†ã‚­ã‚¹ãƒˆè§£æž</span>
-                    <span class="text-[9px] text-emerald-600 font-bold"><i class="fa-solid fa-shield-halved"></i> å…¨æ§‹æ–‡ç²¾å¯†è§£å‰–</span>
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音源/テキスト解析</span>
+                    <span class="text-[9px] text-emerald-600 font-bold"><i class="fa-solid fa-shield-halved"></i> 全構文精密解剖</span>
                 </h3>
                 
                 <label id="fileDropLabel" for="audioFileInput" class="relative group cursor-pointer block">
@@ -131,13 +131,13 @@
                             <div class="w-6 h-6 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
                                 <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
                             </div>
-                            <p class="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">éŸ³å£°ãƒ•ã‚¡ã‚¤ãƒ«ã‚’é¸æŠžï¼ˆè¤‡æ•°å¯ï¼‰</p>
+                            <p class="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">音声ファイルを選択（複数可）</p>
                         </div>
 
                         <div id="dropzoneSelected" class="hidden space-y-1 text-left">
                             <div class="flex items-center justify-between text-emerald-600 mb-0.5">
-                                <span class="text-[9px] font-extrabold"><i class="fa-solid fa-list-check"></i> ã‚­ãƒ¥ãƒ¼ã‚»ãƒƒãƒˆå®Œäº†</span>
-                                <span class="text-[8px] text-slate-400">ã‚¿ãƒƒãƒ—ã§å†é¸æŠž</span>
+                                <span class="text-[9px] font-extrabold"><i class="fa-solid fa-list-check"></i> キューセット完了</span>
+                                <span class="text-[8px] text-slate-400">タップで再選択</span>
                             </div>
                             <div id="queueListContainer" class="max-h-24 overflow-y-auto pr-1"></div>
                         </div>
@@ -146,22 +146,22 @@
 
                 <button id="startTranscribeBtn" onclick="window.processAudioWithGemini()" class="w-full py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition flex items-center justify-center gap-1.5">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    <span id="transcribeBtnText">å…¨ãƒ–ãƒ­ãƒƒã‚¯æ·±æŽ˜ã‚Šè§£æžã‚¹ã‚¿ãƒ¼ãƒˆ</span>
+                    <span id="transcribeBtnText">全ブロック深掘り解析スタート</span>
                 </button>
 
                 <div class="border-t border-slate-100 dark:border-slate-700 pt-2 mt-2">
                     <label class="w-full py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-lg text-[10px] font-bold shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer">
-                        <i class="fa-solid fa-file-code text-blue-500 text-xs"></i> <span>Whisper JSONã‚’æ„å‘³ã®ã¾ã¨ã¾ã‚Šã§å†è§£æž</span>
+                        <i class="fa-solid fa-file-code text-blue-500 text-xs"></i> <span>Whisper JSONを意味のまとまりで再解析</span>
                         <input type="file" accept=".json" multiple onchange="window.handleWhisperJsonChange(event)" class="hidden">
                     </label>
-                    <p class="text-[8px] text-slate-400 text-center mt-1 leading-tight">ãƒãƒ£ãƒ³ã‚¯å†æ§‹ç¯‰ â†’ ç¿»è¨³ â†’ æ–‡æ³•ãƒ»å˜èªžè§£å‰– â†’ è‡ªå‹•ä¿å­˜</p>
+                    <p class="text-[8px] text-slate-400 text-center mt-1 leading-tight">チャンク再構築 → 翻訳 → 文法・単語解剖 → 自動保存</p>
                 </div>
             </div>
 
             <!-- Progress Bar -->
             <div id="chunkProgressContainer" class="hidden bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-1.5 shrink-0">
                 <div class="flex justify-between text-xs font-bold">
-                    <span id="chunkProgressLabel" class="flex items-center gap-1 text-[10px] truncate max-w-[80%]">è§£æžå®Ÿè¡Œä¸­...</span>
+                    <span id="chunkProgressLabel" class="flex items-center gap-1 text-[10px] truncate max-w-[80%]">解析実行中...</span>
                     <span id="chunkProgressPercent" class="text-red-600 text-[10px]">0%</span>
                 </div>
                 <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
@@ -173,29 +173,29 @@
             <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[180px]">
                 <div class="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-700 mb-1.5 gap-1 shrink-0">
                     <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1 shrink-0 truncate">
-                        <i class="fa-solid fa-database text-blue-500"></i> å±¥æ­´<span class="hidden sm:inline">(ç„¡åˆ¶é™)</span>
+                        <i class="fa-solid fa-database text-blue-500"></i> 履歴<span class="hidden sm:inline">(無制限)</span>
                     </h4>
                     <div class="flex items-center gap-0.5 sm:gap-1 shrink-0">
                         <button id="btnReanalyzeSelected" disabled onclick="reanalyzeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-0.5 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed">
-                            <i class="fa-solid fa-rotate-right"></i> å†è§£æž
+                            <i class="fa-solid fa-rotate-right"></i> 再解析
                         </button>
                         <button id="btnMergeSelected" disabled onclick="mergeSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-0.5 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed">
-                            <i class="fa-solid fa-code-merge"></i> çµåˆ
+                            <i class="fa-solid fa-code-merge"></i> 結合
                         </button>
                         <button id="btnSaveSelected" disabled onclick="saveSelectedHistories()" class="px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-0.5 opacity-60 shrink-0 whitespace-nowrap cursor-not-allowed">
-                            <i class="fa-solid fa-download"></i> ä¿å­˜
+                            <i class="fa-solid fa-download"></i> 保存
                         </button>
-                        <button onclick="clearHistory()" class="px-1.5 py-0.5 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded text-[9px] font-bold transition shrink-0 whitespace-nowrap">æ¶ˆåŽ»</button>
+                        <button onclick="clearHistory()" class="px-1.5 py-0.5 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded text-[9px] font-bold transition shrink-0 whitespace-nowrap">消去</button>
                     </div>
                 </div>
 
                 <div id="historyList" class="space-y-1 flex-1 overflow-y-auto max-h-[220px] pr-0.5">
-                    <p class="text-xs text-slate-400 py-1.5 text-center">èª­ã¿è¾¼ã¿ä¸­...</p>
+                    <p class="text-xs text-slate-400 py-1.5 text-center">読み込み中...</p>
                 </div>
 
                 <div class="pt-1.5 border-t border-slate-100 dark:border-slate-700 mt-1 shrink-0">
                     <label class="w-full py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition">
-                        <i class="fa-solid fa-file-import"></i> å±¥æ­´JSONã‚¤ãƒ³ãƒãƒ¼ãƒˆ
+                        <i class="fa-solid fa-file-import"></i> 履歴JSONインポート
                         <input type="file" accept=".json" multiple onchange="importHistoryBackup(event)" class="hidden">
                     </label>
                 </div>
@@ -208,21 +208,21 @@
             <div class="bg-white dark:bg-slate-800 px-2 sm:px-3 py-1.5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-1 shrink-0 overflow-x-auto hide-scrollbar">
                 <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl shrink-0 overflow-x-auto hide-scrollbar max-w-full">
                     <button id="navTabTranscript" onclick="setStudioSubView('transcript')" class="no-wrap-tab px-2 sm:px-3 py-1 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0">
-                        <i class="fa-solid fa-align-left text-[10px]"></i> æœ¬æ–‡
+                        <i class="fa-solid fa-align-left text-[10px]"></i> 本文
                     </button>
                     <button id="navTabGrammar" onclick="setStudioSubView('grammar')" class="no-wrap-tab px-2 sm:px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
-                        <i class="fa-solid fa-diagram-project text-[10px]"></i> æ–‡æ³•è§£å‰–
+                        <i class="fa-solid fa-diagram-project text-[10px]"></i> 文法解剖
                     </button>
                     <button id="navTabVocab" onclick="setStudioSubView('vocab')" class="no-wrap-tab px-2 sm:px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
-                        <i class="fa-solid fa-book-open text-[10px]"></i> å˜èªžå¸³ (<span id="vocabCountBadge">0</span>)
+                        <i class="fa-solid fa-book-open text-[10px]"></i> 単語帳 (<span id="vocabCountBadge">0</span>)
                     </button>
-                    <button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-1.5 sm:px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] sm:text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-0.5 whitespace-nowrap" title="ç¾åœ¨ã®ã‚»ãƒƒã‚·ãƒ§ãƒ³ã‚’æ·±æŽ˜ã‚Šå†è§£æž">
-                        <i class="fa-solid fa-rotate-right text-[9px]"></i> å†è§£æž
+                    <button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-1.5 sm:px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] sm:text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-0.5 whitespace-nowrap" title="現在のセッションを深掘り再解析">
+                        <i class="fa-solid fa-rotate-right text-[9px]"></i> 再解析
                     </button>
                 </div>
 
                 <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
-                    <span class="text-[9px] font-extrabold text-slate-500 shrink-0">æ–‡å­—</span>
+                    <span class="text-[9px] font-extrabold text-slate-500 shrink-0">文字</span>
                     <button onclick="adjustFontSize(-1)" class="w-4 h-4 flex items-center justify-center rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-200 text-xs shrink-0">-</button>
                     <input type="range" min="20" max="30" value="20" oninput="setFontSize(this.value)" class="fontSizeSlider w-8 sm:w-10 accent-red-600 cursor-pointer shrink-0">
                     <button onclick="adjustFontSize(1)" class="w-4 h-4 flex items-center justify-center rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold hover:bg-slate-200 text-xs shrink-0">+</button>
@@ -234,7 +234,7 @@
             <div id="transcriptView" class="flex-1 p-3 overflow-y-auto space-y-3">
                 <div id="emptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
                     <i class="fa-solid fa-file-audio text-3xl text-slate-300 dark:text-slate-700"></i>
-                    <span>éŸ³å£°ã¾ãŸã¯JSONãƒ•ã‚¡ã‚¤ãƒ«ã‚’é¸æŠžã—ã¦ã€Œè§£æžã‚¹ã‚¿ãƒ¼ãƒˆã€ã‚’æŠ¼ã—ã¦ãã ã•ã„</span>
+                    <span>音声またはJSONファイルを選択して「解析スタート」を押してください</span>
                 </div>
                 <div id="transcriptContainer" class="space-y-3"></div>
             </div>
@@ -243,7 +243,7 @@
             <div id="grammarView" class="hidden flex-1 p-3 overflow-y-auto space-y-3">
                 <div id="grammarEmptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2">
                     <i class="fa-solid fa-diagram-project text-3xl text-slate-300 dark:text-slate-700"></i>
-                    <span>æ–‡æ³•è§£å‰–ãƒ‡ãƒ¼ã‚¿ãŒã‚ã‚Šã¾ã›ã‚“</span>
+                    <span>文法解剖データがありません</span>
                 </div>
                 <div id="grammarContainer" class="space-y-3"></div>
             </div>
@@ -252,54 +252,54 @@
             <div id="vocabView" class="hidden flex-1 flex-col overflow-y-auto p-2 sm:p-3 space-y-2">
                 <div class="bg-white dark:bg-slate-800 p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 shrink-0">
                     <div class="flex items-center gap-2">
-                        <input type="text" id="vocabSearchInput" oninput="window.activeVocabSearchQuery=this.value; renderVocabContainer();" placeholder="å˜èªžãƒ»è¨³ãƒ»åŽŸå½¢ã‚’æ¤œç´¢..." class="flex-1 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold focus:outline-none focus:border-red-500">
-                        <button id="btnModeCard" onclick="setVocabMode('card')" class="px-2.5 py-1 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition">ã‚«ãƒ¼ãƒ‰</button>
-                        <button id="btnModeList" onclick="setVocabMode('list')" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">ä¸€è¦§</button>
+                        <input type="text" id="vocabSearchInput" oninput="window.activeVocabSearchQuery=this.value; renderVocabContainer();" placeholder="単語・訳・原形を検索..." class="flex-1 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold focus:outline-none focus:border-red-500">
+                        <button id="btnModeCard" onclick="setVocabMode('card')" class="px-2.5 py-1 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition">カード</button>
+                        <button id="btnModeList" onclick="setVocabMode('list')" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">一覧</button>
                     </div>
                     <div class="flex items-center gap-1 flex-wrap text-[10px] font-bold">
-                        <button data-pos="all" onclick="setVocabPosFilter('all')" class="btn-pos-filter px-2 py-0.5 rounded-lg bg-red-600 text-white">ã™ã¹ã¦</button>
-                        <button data-pos="noun" onclick="setVocabPosFilter('noun')" class="btn-pos-filter px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600">åè©ž</button>
-                        <button data-pos="verb" onclick="setVocabPosFilter('verb')" class="btn-pos-filter px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600">å‹•è©ž</button>
-                        <button data-pos="adjective" onclick="setVocabPosFilter('adjective')" class="btn-pos-filter px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600">å½¢å®¹è©ž</button>
-                        <button data-pos="adverb" onclick="setVocabPosFilter('adverb')" class="btn-pos-filter px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600">å‰¯è©ž</button>
+                        <button data-pos="all" onclick="setVocabPosFilter('all')" class="btn-pos-filter px-2 py-0.5 rounded-lg bg-red-600 text-white">すべて</button>
+                        <button data-pos="noun" onclick="setVocabPosFilter('noun')" class="btn-pos-filter px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600">名詞</button>
+                        <button data-pos="verb" onclick="setVocabPosFilter('verb')" class="btn-pos-filter px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600">動詞</button>
+                        <button data-pos="adjective" onclick="setVocabPosFilter('adjective')" class="btn-pos-filter px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600">形容詞</button>
+                        <button data-pos="adverb" onclick="setVocabPosFilter('adverb')" class="btn-pos-filter px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600">副詞</button>
                     </div>
                 </div>
 
                 <div id="vocabEmptyState" class="h-full flex flex-col items-center justify-center text-xs text-slate-400 font-bold gap-2 py-8">
                     <i class="fa-solid fa-book-bookmark text-3xl text-slate-300 dark:text-slate-700"></i>
-                    <span>å˜èªžãƒ‡ãƒ¼ã‚¿ãŒã‚ã‚Šã¾ã›ã‚“</span>
+                    <span>単語データがありません</span>
                 </div>
                 <div id="vocabListContainer" class="hidden flex-1 overflow-y-auto space-y-2"></div>
                 
                 <div id="vocabCardContainer" class="hidden flex-1 flex-col items-center justify-start p-1 w-full my-auto">
                     <div class="w-full max-w-sm flex justify-between items-center text-xs font-bold text-slate-500 mb-2 shrink-0">
                         <span id="flashcardProgressLabel">1 / 1</span>
-                        <button onclick="toggleShuffleCards()" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] hover:bg-slate-200"><i class="fa-solid fa-shuffle"></i> ã‚·ãƒ£ãƒƒãƒ•ãƒ«</button>
+                        <button onclick="toggleShuffleCards()" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] hover:bg-slate-200"><i class="fa-solid fa-shuffle"></i> シャッフル</button>
                     </div>
 
                     <div onclick="flipFlashcard()" class="w-full max-w-sm h-48 sm:h-56 perspective-1000 cursor-pointer shrink-0">
                         <div id="flashcardInner" class="relative w-full h-full transform-style-3d shadow-md rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                             <div class="absolute inset-0 w-full h-full backface-hidden p-4 flex flex-col justify-between rounded-2xl bg-white dark:bg-slate-800">
-                                <span id="cardBadgeFront" class="self-start text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300">å“è©ž</span>
+                                <span id="cardBadgeFront" class="self-start text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300">品詞</span>
                                 <div class="text-center space-y-1.5 my-auto">
                                     <h2 id="cardIndoText" class="dynamic-text-indo font-black text-slate-800 dark:text-slate-100">---</h2>
-                                    <p class="text-[10px] text-slate-400">ã‚¿ãƒƒãƒ—ã—ã¦è£é¢ã‚’è¡¨ç¤º</p>
+                                    <p class="text-[10px] text-slate-400">タップして裏面を表示</p>
                                 </div>
                                 <div class="text-right shrink-0">
-                                    <button onclick="event.stopPropagation(); speakWordGeminiTTS(document.getElementById('cardIndoText').innerText)" class="p-1.5 text-slate-400 hover:text-emerald-500" title="å˜èªžéŸ³å£°ã‚’Gemini TTSã§å†ç”Ÿ">
+                                    <button onclick="event.stopPropagation(); speakWordGeminiTTS(document.getElementById('cardIndoText').innerText)" class="p-1.5 text-slate-400 hover:text-emerald-500" title="単語音声をGemini TTSで再生">
                                         <i class="fa-solid fa-volume-high text-sm"></i>
                                     </button>
                                 </div>
                             </div>
 
                             <div class="absolute inset-0 w-full h-full backface-hidden rotate-y-180 p-4 flex flex-col justify-between rounded-2xl bg-emerald-50 dark:bg-slate-800 border-2 border-emerald-500">
-                                <span id="cardPosBack" class="self-start text-[10px] font-bold text-emerald-800 dark:text-emerald-300">å“è©žè©³ç´°</span>
+                                <span id="cardPosBack" class="self-start text-[10px] font-bold text-emerald-800 dark:text-emerald-300">品詞詳細</span>
                                 <div class="text-center space-y-1 my-auto">
                                     <h3 id="cardJapText" class="dynamic-text-ja font-extrabold text-emerald-800 dark:text-emerald-300">---</h3>
                                     <p id="cardContextFull" class="text-[11px] text-slate-600 dark:text-slate-400 italic line-clamp-2">---</p>
                                 </div>
                                 <div class="text-right shrink-0">
-                                    <button onclick="event.stopPropagation(); speakWordGeminiTTS(document.getElementById('cardIndoText').innerText)" class="p-1.5 text-slate-400 hover:text-emerald-500" title="å˜èªžéŸ³å£°ã‚’Gemini TTSã§å†ç”Ÿ">
+                                    <button onclick="event.stopPropagation(); speakWordGeminiTTS(document.getElementById('cardIndoText').innerText)" class="p-1.5 text-slate-400 hover:text-emerald-500" title="単語音声をGemini TTSで再生">
                                         <i class="fa-solid fa-volume-high text-sm"></i>
                                     </button>
                                 </div>
@@ -308,8 +308,8 @@
                     </div>
 
                     <div class="flex gap-2 mt-3 w-full max-w-sm shrink-0 mb-1">
-                        <button onclick="nextFlashcard(false)" class="flex-1 py-1.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold hover:bg-slate-300">è¦å¾©ç¿’</button>
-                        <button onclick="nextFlashcard(true)" class="flex-1 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow hover:bg-emerald-700">ç¿’å¾—æ¸ˆã¿</button>
+                        <button onclick="nextFlashcard(false)" class="flex-1 py-1.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold hover:bg-slate-300">要復習</button>
+                        <button onclick="nextFlashcard(true)" class="flex-1 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow hover:bg-emerald-700">習得済み</button>
                     </div>
                 </div>
             </div>
@@ -322,16 +322,16 @@
     <div id="apiKeyModal" class="fixed inset-0 bg-slate-900/60 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white dark:bg-slate-800 rounded-xl p-4 max-w-sm w-full space-y-3 shadow-xl border border-slate-200 dark:border-slate-700">
             <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-                <i class="fa-solid fa-key text-amber-500"></i> Gemini API Key è¨­å®š
+                <i class="fa-solid fa-key text-amber-500"></i> Gemini API Key 設定
             </h3>
             <div id="apiKeyNotice" class="hidden p-2 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded text-[11px] text-amber-800 dark:text-amber-200 font-medium leading-snug">
-                <i class="fa-solid fa-triangle-exclamation mr-1 text-amber-600"></i> APIã‚­ãƒ¼èªè¨¼ã‚¨ãƒ©ãƒ¼ã§ã™ã€‚Google AI Studioã§æ–°ã—ã„API Keyã‚’å–å¾—ãƒ»ä½œæˆã—ã¦è²¼ã‚Šä»˜ã‘ã¦ãã ã•ã„ã€‚
+                <i class="fa-solid fa-triangle-exclamation mr-1 text-amber-600"></i> APIキー認証エラーです。Google AI Studioで新しいAPI Keyを取得・作成して貼り付けてください。
             </div>
-            <p class="text-[10px] text-slate-400">Google AI Studio (https://aistudio.google.com/) ã§å–å¾—ã—ãŸ API Key ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„</p>
-            <input type="password" id="apiKeyInput" placeholder="API Key (AQ... ã¾ãŸã¯ AIza...)" class="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 text-xs dark:bg-slate-900 font-mono text-slate-800 dark:text-slate-100 focus:outline-none focus:border-red-500">
+            <p class="text-[10px] text-slate-400">Google AI Studio (https://aistudio.google.com/) で取得した API Key を入力してください</p>
+            <input type="password" id="apiKeyInput" placeholder="API Key (AQ... または AIza...)" class="w-full px-3 py-2 rounded border border-slate-300 dark:border-slate-600 text-xs dark:bg-slate-900 font-mono text-slate-800 dark:text-slate-100 focus:outline-none focus:border-red-500">
             <div class="flex justify-end gap-2">
-                <button onclick="closeModal('apiKeyModal')" class="px-3 py-1 text-xs text-slate-500 hover:text-slate-700">ã‚­ãƒ£ãƒ³ã‚»ãƒ«</button>
-                <button onclick="saveApiKeyFromModal()" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold">ä¿å­˜ã—ã¦å†é–‹</button>
+                <button onclick="closeModal('apiKeyModal')" class="px-3 py-1 text-xs text-slate-500 hover:text-slate-700">キャンセル</button>
+                <button onclick="saveApiKeyFromModal()" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold">保存して再開</button>
             </div>
         </div>
     </div>
@@ -458,7 +458,7 @@
             if (!badge) return;
             if (!navigator.onLine) {
                 badge.classList.remove('hidden');
-                showToast('ãƒãƒƒãƒˆãƒ¯ãƒ¼ã‚¯ãŒã‚ªãƒ•ãƒ©ã‚¤ãƒ³ã§ã™', 'info');
+                showToast('ネットワークがオフラインです', 'info');
             } else {
                 badge.classList.add('hidden');
             }
@@ -587,24 +587,24 @@
         function translateErrorMessage(rawMessage) {
             var str = String(rawMessage || '').toLowerCase();
             if (str.includes('prepayment credits are depleted') || str.includes('billing#prepay')) {
-                return 'APIå‰æ‰•ã„ã‚¯ãƒ¬ã‚¸ãƒƒãƒˆãŒä¸è¶³ã—ã¦ã„ã¾ã™ã€‚Google AI Studioã§ãƒãƒ£ãƒ¼ã‚¸ã—ã¦ãã ã•ã„ã€‚';
+                return 'API前払いクレジットが不足しています。Google AI Studioでチャージしてください。';
             }
             if (str.includes('spend cap breached') || str.includes('quota exceeded') || str.includes('resourcehasexhausted')) {
-                return 'APIåˆ©ç”¨ä¸Šé™ï¼ˆQuotaï¼‰ã«é”ã—ã¾ã—ãŸã€‚æ™‚é–“ã‚’ãŠã„ã¦å†å®Ÿè¡Œã—ã¦ãã ã•ã„ã€‚';
+                return 'API利用上限（Quota）に達しました。時間をおいて再実行してください。';
             }
             if (str.includes('invalid authentication credentials') || str.includes('api_key_invalid') || str.includes('unauthorized') || str.includes('401')) {
-                return 'API Keyèªè¨¼ã‚¨ãƒ©ãƒ¼ï¼ˆ401ï¼‰ã§ã™ã€‚æœ‰åŠ¹ãªGoogle AI Studioã‚­ãƒ¼ã‚’è¨­å®šã—ã¦ãã ã•ã„ã€‚';
+                return 'API Key認証エラー（401）です。有効なGoogle AI Studioキーを設定してください。';
             }
             if (str.includes('network') || str.includes('failed to fetch')) {
-                return 'ãƒãƒƒãƒˆãƒ¯ãƒ¼ã‚¯æŽ¥ç¶šãŒä¸å®‰å®šã§ã™ã€‚é€šä¿¡çŠ¶æ³ã‚’ã”ç¢ºèªãã ã•ã„ã€‚';
+                return 'ネットワーク接続が不安定です。通信状況をご確認ください。';
             }
             return rawMessage;
         }
 
         function formatOutputFileName(baseName) {
-            var clean = String(baseName || 'è§£æžãƒ‡ãƒ¼ã‚¿').trim().replace(/\.[^/.]+$/, "");
-            clean = clean.replace(/^Â®\s*/, '');
-            return clean || 'è§£æžãƒ‡ãƒ¼ã‚¿';
+            var clean = String(baseName || '解析データ').trim().replace(/\.[^/.]+$/, "");
+            clean = clean.replace(/^®\s*/, '');
+            return clean || '解析データ';
         }
 
         function setSpeechRate(val) {
@@ -640,7 +640,7 @@
         }
 
         function safeParseTruncatedJson(jsonString) {
-            if (!jsonString) throw new Error('Geminiã‹ã‚‰å¿œç­”ãŒè¿”ã•ã‚Œã¾ã›ã‚“ã§ã—ãŸ');
+            if (!jsonString) throw new Error('Geminiから応答が返されませんでした');
             var raw = String(jsonString).trim();
 
             try { return JSON.parse(raw); } catch (e1) {}
@@ -716,7 +716,7 @@
             repaired = repaired.replace(/,\s*([}\]])/g, '$1');
 
             try { return JSON.parse(repaired); } catch (e7) {}
-            throw new Error('JSONã®æ§‹é€ è§£æžã«å¤±æ•—ã—ã¾ã—ãŸ');
+            throw new Error('JSONの構造解析に失敗しました');
         }
 
         function formatBytes(bytes) {
@@ -728,7 +728,7 @@
 
         function resetActiveSessionState(newFileName) {
             window.currentLoadedSessionId = 'session-' + Date.now();
-            window.currentLoadedFileName = newFileName || 'æ–°è¦ã‚»ãƒƒã‚·ãƒ§ãƒ³';
+            window.currentLoadedFileName = newFileName || '新規セッション';
             window.transcriptBlocks = [];
             window.vocabList = [];
             window.activeVocabSearchQuery = '';
@@ -752,7 +752,7 @@
             var badge = document.getElementById('activeSessionBadge');
             if (!badge) return;
             if (window.currentLoadedFileName) {
-                badge.textContent = 'è¡¨ç¤ºä¸­: ' + window.currentLoadedFileName;
+                badge.textContent = '表示中: ' + window.currentLoadedFileName;
                 badge.classList.remove('hidden');
             } else {
                 badge.classList.add('hidden');
@@ -769,14 +769,14 @@
         function processSelectedFiles(files) {
             var validFiles = files.filter(function(f) { return f.type.startsWith('audio/') || f.name.match(/\.(mp3|wav|m4a|aac|ogg|flac)$/i); }).slice(0, 10);
             if (validFiles.length === 0) {
-                showToast('éŸ³å£°ãƒ•ã‚¡ã‚¤ãƒ«ãŒé¸æŠžã•ã‚Œã¦ã„ã¾ã›ã‚“', 'error');
+                showToast('音声ファイルが選択されていません', 'error');
                 return;
             }
             window.fileQueue = validFiles.map(function(f, idx) {
                 return { id: 'queue-' + Date.now() + '-' + idx, file: f, status: 'waiting', progress: 0 };
             });
             renderQueueUI();
-            showToast(window.fileQueue.length + ' ä»¶ã®éŸ³æºã‚’ã‚­ãƒ¥ãƒ¼ã«ã‚»ãƒƒãƒˆã—ã¾ã—ãŸï¼', 'info');
+            showToast(window.fileQueue.length + ' 件の音源をキューにセットしました！', 'info');
         }
 
         function renderQueueUI() {
@@ -796,10 +796,10 @@
             var html = '';
             window.fileQueue.forEach(function(q, idx) {
                 var statusBadge = '';
-                if (q.status === 'waiting') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 font-bold">å¾…æ©Ÿä¸­</span>';
-                else if (q.status === 'processing') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500 text-white font-bold"><i class="fa-solid fa-spinner fa-spin"></i> è§£æžä¸­</span>';
-                else if (q.status === 'completed') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500 text-white font-bold"><i class="fa-solid fa-check"></i> å®Œäº†</span>';
-                else if (q.status === 'error') statusBadge = '<button onclick="retryQueueItem(\'' + q.id + '\', event)" class="text-[9px] px-1.5 py-0.5 rounded bg-rose-600 hover:bg-rose-700 text-white font-bold transition flex items-center gap-1">å†è©¦è¡Œ</button>';
+                if (q.status === 'waiting') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 font-bold">待機中</span>';
+                else if (q.status === 'processing') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500 text-white font-bold"><i class="fa-solid fa-spinner fa-spin"></i> 解析中</span>';
+                else if (q.status === 'completed') statusBadge = '<span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500 text-white font-bold"><i class="fa-solid fa-check"></i> 完了</span>';
+                else if (q.status === 'error') statusBadge = '<button onclick="retryQueueItem(\'' + q.id + '\', event)" class="text-[9px] px-1.5 py-0.5 rounded bg-rose-600 hover:bg-rose-700 text-white font-bold transition flex items-center gap-1">再試行</button>';
 
                 html += '<div class="flex items-center justify-between gap-1 text-xs p-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 mb-1">' +
                     '<div class="min-w-0 flex-1">' +
@@ -837,7 +837,7 @@
             var cleanKey = String(apiKey || getApiKey() || '').trim().replace(/^["']|["']$/g, '');
             if (!cleanKey || cleanKey.length < 10) {
                 openModal('apiKeyModal');
-                throw new Error('API KeyãŒæ­£ã—ãè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚');
+                throw new Error('API Keyが正しく設定されていません。');
             }
 
             var modelName = isTtsRequest ? 'gemini-3.8-flash-tts' : 'gemini-3.8-flash';
@@ -877,7 +877,7 @@
 
                 if (!response || response.status === 401 || response.status === 403 || (errDetail && errDetail.toLowerCase().includes('key'))) {
                     openModal('apiKeyModal', true);
-                    throw new Error('API Keyèªè¨¼ã‚¨ãƒ©ãƒ¼ï¼ˆ401ï¼‰ã§ã™ã€‚æœ‰åŠ¹ãªAPI Keyã‚’è¨­å®šã—ã¦ãã ã•ã„ã€‚');
+                    throw new Error('API Key認証エラー（401）です。有効なAPI Keyを設定してください。');
                 }
                 throw new Error(translateErrorMessage(errDetail));
             }
@@ -891,7 +891,7 @@
 
         function extractGeminiText(data) {
             var parts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) ? data.candidates[0].content.parts : null;
-            if (!Array.isArray(parts)) throw new Error('å¿œç­”ã«ãƒ†ã‚­ã‚¹ãƒˆãƒ‡ãƒ¼ã‚¿ãŒå«ã¾ã‚Œã¦ã„ã¾ã›ã‚“');
+            if (!Array.isArray(parts)) throw new Error('応答にテキストデータが含まれていません');
             return parts.map(function(p) { return p.text || ''; }).join('').trim();
         }
 
@@ -935,9 +935,9 @@
             writeString(view, 36, 'data');
             view.setUint32(40, dataSize, true);
 
-            // TTSæœ«å°¾ã®ã‚¯ãƒªãƒƒã‚¯ï¼ãƒ—ãƒ„ãƒƒã¨ã„ã†ãƒŽã‚¤ã‚ºã‚’é˜²ããŸã‚ã€
-            // æœ€å¾Œã®çŸ­ã„åŒºé–“ã‚’æ»‘ã‚‰ã‹ã«ã‚¼ãƒ­ã¸ãƒ•ã‚§ãƒ¼ãƒ‰ã‚¢ã‚¦ãƒˆã™ã‚‹ã€‚
-            // éŸ³å£°ã®é•·ã•ã‚„å†ç”Ÿé€Ÿåº¦ã€TTSç”Ÿæˆãã®ã‚‚ã®ã¯å¤‰æ›´ã—ãªã„ã€‚
+            // TTS末尾のクリック／プツッというノイズを防ぐため、
+            // 最後の短い区間を滑らかにゼロへフェードアウトする。
+            // 音声の長さや再生速度、TTS生成そのものは変更しない。
             var fadeSamples = Math.min(pcm16.length, Math.floor(sampleRate * 0.06)); // 60ms
             var offset = 44;
             for (var i = 0; i < pcm16.length; i++, offset += 2) {
@@ -971,16 +971,16 @@
             var files = event.target.files ? Array.from(event.target.files) : [];
             if (files.length === 0) return;
 
-            // Whisper JSONå†è§£æžã®å¾…æ©Ÿãƒ•ã‚¡ã‚¤ãƒ«æ•°ä¸Šé™
+            // Whisper JSON再解析の待機ファイル数上限
             var MAX_WHISPER_JSON_QUEUE = 15;
             if (files.length > MAX_WHISPER_JSON_QUEUE) {
-                showToast('Whisper JSONã¯æœ€å¤§15ä»¶ã¾ã§é¸æŠžã§ãã¾ã™ã€‚å…ˆé ­15ä»¶ã‚’å†è§£æžã—ã¾ã™ã€‚', 'info');
+                showToast('Whisper JSONは最大15件まで選択できます。先頭15件を再解析します。', 'info');
                 files = files.slice(0, MAX_WHISPER_JSON_QUEUE);
             }
 
             var apiKey = getApiKey();
             if (!apiKey) {
-                showToast('Gemini API Key ãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚', 'error');
+                showToast('Gemini API Key が設定されていません。', 'error');
                 openModal('apiKeyModal');
                 return;
             }
@@ -997,7 +997,7 @@
             for (var i = 0; i < files.length; i++) {
                 var file = files[i];
                 try {
-                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-file-code text-blue-500"></i> <span class="truncate">[' + (i+1) + '/' + files.length + '] JSONèª­ã¿è¾¼ã¿ä¸­...</span>';
+                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-file-code text-blue-500"></i> <span class="truncate">[' + (i+1) + '/' + files.length + '] JSON読み込み中...</span>';
                     if (progressBar) progressBar.style.width = '5%';
                     if (progressPercent) progressPercent.textContent = '5%';
 
@@ -1012,7 +1012,7 @@
                     try {
                         parsedJson = JSON.parse(content);
                     } catch (err) {
-                        throw new Error('ç„¡åŠ¹ãªJSONãƒ•ã‚¡ã‚¤ãƒ«ã§ã™ã€‚ãƒ‘ãƒ¼ã‚¹ã«å¤±æ•—ã—ã¾ã—ãŸã€‚');
+                        throw new Error('無効なJSONファイルです。パースに失敗しました。');
                     }
 
                     var rawText = '';
@@ -1025,12 +1025,12 @@
                         rawText = extractAllTextValues(parsedJson).join(' ');
                     }
 
-                    if (!rawText.trim()) throw new Error('JSONã‹ã‚‰ãƒ†ã‚­ã‚¹ãƒˆãƒ‡ãƒ¼ã‚¿ã‚’æŠ½å‡ºã§ãã¾ã›ã‚“ã§ã—ãŸ');
+                    if (!rawText.trim()) throw new Error('JSONからテキストデータを抽出できませんでした');
 
                     var cleanFileName = formatOutputFileName(file.name);
                     resetActiveSessionState(cleanFileName);
 
-                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-align-left text-amber-500"></i> <span>æ„å‘³ã®ã¾ã¨ã¾ã‚Šï¼ˆãƒãƒ£ãƒ³ã‚¯ï¼‰ã«åˆ†å‰²ãƒ»ç¿»è¨³ä¸­...</span>';
+                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-align-left text-amber-500"></i> <span>意味のまとまり（チャンク）に分割・翻訳中...</span>';
                     if (progressBar) progressBar.style.width = '20%';
                     if (progressPercent) progressPercent.textContent = '20%';
 
@@ -1069,7 +1069,7 @@
                     var parsedRes = safeParseTruncatedJson(resultText);
 
                     var chunkedBlocks = parsedRes.blocks || [];
-                    if (!Array.isArray(chunkedBlocks) || chunkedBlocks.length === 0) throw new Error('ãƒ†ã‚­ã‚¹ãƒˆã®ãƒãƒ£ãƒ³ã‚¯åˆ†å‰²ãƒ»å†æ§‹ç¯‰ã«å¤±æ•—ã—ã¾ã—ãŸ');
+                    if (!Array.isArray(chunkedBlocks) || chunkedBlocks.length === 0) throw new Error('テキストのチャンク分割・再構築に失敗しました');
 
                     var formattedBlocks = chunkedBlocks.map(function(b, idx) {
                         return {
@@ -1078,7 +1078,7 @@
                             speaker: 'Speaker',
                             indonesian: b.indonesian || '',
                             japanese: b.japanese || '',
-                            grammarExplanation: 'è§£æžä¸­...'
+                            grammarExplanation: '解析中...'
                         };
                     });
 
@@ -1093,7 +1093,7 @@
                         cleanFileName,
                         function(chunkIdx, totalChunks, currentPct, label) {
                             var mappedPct = Math.floor(30 + (currentPct * 0.7));
-                            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-blue-500"></i> <span class="truncate">ã€æ–‡æ³•ãƒ»å˜èªžè§£æžã€‘' + chunkIdx + '/' + totalChunks + '</span>';
+                            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-blue-500"></i> <span class="truncate">【文法・単語解析】' + chunkIdx + '/' + totalChunks + '</span>';
                             if (progressBar) progressBar.style.width = mappedPct + '%';
                             if (progressPercent) progressPercent.textContent = mappedPct + '%';
                         }
@@ -1121,11 +1121,11 @@
                     };
                     exportDataToFile(singleDataObj, cleanFileName + '_analyzed.json');
 
-                    showToast(file.name + ' ã®è§£æžã¨ä¿å­˜ãŒå®Œäº†ã—ã¾ã—ãŸ', 'info');
+                    showToast(file.name + ' の解析と保存が完了しました', 'info');
 
                 } catch (e) {
                     console.error('Whisper JSON error:', e);
-                    showToast('ã‚¨ãƒ©ãƒ¼: ' + translateErrorMessage(e.message), 'error');
+                    showToast('エラー: ' + translateErrorMessage(e.message), 'error');
                 }
                 await sleep(1500);
             }
@@ -1142,7 +1142,7 @@
             var totalChunks = Math.ceil(totalBlocks / chunkSize);
             var accumulatedVocabMap = new Map();
 
-            blocks.forEach(function(b) { if (!b.grammarExplanation || b.grammarExplanation === 'è§£æžä¸­...') b.grammarExplanation = 'è§£æžä¸­...'; });
+            blocks.forEach(function(b) { if (!b.grammarExplanation || b.grammarExplanation === '解析中...') b.grammarExplanation = '解析中...'; });
 
             for (var chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
                 var start = chunkIdx * chunkSize;
@@ -1172,10 +1172,10 @@
 'Analyze EVERY single given Indonesian text block with utmost precision and depth. NEVER omit, skip, or summarize any part.\n\n' +
 'REQUIREMENTS:\n' +
 '1. "grammar": For EVERY single block index, generate a thorough, rich 4-part grammatical analysis in Japanese using these EXACT headings:\n' +
-'ã€èªžå¥å¯¾æ¯”ã€‘\nãƒ»Provide strict 1-to-1 word/phrase level alignment.\n' +
-'ã€æ§‹æ–‡æ§‹é€ ã€‘\nãƒ»Detailed SVO structure and modifier relationships.\n' +
-'ã€æŽ¥è¾žè§£å‰–ã€‘\nãƒ»Extract root word (Kata Dasar) and dissect affixes (me-, ber-, di-, -kan, -i, etc.).\n' +
-'ã€è§£èª¬ãƒ»ãƒ‹ãƒ¥ã‚¢ãƒ³ã‚¹ã€‘\nãƒ»Explain natural spoken usage and cultural nuance.\n\n' +
+'【語句対比】\n・Provide strict 1-to-1 word/phrase level alignment.\n' +
+'【構文構造】\n・Detailed SVO structure and modifier relationships.\n' +
+'【接辞解剖】\n・Extract root word (Kata Dasar) and dissect affixes (me-, ber-, di-, -kan, -i, etc.).\n' +
+'【解説・ニュアンス】\n・Explain natural spoken usage and cultural nuance.\n\n' +
 '2. "vocab": From target words list: "' + wordListStr + '", select important vocabulary and return indonesian, baseForm, Japanese translation, pos (noun/verb/adjective/adverb/other), context sentence, and isKeyWord (boolean).\n\n' +
 'INPUT BLOCKS:\n' + inputChunkText;
 
@@ -1247,7 +1247,7 @@
                                         id: 'vocab-' + Date.now() + '-' + accumulatedVocabMap.size,
                                         indonesian: wordForm,
                                         baseForm: base,
-                                        japanese: japMeaning || 'ï¼ˆæ„å‘³å–å¾—ï¼‰',
+                                        japanese: japMeaning || '（意味取得）',
                                         pos: ['noun', 'verb', 'adjective', 'adverb', 'other'].includes(v.pos) ? v.pos : 'other',
                                         context: v.context || '',
                                         isKeyWord: Boolean(v.isKeyWord),
@@ -1262,8 +1262,8 @@
                 }
 
                 chunkBlocks.forEach(function(cb) {
-                    if (!cb.grammarExplanation || cb.grammarExplanation === 'è§£æžä¸­...') {
-                        cb.grammarExplanation = 'ã€èªžå¥å¯¾æ¯”ã€‘\nãƒ»' + cb.indonesian + ' = ' + cb.japanese + '\nã€æ§‹æ–‡æ§‹é€ ã€‘\nãƒ»ä¸»èªž(S) + å‹•è©ž(V) ã®åŸºæœ¬é…ç½®æ§‹é€ \nã€æŽ¥è¾žè§£å‰–ã€‘\nãƒ»åŸºæœ¬èªžå½¢èªžå½™\nã€è§£èª¬ãƒ»ãƒ‹ãƒ¥ã‚¢ãƒ³ã‚¹ã€‘\nãƒ»æ—¥å¸¸ä¼šè©±ã§ã‚ˆãç”¨ã„ã‚‰ã‚Œã‚‹æ¨™æº–çš„è¡¨ç¾ã§ã™ã€‚';
+                    if (!cb.grammarExplanation || cb.grammarExplanation === '解析中...') {
+                        cb.grammarExplanation = '【語句対比】\n・' + cb.indonesian + ' = ' + cb.japanese + '\n【構文構造】\n・主語(S) + 動詞(V) の基本配置構造\n【接辞解剖】\n・基本語形語彙\n【解説・ニュアンス】\n・日常会話でよく用いられる標準的表現です。';
                     }
                 });
 
@@ -1278,13 +1278,13 @@
 
         window.processAudioWithGemini = async function() {
             if (!window.fileQueue || window.fileQueue.length === 0) {
-                showToast('éŸ³æºãƒ•ã‚¡ã‚¤ãƒ«ãŒã‚­ãƒ¥ãƒ¼ã«è¿½åŠ ã•ã‚Œã¦ã„ã¾ã›ã‚“', 'error');
+                showToast('音源ファイルがキューに追加されていません', 'error');
                 return;
             }
 
             var apiKey = getApiKey();
             if (!apiKey) {
-                showToast('Gemini API Key ãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚', 'error');
+                showToast('Gemini API Key が設定されていません。', 'error');
                 openModal('apiKeyModal');
                 return;
             }
@@ -1306,7 +1306,7 @@
 
                 item.status = 'processing';
                 renderQueueUI();
-                if (btnText) btnText.textContent = 'è§£æžä¸­ (' + (i + 1) + '/' + window.fileQueue.length + ')';
+                if (btnText) btnText.textContent = '解析中 (' + (i + 1) + '/' + window.fileQueue.length + ')';
 
                 try {
                     await processSingleFileWithLongAudioChunking(item, apiKey, i + 1, window.fileQueue.length);
@@ -1316,8 +1316,8 @@
                     console.error('Queue Error:', err);
                     item.status = 'error';
                     renderQueueUI();
-                    showToast('ã‚¨ãƒ©ãƒ¼: ' + translateErrorMessage(err.message), 'error');
-                    if (err.message.includes('401') || err.message.includes('èªè¨¼ã‚¨ãƒ©ãƒ¼') || err.message.includes('Key')) {
+                    showToast('エラー: ' + translateErrorMessage(err.message), 'error');
+                    if (err.message.includes('401') || err.message.includes('認証エラー') || err.message.includes('Key')) {
                         openModal('apiKeyModal', true);
                         break;
                     }
@@ -1327,8 +1327,8 @@
 
             window.isQueueProcessing = false;
             if (btn) btn.disabled = false;
-            if (btnText) btnText.textContent = "å…¨ãƒ–ãƒ­ãƒƒã‚¯æ·±æŽ˜ã‚Šè§£æžã‚¹ã‚¿ãƒ¼ãƒˆ";
-            showToast('ã™ã¹ã¦ã®ã‚­ãƒ¥ãƒ¼ãƒ•ã‚¡ã‚¤ãƒ«ã®è§£æžå‡¦ç†ãŒå®Œäº†ã—ã¾ã—ãŸ', 'info');
+            if (btnText) btnText.textContent = "全ブロック深掘り解析スタート";
+            showToast('すべてのキューファイルの解析処理が完了しました', 'info');
             setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
         };
 
@@ -1339,7 +1339,7 @@
             var progressPercent = document.getElementById('chunkProgressPercent');
             var progressBar = document.getElementById('chunkProgressBar');
 
-            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-scissors text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] éŸ³å£°ã‚’è»½é‡åŒ–ãƒ»åˆ†å‰²å‡¦ç†ä¸­...</span>';
+            if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-scissors text-amber-500"></i> <span>[' + currentIdx + '/' + totalIdx + '] 音声を軽量化・分割処理中...</span>';
             if (progressBar) progressBar.style.width = '10%';
             if (progressPercent) progressPercent.textContent = '10%';
 
@@ -1349,7 +1349,7 @@
             for (var c = 0; c < wavChunks.length; c++) {
                 var chunkObj = wavChunks[c];
                 var subPct = Math.floor(10 + ((c / wavChunks.length) * 40));
-                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> <span>ãƒ‘ãƒ¼ãƒˆ ' + (c + 1) + '/' + wavChunks.length + ' ã‚’æ–‡å­—èµ·ã“ã—ä¸­...</span>';
+                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> <span>パート ' + (c + 1) + '/' + wavChunks.length + ' を文字起こし中...</span>';
                 if (progressBar) progressBar.style.width = subPct + '%';
                 if (progressPercent) progressPercent.textContent = subPct + '%';
 
@@ -1394,13 +1394,13 @@
                         speaker: sb.speaker || 'Pembicara 1',
                         indonesian: sb.indonesian || '',
                         japanese: sb.japanese || '',
-                        grammarExplanation: 'è§£æžä¸­...'
+                        grammarExplanation: '解析中...'
                     });
                 });
                 await sleep(1500);
             }
 
-            if (allCombinedBlocks.length === 0) throw new Error('éŸ³å£°ã‹ã‚‰ãƒ†ã‚­ã‚¹ãƒˆãŒèª­ã¿å–ã‚Œã¾ã›ã‚“ã§ã—ãŸ');
+            if (allCombinedBlocks.length === 0) throw new Error('音声からテキストが読み取れませんでした');
 
             window.transcriptBlocks = allCombinedBlocks;
             renderTranscriptContainer();
@@ -1413,7 +1413,7 @@
                 cleanFileName,
                 function(chunkIdx, totalChunks, currentPct, label) {
                     var mappedPct = Math.floor(50 + (currentPct * 0.5));
-                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-blue-500"></i> <span class="truncate">ã€æ–‡æ³•ãƒ»å˜èªžè§£æžã€‘' + chunkIdx + '/' + totalChunks + '</span>';
+                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-blue-500"></i> <span class="truncate">【文法・単語解析】' + chunkIdx + '/' + totalChunks + '</span>';
                     if (progressBar) progressBar.style.width = mappedPct + '%';
                     if (progressPercent) progressPercent.textContent = mappedPct + '%';
                 }
@@ -1446,7 +1446,7 @@
 
             var apiKey = getApiKey();
             if (!apiKey) {
-                showToast('Gemini API Key ãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚', 'error');
+                showToast('Gemini API Key が設定されていません。', 'error');
                 openModal('apiKeyModal');
                 return;
             }
@@ -1505,11 +1505,11 @@
                     await dbSaveSession(item);
                     await sleep(1500);
                 }
-                showToast(selectedItems.length + ' ä»¶ã®é¸æŠžå†è§£æžãŒå®Œäº†ã—ã¾ã—ãŸï¼', 'info');
+                showToast(selectedItems.length + ' 件の選択再解析が完了しました！', 'info');
                 window.selectedHistoryIds = [];
                 await loadHistoryFromStorage();
             } catch (err) {
-                showToast('ä¸€æ‹¬å†è§£æžã‚¨ãƒ©ãƒ¼: ' + translateErrorMessage(err.message), 'error');
+                showToast('一括再解析エラー: ' + translateErrorMessage(err.message), 'error');
             } finally {
                 updateHistoryActionButtonsState();
                 setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
@@ -1518,13 +1518,13 @@
 
         window.reanalyzeCurrentTranscript = async function() {
             if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
-                showToast('å†è§£æžå¯¾è±¡ã®ãƒ†ã‚­ã‚¹ãƒˆãƒ‡ãƒ¼ã‚¿ãŒã‚ã‚Šã¾ã›ã‚“', 'error');
+                showToast('再解析対象のテキストデータがありません', 'error');
                 return;
             }
 
             var apiKey = getApiKey();
             if (!apiKey) {
-                showToast('Gemini API Key ãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚', 'error');
+                showToast('Gemini API Key が設定されていません。', 'error');
                 openModal('apiKeyModal');
                 return;
             }
@@ -1539,7 +1539,7 @@
             if (progressContainer) progressContainer.classList.remove('hidden');
 
             try {
-                var rawName = window.currentLoadedFileName || 'è§£æžãƒ‡ãƒ¼ã‚¿';
+                var rawName = window.currentLoadedFileName || '解析データ';
                 var targetName = formatOutputFileName(rawName);
 
                 var res = await reanalyzeBlocksCore(
@@ -1547,7 +1547,7 @@
                     apiKey,
                     targetName,
                     function(cIdx, totalC, pct, label) {
-                        if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-amber-500"></i> <span class="truncate">ã€å†è§£æžã€‘' + label + ' (' + cIdx + '/' + totalC + ')...</span>';
+                        if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-brain text-amber-500"></i> <span class="truncate">【再解析】' + label + ' (' + cIdx + '/' + totalC + ')...</span>';
                         if (progressBar) progressBar.style.width = pct + '%';
                         if (progressPercent) progressPercent.textContent = pct + '%';
                     }
@@ -1558,9 +1558,9 @@
                 renderGrammarContainer();
                 renderVocabContainer();
                 await saveCurrentToHistory(targetName, false);
-                showToast('ãƒ†ã‚­ã‚¹ãƒˆå†è§£æžãŒå®Œäº†ã—ã¾ã—ãŸï¼', 'info');
+                showToast('テキスト再解析が完了しました！', 'info');
             } catch (err) {
-                showToast('å†è§£æžã‚¨ãƒ©ãƒ¼: ' + translateErrorMessage(err.message), 'error');
+                showToast('再解析エラー: ' + translateErrorMessage(err.message), 'error');
             } finally {
                 if (btn) btn.disabled = false;
                 setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
@@ -1589,10 +1589,10 @@
             var clean = String(input ? input.value : '').trim().replace(/^["']|["']$/g, '');
             if (clean && clean.length > 5) {
                 localStorage.setItem('suarateks_gemini_key', clean);
-                showToast('API Keyã‚’ä¿å­˜ã—ã¾ã—ãŸï¼', 'info');
+                showToast('API Keyを保存しました！', 'info');
                 closeModal('apiKeyModal');
             } else {
-                showToast('æœ‰åŠ¹ãªAPI Keyã‚’å…¥åŠ›ã—ã¦ãã ã•ã„', 'error');
+                showToast('有効なAPI Keyを入力してください', 'error');
             }
         }
 
@@ -1614,7 +1614,7 @@
             var apiKey = getApiKey();
             if (!apiKey) {
                 openModal('apiKeyModal');
-                showToast('Gemini API Keyã‚’è¨­å®šã—ã¦ãã ã•ã„', 'error');
+                showToast('Gemini API Keyを設定してください', 'error');
                 return;
             }
 
@@ -1662,7 +1662,7 @@
                     var audioInline = part && part.inlineData;
 
                     if (!audioInline || !audioInline.data) {
-                        throw new Error('Gemini TTSéŸ³å£°ãƒ‡ãƒ¼ã‚¿ã®ç”Ÿæˆã«å¤±æ•—ã—ã¾ã—ãŸ');
+                        throw new Error('Gemini TTS音声データの生成に失敗しました');
                     }
 
                     var mimeType = audioInline.mimeType || 'audio/L16;rate=24000';
@@ -1678,7 +1678,7 @@
                 } catch (ttsErr) {
                     console.warn('Gemini TTS sentence error:', ttsErr);
                     if (blockId) updateBlockToggleUI(blockId, 'stopped');
-                    showToast('éŸ³å£°ç”Ÿæˆã‚¨ãƒ©ãƒ¼: ' + translateErrorMessage(ttsErr.message), 'error');
+                    showToast('音声生成エラー: ' + translateErrorMessage(ttsErr.message), 'error');
                     return;
                 }
             }
@@ -1700,7 +1700,7 @@
 
             audio.onerror = function() {
                 if (blockId) updateBlockToggleUI(blockId, 'stopped');
-                showToast('éŸ³å£°ã®å†ç”Ÿä¸­ã«ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸ', 'error');
+                showToast('音声の再生中にエラーが発生しました', 'error');
             };
 
             await audio.play();
@@ -1713,7 +1713,7 @@
             var apiKey = getApiKey();
             if (!apiKey) {
                 openModal('apiKeyModal');
-                showToast('Gemini API Keyã‚’è¨­å®šã—ã¦ãã ã•ã„', 'error');
+                showToast('Gemini API Keyを設定してください', 'error');
                 return;
             }
 
@@ -1743,7 +1743,7 @@
                     var audioInline = part && part.inlineData;
 
                     if (!audioInline || !audioInline.data) {
-                        throw new Error('å˜èªžTTSéŸ³å£°ã®ç”Ÿæˆã«å¤±æ•—ã—ã¾ã—ãŸ');
+                        throw new Error('単語TTS音声の生成に失敗しました');
                     }
 
                     var mimeType = audioInline.mimeType || 'audio/L16;rate=24000';
@@ -1758,7 +1758,7 @@
                     window.ttsWordCache.set(cacheKey, audioUrl);
                 } catch (wordErr) {
                     console.warn('Gemini word TTS error:', wordErr);
-                    showToast('å˜èªžéŸ³å£°ç”Ÿæˆã‚¨ãƒ©ãƒ¼: ' + translateErrorMessage(wordErr.message), 'error');
+                    showToast('単語音声生成エラー: ' + translateErrorMessage(wordErr.message), 'error');
                     return;
                 }
             }
@@ -1789,17 +1789,17 @@
         function updateBlockToggleUI(blockId, state) {
             var btn = document.getElementById('btn-toggle-' + blockId);
             if (!btn) return;
-            if (state === 'loading') btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i><span>ç”Ÿæˆä¸­</span>';
-            else if (state === 'playing') btn.innerHTML = '<i class="fa-solid fa-pause text-red-500"></i><span>ä¸€æ™‚åœæ­¢</span>';
-            else if (state === 'paused') btn.innerHTML = '<i class="fa-solid fa-play text-amber-500"></i><span>å†é–‹</span>';
-            else btn.innerHTML = '<i class="fa-solid fa-play"></i><span>ãƒŠãƒ¬ãƒ¼ã‚·ãƒ§ãƒ³å†ç”Ÿ</span>';
+            if (state === 'loading') btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i><span>生成中</span>';
+            else if (state === 'playing') btn.innerHTML = '<i class="fa-solid fa-pause text-red-500"></i><span>一時停止</span>';
+            else if (state === 'paused') btn.innerHTML = '<i class="fa-solid fa-play text-amber-500"></i><span>再開</span>';
+            else btn.innerHTML = '<i class="fa-solid fa-play"></i><span>ナレーション再生</span>';
         }
 
         function renderClickableIndonesianWords(text, blockId) {
             if (!text) return '';
             var words = text.split(/\s+/);
             return words.map(function(w, idx) {
-                return '<span class="word-clickable" onclick="speakWordGeminiTTS(\'' + escapeHtml(w) + '\')" title="å˜èªžéŸ³å£°ã‚’Gemini TTSã§å†ç”Ÿ">' + escapeHtml(w) + '</span>';
+                return '<span class="word-clickable" onclick="speakWordGeminiTTS(\'' + escapeHtml(w) + '\')" title="単語音声をGemini TTSで再生">' + escapeHtml(w) + '</span>';
             }).join(' ');
         }
 
@@ -1822,7 +1822,7 @@
                             '<span class="font-bold text-red-600 bg-red-50 dark:bg-red-950/60 px-2 py-0.5 rounded-full text-[10px]">' + escapeHtml(block.speaker) + '</span>' +
                         '</div>' +
                         '<button id="btn-toggle-t-' + block.id + '" onclick="toggleSpeechBlock(\'t-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1 hover:bg-slate-200">' +
-                            '<i class="fa-solid fa-play text-[10px]"></i><span>ãƒŠãƒ¬ãƒ¼ã‚·ãƒ§ãƒ³å†ç”Ÿ</span>' +
+                            '<i class="fa-solid fa-play text-[10px]"></i><span>ナレーション再生</span>' +
                         '</button>' +
                     '</div>' +
                     '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + clickableIndo + '</p>' +
@@ -1848,9 +1848,9 @@
                 var clickableIndo = renderClickableIndonesianWords(block.indonesian, 'g-' + block.id);
                 html += '<div class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2.5">' +
                     '<div class="flex items-center justify-between text-xs pb-1 border-b border-slate-100 dark:border-slate-700">' +
-                        '<span class="font-extrabold text-blue-700 bg-blue-100 dark:bg-blue-950/80 px-2.5 py-0.5 rounded-full text-[11px]">æ–‡ç¯€ #' + (idx + 1) + '</span>' +
+                        '<span class="font-extrabold text-blue-700 bg-blue-100 dark:bg-blue-950/80 px-2.5 py-0.5 rounded-full text-[11px]">文節 #' + (idx + 1) + '</span>' +
                         '<button id="btn-toggle-g-' + block.id + '" onclick="toggleSpeechBlock(\'g-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-xs font-bold">' +
-                            '<i class="fa-solid fa-play text-[9px]"></i><span>å†ç”Ÿ</span>' +
+                            '<i class="fa-solid fa-play text-[9px]"></i><span>再生</span>' +
                         '</button>' +
                     '</div>' +
                     '<div class="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border-l-4 border-blue-500 space-y-1">' +
@@ -1858,7 +1858,7 @@
                         '<p class="dynamic-text-ja text-slate-500 dark:text-slate-400 font-medium">' + escapeHtml(block.japanese) + '</p>' +
                     '</div>' +
                     '<div class="bg-blue-50/60 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200/60 text-xs leading-relaxed text-blue-950 dark:text-blue-200 space-y-1.5">' +
-                        '<h5 class="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1 text-[10px] uppercase tracking-wider"><i class="fa-solid fa-diagram-project"></i> 4æ®µéšŽç²¾å¯†æ§‹æ–‡è§£å‰–ãƒ»å¿œç”¨è§£èª¬</h5>' +
+                        '<h5 class="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1 text-[10px] uppercase tracking-wider"><i class="fa-solid fa-diagram-project"></i> 4段階精密構文解剖・応用解説</h5>' +
                         '<div class="dynamic-text-ja whitespace-pre-line font-medium pt-0.5 leading-relaxed">' + escapeHtml(block.grammarExplanation) + '</div>' +
                     '</div>' +
                 '</div>';
@@ -1917,7 +1917,7 @@
                 filtered.forEach(function(v) {
                     var hIndo = highlightMatch(v.indonesian, q);
                     var hJap = highlightMatch(v.japanese, q);
-                    var keyTag = v.isKeyWord ? '<span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/50 flex items-center gap-0.5 shrink-0"><i class="fa-solid fa-star text-[8px]"></i>é‡è¦</span>' : '';
+                    var keyTag = v.isKeyWord ? '<span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/50 flex items-center gap-0.5 shrink-0"><i class="fa-solid fa-star text-[8px]"></i>重要</span>' : '';
 
                     html += '<div class="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between gap-2">' +
                         '<div class="space-y-0.5 flex-1 min-w-0">' +
@@ -1925,11 +1925,11 @@
                                 '<span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0">' + getPosLabel(v.pos) + '</span>' +
                                 keyTag +
                                 '<h4 class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100 truncate">' + hIndo + '</h4>' +
-                                '<button onclick="speakWordGeminiTTS(\'' + escapeHtml(v.indonesian) + '\')" class="text-slate-400 hover:text-emerald-500 p-1 shrink-0" title="å˜èªžéŸ³å£°ã‚’Gemini TTSã§å†ç”Ÿ"><i class="fa-solid fa-volume-high text-xs"></i></button>' +
+                                '<button onclick="speakWordGeminiTTS(\'' + escapeHtml(v.indonesian) + '\')" class="text-slate-400 hover:text-emerald-500 p-1 shrink-0" title="単語音声をGemini TTSで再生"><i class="fa-solid fa-volume-high text-xs"></i></button>' +
                             '</div>' +
                             '<p class="dynamic-text-ja text-emerald-700 dark:text-emerald-400 font-bold">' + hJap + '</p>' +
                         '</div>' +
-                        '<button onclick="toggleVocabMastered(\'' + v.id + '\')" class="px-2 py-1 rounded ' + (v.mastered ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400') + ' text-[10px] font-bold shrink-0">' + (v.mastered ? 'ç¿’å¾—' : 'æœªä¿®') + '</button>' +
+                        '<button onclick="toggleVocabMastered(\'' + v.id + '\')" class="px-2 py-1 rounded ' + (v.mastered ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400') + ' text-[10px] font-bold shrink-0">' + (v.mastered ? '習得' : '未修') + '</button>' +
                     '</div>';
                 });
                 if (listContainer) listContainer.innerHTML = html;
@@ -1942,11 +1942,11 @@
 
         function getPosLabel(pos) {
             switch(pos) {
-                case 'noun': return 'åè©ž';
-                case 'verb': return 'å‹•è©ž';
-                case 'adjective': return 'å½¢å®¹è©ž';
-                case 'adverb': return 'å‰¯è©ž';
-                default: return 'ãã®ä»–';
+                case 'noun': return '名詞';
+                case 'verb': return '動詞';
+                case 'adjective': return '形容詞';
+                case 'adverb': return '副詞';
+                default: return 'その他';
             }
         }
 
@@ -2002,9 +2002,9 @@
 
             if (cardIndo) cardIndo.innerHTML = highlightMatch(item.indonesian, q);
             if (cardJap) cardJap.innerHTML = highlightMatch(item.japanese, q);
-            if (cardContext) cardContext.innerHTML = item.context ? ('æ–‡è„ˆ: "' + highlightMatch(item.context, q) + '"') : 'æ–‡è„ˆãªã—';
-            if (cardPosFront) cardPosFront.innerHTML = getPosLabel(item.pos) + (item.isKeyWord ? ' <span class="ml-1 px-1.5 py-0.5 bg-amber-500 text-white rounded text-[9px] font-extrabold"><i class="fa-solid fa-star text-[8px]"></i> é‡è¦èªž</span>' : '');
-            if (cardPosBack) cardPosBack.innerHTML = 'å“è©ž: ' + getPosLabel(item.pos) + (item.baseForm ? (' (åŽŸå½¢: ' + item.baseForm + ')') : '');
+            if (cardContext) cardContext.innerHTML = item.context ? ('文脈: "' + highlightMatch(item.context, q) + '"') : '文脈なし';
+            if (cardPosFront) cardPosFront.innerHTML = getPosLabel(item.pos) + (item.isKeyWord ? ' <span class="ml-1 px-1.5 py-0.5 bg-amber-500 text-white rounded text-[9px] font-extrabold"><i class="fa-solid fa-star text-[8px]"></i> 重要語</span>' : '');
+            if (cardPosBack) cardPosBack.innerHTML = '品詞: ' + getPosLabel(item.pos) + (item.baseForm ? (' (原形: ' + item.baseForm + ')') : '');
             if (progressLabel) progressLabel.textContent = (window.currentCardIndex + 1) + ' / ' + filtered.length;
 
             window.isCardFlipped = false;
@@ -2052,11 +2052,11 @@
                 if (count >= 1) {
                     btnRe.disabled = false;
                     btnRe.className = "px-1.5 py-0.5 bg-amber-500 hover:bg-amber-600 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
-                    btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> å†è§£æž (' + count + ')';
+                    btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 再解析 (' + count + ')';
                 } else {
                     btnRe.disabled = true;
                     btnRe.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
-                    btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> å†è§£æž';
+                    btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 再解析';
                 }
             }
 
@@ -2064,11 +2064,11 @@
                 if (count >= 2) {
                     btnMerge.disabled = false;
                     btnMerge.className = "px-1.5 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
-                    btnMerge.innerHTML = '<i class="fa-solid fa-code-merge"></i> çµåˆ (' + count + ')';
+                    btnMerge.innerHTML = '<i class="fa-solid fa-code-merge"></i> 結合 (' + count + ')';
                 } else {
                     btnMerge.disabled = true;
                     btnMerge.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
-                    btnMerge.innerHTML = '<i class="fa-solid fa-code-merge"></i> çµåˆ';
+                    btnMerge.innerHTML = '<i class="fa-solid fa-code-merge"></i> 結合';
                 }
             }
 
@@ -2076,11 +2076,11 @@
                 if (count >= 1) {
                     btnSave.disabled = false;
                     btnSave.className = "px-1.5 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
-                    btnSave.innerHTML = '<i class="fa-solid fa-download"></i> ä¿å­˜ (' + count + ')';
+                    btnSave.innerHTML = '<i class="fa-solid fa-download"></i> 保存 (' + count + ')';
                 } else {
                     btnSave.disabled = true;
                     btnSave.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
-                    btnSave.innerHTML = '<i class="fa-solid fa-download"></i> ä¿å­˜';
+                    btnSave.innerHTML = '<i class="fa-solid fa-download"></i> 保存';
                 }
             }
         }
@@ -2089,7 +2089,7 @@
             var container = document.getElementById('historyList');
             if (!container) return;
             if (!history || history.length === 0) {
-                container.innerHTML = '<p class="text-xs text-slate-400 py-1.5 text-center">å±¥æ­´ãªã— (IndexedDB)</p>';
+                container.innerHTML = '<p class="text-xs text-slate-400 py-1.5 text-center">履歴なし (IndexedDB)</p>';
                 window.selectedHistoryIds = [];
                 updateHistoryActionButtonsState();
                 return;
@@ -2123,7 +2123,7 @@
             if (selectedItems.length === 0) return;
 
             selectedItems.forEach(function(item, index) {
-                var cleanName = formatOutputFileName(item.fileName || 'è§£æžãƒ‡ãƒ¼ã‚¿');
+                var cleanName = formatOutputFileName(item.fileName || '解析データ');
                 var exportObj = {
                     id: item.id,
                     fileName: cleanName,
@@ -2136,7 +2136,7 @@
                 }, index * 300);
             });
 
-            showToast(selectedItems.length + ' ä»¶ã®å±¥æ­´ã‚’å€‹åˆ¥JSONã¨ã—ã¦ä¿å­˜ã—ã¾ã—ãŸï¼', 'info');
+            showToast(selectedItems.length + ' 件の履歴を個別JSONとして保存しました！', 'info');
         }
 
         async function saveCurrentToHistory(fileName, showToastNotification) {
@@ -2186,7 +2186,7 @@
                 }
             });
 
-            var mergedTitle = formatOutputFileName('çµåˆ_' + titleParts.join('_').substring(0, 20));
+            var mergedTitle = formatOutputFileName('結合_' + titleParts.join('_').substring(0, 20));
             window.currentLoadedSessionId = 'session-merged-' + Date.now();
             window.currentLoadedFileName = mergedTitle;
             window.transcriptBlocks = mergedBlocks;
@@ -2212,14 +2212,14 @@
 
             exportDataToFile(mergedDataObj, mergedTitle + '.json');
             window.selectedHistoryIds = [];
-            showToast('é¸æŠžã—ãŸå±¥æ­´ã‚’çµåˆã—ã¾ã—ãŸï¼', 'info');
+            showToast('選択した履歴を結合しました！', 'info');
         }
 
         async function clearHistory() {
             await dbClearAll();
             window.selectedHistoryIds = [];
             renderHistoryList([]);
-            showToast('IndexedDBå±¥æ­´ã‚’ã™ã¹ã¦æ¶ˆåŽ»ã—ã¾ã—ãŸ', 'info');
+            showToast('IndexedDB履歴をすべて消去しました', 'info');
         }
 
         async function loadHistoryItem(id) {
@@ -2237,7 +2237,7 @@
                 renderVocabContainer();
                 var history = await dbGetAllSessions();
                 renderHistoryList(history);
-                showToast('ã€Œ' + found.fileName + 'ã€ã‚’åˆ‡ã‚Šæ›¿ãˆèª­ã¿è¾¼ã¿ã¾ã—ãŸ', 'info');
+                showToast('「' + found.fileName + '」を切り替え読み込みました', 'info');
                 if (window.innerWidth < 768) switchMobileTab('transcript');
             }
         }
@@ -2248,7 +2248,7 @@
             window.selectedHistoryIds = window.selectedHistoryIds.filter(function(sid) { return sid !== id; });
             var history = await dbGetAllSessions();
             renderHistoryList(history);
-            showToast('å±¥æ­´ã‹ã‚‰å‰Šé™¤ã—ã¾ã—ãŸ', 'info');
+            showToast('履歴から削除しました', 'info');
         }
 
         function exportDataToFile(dataObj, customFilename) {
@@ -2309,7 +2309,7 @@
                 renderGrammarContainer();
                 renderVocabContainer();
             }
-            showToast(successCount + ' ä»¶ã®JSONã‚’ã‚¤ãƒ³ãƒãƒ¼ãƒˆã—ã¾ã—ãŸï¼', 'info');
+            showToast(successCount + ' 件のJSONをインポートしました！', 'info');
             event.target.value = '';
         }
 
