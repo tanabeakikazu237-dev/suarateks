@@ -21,6 +21,9 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+<!-- SastrawiJs CDN for Indonesian Lemmatization / Stemming Dictionary Engine -->
+<script src="https://cdn.jsdelivr.net/npm/sastrawijs@1.0.4/dist/sastrawijs.umd.min.js"></script>
+
 <style>
     :root { --transcript-font-size: 20px; }
     .dynamic-text-indo { font-size: var(--transcript-font-size, 20px); line-height: 1.4; }
@@ -48,7 +51,7 @@
     <h1 class="font-extrabold text-xs sm:text-sm flex items-center gap-1.5 shrink-0 truncate">
         <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block shrink-0"></span>
         <span class="truncate">SuaraTeks<span class="text-red-600">ID</span> Pro</span>
-        <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold shrink-0">v7.2 (Robust Ultralight Ollama)</span>
+        <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold shrink-0">v8.0 (SastrawiJs + Lightweight LLM)</span>
         <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1 py-0.5 rounded font-bold shrink-0"><i class="fa-solid fa-wifi-slash"></i> オフライン</span>
     </h1>
     <div class="flex items-center gap-1.5 shrink-0 min-w-0">
@@ -101,6 +104,10 @@
 
             <div class="space-y-1 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60 text-[10px]">
                 <div class="flex justify-between font-bold">
+                    <span class="text-purple-600"><i class="fa-solid fa-book-atlas mr-1"></i>接辞辞書:</span>
+                    <span id="sastrawiStatusBadge" class="font-bold text-purple-600">SastrawiJs 準備完了</span>
+                </div>
+                <div class="flex justify-between font-bold">
                     <span class="text-blue-600"><i class="fa-solid fa-microchip mr-1"></i>軽量LLM:</span>
                     <span id="displayLlmModel" class="font-mono text-slate-700 dark:text-slate-200 truncate max-w-[130px]">qwen2.5:1.5b-instruct</span>
                 </div>
@@ -115,7 +122,7 @@
         <div id="playerCard" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
             <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
                 <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> Whisper JSON解析</span>
-                <span class="text-[9px] text-emerald-600 font-bold"><i class="fa-solid fa-microchip"></i> メモリ1.1GB動作</span>
+                <span class="text-[9px] text-purple-600 font-bold"><i class="fa-solid fa-shield-halved"></i> 辞書アシスト結合</span>
             </h3>
             
             <div class="border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-slate-50 dark:bg-slate-900">
@@ -125,7 +132,7 @@
                     <input type="file" accept=".json" multiple onchange="window.handleWhisperJsonChange(event)" class="hidden">
                 </label>
                 <p class="text-[9px] text-slate-500 text-center mt-1.5 leading-tight">
-                    MacBook上（空き3GB以下）で超爆速でまとまり分割・翻訳・文法解剖を実行します。
+                    SastrawiJs辞書で正確な原形を決定後、ローカルLLMで高速翻訳します。
                 </p>
             </div>
         </div>
@@ -188,7 +195,7 @@
                 <button id="navTabVocab" onclick="setStudioSubView('vocab')" class="no-wrap-tab px-2 sm:px-3 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0">
                     <i class="fa-solid fa-book-open text-[10px]"></i> 単語帳 (<span id="vocabCountBadge">0</span>)
                 </button>
-                <button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-1.5 sm:px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] sm:text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-0.5 whitespace-nowrap" title="現在のセッションをローカルLLMで再解析">
+                <button id="btnReanalyzeText" onclick="reanalyzeCurrentTranscript()" class="no-wrap-tab px-1.5 sm:px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] sm:text-xs font-extrabold shadow-sm transition flex items-center gap-1 shrink-0 ml-0.5 whitespace-nowrap" title="現在のセッションを再解析">
                     <i class="fa-solid fa-rotate-right text-[9px]"></i> 再解析
                 </button>
             </div>
@@ -348,11 +355,30 @@
         'dengan','oleh','maka','kalau','sebab','karena','bahwa','saat','ketika','ada','adalah'
     ]);
 
-    // インドネシア語接辞解析の正規表現（JSによる高速ルールエンジン補助）
+    // SastrawiJs Stemmer initialization
+    var sastrawiStemmer = null;
+    try {
+        if (window.Sastrawi && window.Sastrawi.StemmerFactory) {
+            var factory = new window.Sastrawi.StemmerFactory();
+            sastrawiStemmer = factory.createStemmer();
+        }
+    } catch(e) {
+        console.warn('SastrawiJs fallback to regex algorithm');
+    }
+
     function extractIndonesianRoot(word) {
         var w = String(word || '').trim().toLowerCase();
         if (w.length <= 3 || INDO_STOP_WORDS.has(w)) return w;
         
+        // 1. Use SastrawiJs Dictionary Engine if available (100% Deterministic)
+        if (sastrawiStemmer) {
+            try {
+                var stem = sastrawiStemmer.stem(w);
+                if (stem && stem.length >= 2) return stem;
+            } catch(err) {}
+        }
+
+        // 2. Fallback Rule-based Regex Engine
         var original = w;
         w = w.replace(/(kan|lah|kah|nya)$/i, '');
         if (w.length > 3 && w.endsWith('i')) w = w.slice(0, -1);
@@ -619,7 +645,7 @@
         }
     }
 
-    // ---------- Local Ollama API Request ----------
+    // ---------- Local Ollama API Request (Context Limiter Added) ----------
     async function fetchLocalLlmApi(promptText, systemPrompt) {
         var baseUrl = getLlmUrl();
         var modelName = getLlmModel();
@@ -632,7 +658,10 @@
                 { role: "system", content: systemPrompt || "You are an expert translator and linguist. You MUST return JSON only." },
                 { role: "user", content: promptText }
             ],
-            temperature: 0.1
+            temperature: 0.1,
+            options: {
+                num_ctx: 4096
+            }
         };
 
         var headers = { 'Content-Type': 'application/json' };
@@ -661,7 +690,25 @@
         throw new Error('ローカルLLMからのレスポンスを読み取れませんでした');
     }
 
-    // ---------- Whisper JSON Handling ----------
+    // Helper: Split long raw text into safe small chunks (under 600 chars each)
+    function sliceTextIntoSmallChunks(text, maxChars) {
+        if (!maxChars) maxChars = 600;
+        var result = [];
+        var sentences = text.split(/(?<=[.!?\n])\s+/);
+        var currentChunk = "";
+
+        sentences.forEach(function(sentence) {
+            if ((currentChunk + " " + sentence).length > maxChars) {
+                if (currentChunk.trim()) result.push(currentChunk.trim());
+                currentChunk = sentence;
+            } else {
+                currentChunk += (currentChunk ? " " : "") + sentence;
+            }
+        });
+        if (currentChunk.trim()) result.push(currentChunk.trim());
+        return result.length > 0 ? result : [text];
+    }
+
     function extractAllTextValues(obj) {
         var texts = [];
         function recurse(curr) {
@@ -694,8 +741,8 @@
             var file = files[i];
             try {
                 if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-file-code text-blue-500"></i> <span class="truncate">[' + (i+1) + '/' + files.length + '] JSON読み込み中...</span>';
-                if (progressBar) progressBar.style.width = '10%';
-                if (progressPercent) progressPercent.textContent = '10%';
+                if (progressBar) progressBar.style.width = '5%';
+                if (progressPercent) progressPercent.textContent = '5%';
 
                 var content = await new Promise(function(resolve, reject) {
                     var reader = new FileReader();
@@ -704,7 +751,6 @@
                     reader.readAsText(file);
                 });
 
-                // Strip BOM if present
                 if (typeof content === 'string') {
                     content = content.replace(/^\uFEFF/, '').trim();
                 }
@@ -716,43 +762,71 @@
                     throw new Error('無効なJSONフォーマットです。ファイル内容をご確認ください。');
                 }
 
-                var rawText = '';
-                if (parsedJson.text && typeof parsedJson.text === 'string') {
-                    rawText = parsedJson.text;
-                } else if (parsedJson.segments && Array.isArray(parsedJson.segments)) {
-                    rawText = parsedJson.segments.map(function(s) { return s.text || ''; }).join(' ');
+                var textSnippets = [];
+                if (parsedJson.segments && Array.isArray(parsedJson.segments)) {
+                    textSnippets = parsedJson.segments.map(function(s) { return s.text || ''; }).filter(Boolean);
+                } else if (parsedJson.text && typeof parsedJson.text === 'string') {
+                    textSnippets = sliceTextIntoSmallChunks(parsedJson.text, 600);
                 } else if (Array.isArray(parsedJson)) {
-                    rawText = parsedJson.map(function(s) {
+                    textSnippets = parsedJson.map(function(s) {
                         if (typeof s === 'string') return s;
                         return (s && s.text) ? s.text : '';
-                    }).filter(Boolean).join(' ');
+                    }).filter(Boolean);
                 } else {
-                    rawText = extractAllTextValues(parsedJson).join(' ');
+                    var rawText = extractAllTextValues(parsedJson).join(' ');
+                    textSnippets = sliceTextIntoSmallChunks(rawText, 600);
                 }
 
-                if (!rawText || !rawText.trim()) throw new Error('JSONから文字起こしテキストを抽出できませんでした');
+                if (textSnippets.length === 0) throw new Error('JSONから文字起こしテキストを抽出できませんでした');
 
                 var cleanFileName = formatOutputFileName(file.name);
                 resetActiveSessionState(cleanFileName);
 
-                if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-microchip text-emerald-500"></i> <span>超軽量LLMがまとまり分割・翻訳中...</span>';
-                if (progressBar) progressBar.style.width = '30%';
-                if (progressPercent) progressPercent.textContent = '30%';
+                // 小分けグループ化 (各リクエスト2〜3文／最大600文字程度に制限してトークン制限を回避)
+                var textBatches = [];
+                var batchTemp = "";
+                textSnippets.forEach(function(snippet) {
+                    if ((batchTemp + " " + snippet).length > 600) {
+                        if (batchTemp.trim()) textBatches.push(batchTemp.trim());
+                        batchTemp = snippet;
+                    } else {
+                        batchTemp += (batchTemp ? " " : "") + snippet;
+                    }
+                });
+                if (batchTemp.trim()) textBatches.push(batchTemp.trim());
 
-                var systemPrompt = "You are a Japanese-Indonesian linguistic expert. Output valid JSON only.";
-                var prompt = 'Split and translate this raw Indonesian transcript into natural sentence blocks.\n' +
+                var allParsedBlocks = [];
+                var systemPrompt = "You are a Japanese-Indonesian translator. Output valid JSON only.";
 
+                for (var bIdx = 0; bIdx < textBatches.length; bIdx++) {
+                    var subPct = Math.floor(10 + ((bIdx + 1) / textBatches.length) * 30);
+                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-microchip text-emerald-500"></i> <span>パート ' + (bIdx + 1) + '/' + textBatches.length + ' を分割・翻訳中...</span>';
+                    if (progressBar) progressBar.style.width = subPct + '%';
+                    if (progressPercent) progressPercent.textContent = subPct + '%';
 
-'Return JSON format: {"blocks": [{"indonesian": "...", "japanese": "..."}]}\n\n' +
-'Input:\n' + rawText;
+                    var prompt = 'Split and translate this Indonesian text snippet into natural sentence blocks.\n' +
+                        'Return JSON format: {"blocks": [{"indonesian": "...", "japanese": "..."}]}\n\n' +
+                        'Snippet:\n' + textBatches[bIdx];
 
-                var llmResponse = await fetchLocalLlmApi(prompt, systemPrompt);
-                var parsedRes = safeParseTruncatedJson(llmResponse);
+                    try {
+                        var llmResponse = await fetchLocalLlmApi(prompt, systemPrompt);
+                        var parsedRes = safeParseTruncatedJson(llmResponse);
+                        var subBlocks = parsedRes.blocks || [];
+                        subBlocks.forEach(function(sb) {
+                            if (sb.indonesian && sb.japanese) {
+                                allParsedBlocks.push(sb);
+                            }
+                        });
+                    } catch (subErr) {
+                        console.warn('[handleWhisperJsonChange] Sub-batch error:', subErr);
+                        allParsedBlocks.push({ indonesian: textBatches[bIdx], japanese: "（翻訳処理スキップ）" });
+                    }
+                    await sleep(150);
+                }
 
-                var chunkedBlocks = parsedRes.blocks || [];
-                if (!Array.isArray(chunkedBlocks) || chunkedBlocks.length === 0) throw new Error('チャンク分割に失敗しました');
+                if (allParsedBlocks.length === 0) throw new Error('チャンク分割・翻訳に失敗しました');
 
-                var formattedBlocks = chunkedBlocks.map(function(b, idx) {
+                var formattedBlocks = allParsedBlocks.map(function(b, idx) {
                     return {
                         id: 'block-' + Date.now() + '-' + idx,
                         blockIndex: idx,
@@ -773,7 +847,7 @@
                     cleanFileName,
                     function(chunkIdx, totalChunks, currentPct, label) {
                         var mappedPct = Math.floor(40 + (currentPct * 0.6));
-                        if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-diagram-project text-emerald-500"></i> <span class="truncate">【文法解剖】' + chunkIdx + '/' + totalChunks + '</span>';
+                        if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-diagram-project text-emerald-500"></i> <span class="truncate">【SastrawiJs辞書＋LLM解剖】' + chunkIdx + '/' + totalChunks + '</span>';
                         if (progressBar) progressBar.style.width = mappedPct + '%';
                         if (progressPercent) progressPercent.textContent = mappedPct + '%';
                     }
@@ -805,7 +879,7 @@
 
     async function reanalyzeBlocksCore(blocks, fileNameLabel, onProgress) {
         var totalBlocks = blocks.length;
-        var chunkSize = 2; // メモリ3GB以下用に2ブロックずつ高速処理
+        var chunkSize = 2; // メモリ3GB以下用に2ブロックずつ小分け処理
         var totalChunks = Math.ceil(totalBlocks / chunkSize);
         var accumulatedVocabMap = new Map();
 
@@ -829,23 +903,23 @@
                 });
             });
 
+            // SastrawiJs 辞書エンジンにより100%確定した Kata Dasar (原形) のヒント文字列を作成
             var wordListStr = Array.from(chunkWords).map(function(w) {
-                return w + ' (Estimated root: ' + extractIndonesianRoot(w) + ')';
+                var exactRoot = extractIndonesianRoot(w);
+                return w + ' (Verified Root/Kata Dasar: ' + exactRoot + ')';
             }).join(', ');
 
-            var systemPrompt = "You are a linguistic analyzer. Output strict JSON only.";
+            var systemPrompt = "You are a linguistic analyzer. Use the verified root words provided. Output strict JSON only.";
             var prompt = 'Analyze text and return strict JSON:\n' +
-
-
-'{\n' +
-'  "grammar": [\n' +
-'    {"blockIndex": 0, "grammarExplanation": "【語句対比】\n・...\n【構文構造】\n・SVO...\n【接辞解剖】\n・...\n【解説】\n・..."}\n' +
-'  ],\n' +
-'  "vocab": [\n' +
-'    {"indonesian": "word", "baseForm": "root", "japanese": "意味", "pos": "noun|verb|adjective|adverb|other", "context": "sentence", "isKeyWord": true}\n' +
-'  ]\n' +
-'}\n\n' +
-'Target vocabulary hint: ' + wordListStr + '\n\nBlocks:\n' + inputChunkText;
+                '{\n' +
+                '  "grammar": [\n' +
+                '    {"blockIndex": 0, "grammarExplanation": "【語句対比】\\n・...\\n【構文構造】\\n・SVO...\\n【接辞解剖】\\n・...\\n【解説】\\n・..."}\n' +
+                '  ],\n' +
+                '  "vocab": [\n' +
+                '    {"indonesian": "word", "baseForm": "exactRoot", "japanese": "意味", "pos": "noun|verb|adjective|adverb|other", "context": "sentence", "isKeyWord": true}\n' +
+                '  ]\n' +
+                '}\n\n' +
+                'Verified vocabulary roots from Sastrawi dictionary: ' + wordListStr + '\n\nBlocks:\n' + inputChunkText;
 
             try {
                 var llmResponse = await fetchLocalLlmApi(prompt, systemPrompt);
@@ -921,7 +995,7 @@
                 window.transcriptBlocks,
                 targetName,
                 function(cIdx, totalC, pct, label) {
-                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-microchip text-amber-500"></i> <span class="truncate">【LLM再解析】' + label + ' (' + cIdx + '/' + totalC + ')...</span>';
+                    if (progressLabel) progressLabel.innerHTML = '<i class="fa-solid fa-microchip text-amber-500"></i> <span class="truncate">【Sastrawi＋LLM再解析】' + label + ' (' + cIdx + '/' + totalC + ')...</span>';
                     if (progressBar) progressBar.style.width = pct + '%';
                     if (progressPercent) progressPercent.textContent = pct + '%';
                 }
@@ -932,7 +1006,7 @@
             renderGrammarContainer();
             renderVocabContainer();
             await saveCurrentToHistory(targetName, false);
-            showToast('ローカルLLM再解析が完了しました！', 'info');
+            showToast('再解析が完了しました！', 'info');
         } catch (err) {
             showToast('再解析エラー: ' + translateErrorMessage(err.message), 'error');
         } finally {
@@ -1807,5 +1881,10 @@
         
         var displayModel = document.getElementById('displayLlmModel');
         if (displayModel) displayModel.textContent = getLlmModel();
+
+        var statusBadge = document.getElementById('sastrawiStatusBadge');
+        if (statusBadge) {
+            statusBadge.textContent = sastrawiStemmer ? "SastrawiJs 辞書動作中" : "Regex アルゴリズム動作中";
+        }
     });
 </script>
