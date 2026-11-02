@@ -48,7 +48,7 @@
     <h1 class="font-extrabold text-xs sm:text-sm flex items-center gap-1.5 shrink-0 truncate">
         <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block shrink-0"></span>
         <span class="truncate">SuaraTeks<span class="text-red-600">ID</span> Pro</span>
-        <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold shrink-0">v7.1 (Ultralight 1.5B × Gemini TTS)</span>
+        <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold shrink-0">v7.2 (Robust Ultralight Ollama)</span>
         <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1 py-0.5 rounded font-bold shrink-0"><i class="fa-solid fa-wifi-slash"></i> オフライン</span>
     </h1>
     <div class="flex items-center gap-1.5 shrink-0 min-w-0">
@@ -115,7 +115,7 @@
         <div id="playerCard" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
             <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
                 <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> Whisper JSON解析</span>
-                <span class="text-[9px] text-emerald-600 font-bold"><i class="fa-solid fa-[#1.1GB]"></i> メモリ1.1GB動作</span>
+                <span class="text-[9px] text-emerald-600 font-bold"><i class="fa-solid fa-microchip"></i> メモリ1.1GB動作</span>
             </h3>
             
             <div class="border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-slate-50 dark:bg-slate-900">
@@ -505,8 +505,8 @@
 
     function translateErrorMessage(rawMessage) {
         var str = String(rawMessage || '').toLowerCase();
-        if (str.includes('failed to fetch') || str.includes('network')) {
-            return 'ローカルLLM (Ollama) に接続できません。OLLAMA_ORIGINS="*" ollama serve が起動しているか確認してください。';
+        if (str.includes('failed to fetch') || str.includes('network') || str.includes('connection refused')) {
+            return 'ローカルLLM (Ollama) に接続できません。ターミナルで OLLAMA_ORIGINS="*" ollama serve が起動しているか確認してください。';
         }
         return rawMessage;
     }
@@ -638,11 +638,16 @@
         var headers = { 'Content-Type': 'application/json' };
         if (apiKey && apiKey !== 'ollama') headers['Authorization'] = 'Bearer ' + apiKey;
 
-        var response = await fetch(endpoint, {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(payload)
-        });
+        var response;
+        try {
+            response = await fetch(endpoint, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(payload)
+            });
+        } catch (netErr) {
+            throw new Error('ローカルLLM (Ollama) との通信に失敗しました。OLLAMA_ORIGINS="*" ollama serve が実行されているか確認してください。');
+        }
 
         if (!response.ok) {
             var errText = await response.text();
@@ -660,9 +665,15 @@
     function extractAllTextValues(obj) {
         var texts = [];
         function recurse(curr) {
-            if (typeof curr === 'string') texts.push(curr);
-            else if (Array.isArray(curr)) curr.forEach(recurse);
-            else if (curr !== null && typeof curr === 'object') Object.values(curr).forEach(recurse);
+            if (typeof curr === 'string') {
+                if (curr.trim()) texts.push(curr.trim());
+            } else if (Array.isArray(curr)) {
+                curr.forEach(recurse);
+            } else if (curr !== null && typeof curr === 'object') {
+                try {
+                    Object.values(curr).forEach(recurse);
+                } catch(err) {}
+            }
         }
         recurse(obj);
         return texts;
@@ -689,17 +700,37 @@
                 var content = await new Promise(function(resolve, reject) {
                     var reader = new FileReader();
                     reader.onload = function(e) { resolve(e.target.result); };
-                    reader.onerror = reject;
+                    reader.onerror = function(e) { reject(new Error('ファイルの読み込みに失敗しました')); };
                     reader.readAsText(file);
                 });
 
-                var parsedJson = JSON.parse(content);
-                var rawText = '';
-                if (parsedJson.text && typeof parsedJson.text === 'string') rawText = parsedJson.text;
-                else if (parsedJson.segments && Array.isArray(parsedJson.segments)) rawText = parsedJson.segments.map(function(s) { return s.text || ''; }).join(' ');
-                else rawText = extractAllTextValues(parsedJson).join(' ');
+                // Strip BOM if present
+                if (typeof content === 'string') {
+                    content = content.replace(/^\uFEFF/, '').trim();
+                }
 
-                if (!rawText.trim()) throw new Error('JSONからテキストを抽出し終えませんでした');
+                var parsedJson;
+                try {
+                    parsedJson = JSON.parse(content);
+                } catch (jsonErr) {
+                    throw new Error('無効なJSONフォーマットです。ファイル内容をご確認ください。');
+                }
+
+                var rawText = '';
+                if (parsedJson.text && typeof parsedJson.text === 'string') {
+                    rawText = parsedJson.text;
+                } else if (parsedJson.segments && Array.isArray(parsedJson.segments)) {
+                    rawText = parsedJson.segments.map(function(s) { return s.text || ''; }).join(' ');
+                } else if (Array.isArray(parsedJson)) {
+                    rawText = parsedJson.map(function(s) {
+                        if (typeof s === 'string') return s;
+                        return (s && s.text) ? s.text : '';
+                    }).filter(Boolean).join(' ');
+                } else {
+                    rawText = extractAllTextValues(parsedJson).join(' ');
+                }
+
+                if (!rawText || !rawText.trim()) throw new Error('JSONから文字起こしテキストを抽出できませんでした');
 
                 var cleanFileName = formatOutputFileName(file.name);
                 resetActiveSessionState(cleanFileName);
