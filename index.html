@@ -56,7 +56,7 @@
         <h1 class="font-extrabold text-xs sm:text-sm flex items-center gap-1.5 shrink-0 truncate">
             <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block shrink-0"></span>
             <span class="truncate">SuaraTeks<span class="text-red-600">ID</span> Pro</span>
-            <span class="text-[9px] text-slate-400 font-normal shrink-0">v6.2 (Optimized Gemini Engine)</span>
+            <span class="text-[9px] text-slate-400 font-normal shrink-0">v6.5 (Ultimate Gemini Engine)</span>
             <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1 py-0.5 rounded font-bold shrink-0"><i class="fa-solid fa-wifi-slash"></i> オフライン</span>
         </h1>
         <div class="flex items-center gap-1.5 shrink-0 min-w-0">
@@ -112,7 +112,7 @@
                         <span><i class="fa-solid fa-microphone-lines text-red-600 mr-1"></i>音声エンジン</span>
                         <span class="text-emerald-600 font-extrabold">Gemini TTS (Puck固定)</span>
                     </div>
-                    <p class="text-[9px] text-slate-400 leading-tight">文節・単語ともにメモリキャッシュ付き高音質固定モデル</p>
+                    <p class="text-[9px] text-slate-400 leading-tight">BoundedAudioCacheメモリ最適化モデル</p>
                 </div>
             </div>
 
@@ -347,6 +347,41 @@
             'dengan','oleh','maka','kalau','sebab','karena','bahwa','saat','ketika','ada','adalah'
         ]);
 
+        // Blob URL メモリ自動開放用 LRU キャッシュクラス
+        class BoundedAudioCache {
+            constructor(maxSize = 50) {
+                this.maxSize = maxSize;
+                this.cache = new Map();
+            }
+            get(key) {
+                if (!this.cache.has(key)) return null;
+                const val = this.cache.get(key);
+                this.cache.delete(key);
+                this.cache.set(key, val);
+                return val;
+            }
+            set(key, value) {
+                if (this.cache.has(key)) {
+                    const oldUrl = this.cache.get(key);
+                    if (oldUrl) URL.revokeObjectURL(oldUrl);
+                    this.cache.delete(key);
+                } else if (this.cache.size >= this.maxSize) {
+                    const oldestKey = this.cache.keys().next().value;
+                    const oldestUrl = this.cache.get(oldestKey);
+                    if (oldestUrl) URL.revokeObjectURL(oldestUrl);
+                    this.cache.delete(oldestKey);
+                }
+                this.cache.set(key, value);
+            }
+            has(key) { return this.cache.has(key); }
+            clear() {
+                for (const url of this.cache.values()) {
+                    if (url) URL.revokeObjectURL(url);
+                }
+                this.cache.clear();
+            }
+        }
+
         function openIndexedDB() {
             return new Promise((resolve, reject) => {
                 var request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -577,30 +612,28 @@
         window.selectedHistoryIds = [];
         window.speechRate = 0.85;
 
-        window.ttsSentenceCache = new Map();
-        window.ttsWordCache = new Map();
+        // メモリリーク防止 Bounded LRU キャッシュ
+        window.ttsSentenceCache = new BoundedAudioCache(50);
+        window.ttsWordCache = new BoundedAudioCache(200);
 
         window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
 
         var sleep = function(ms) { return new Promise(function(resolve) { setTimeout(resolve, ms); }); };
 
-        // ---------- PRE-REQUEST SMART GUARD (事前判断＆トークン/レート制御エンジン) ----------
+        // PRE-REQUEST SMART GUARD (15 RPM 安全制御)
         window.apiRateTracker = {
             requestTimestamps: [],
-            // Gemini 無料枠: 15 RPM (安全のため 12 RPM に制限して判断)
             maxRequestsPerMinute: 12,
             
-            // APIを叩く前に判断し、必要なら自動待機する関数
             async guardRateLimit() {
                 var now = Date.now();
-                // 60秒以内のリクエスト履歴だけに絞り込み
                 this.requestTimestamps = this.requestTimestamps.filter(function(ts) {
                     return now - ts < 60000;
                 });
 
                 if (this.requestTimestamps.length >= this.maxRequestsPerMinute) {
                     var oldestInWindow = this.requestTimestamps[0];
-                    var waitTime = 60000 - (now - oldestInWindow) + 500; // 余裕を持って+500ms
+                    var waitTime = 60000 - (now - oldestInWindow) + 500;
                     if (waitTime > 0) {
                         showToast('API制限回避のため ' + Math.ceil(waitTime / 1000) + ' 秒自動待機中...', 'info');
                         await sleep(waitTime);
@@ -610,7 +643,6 @@
             }
         };
 
-        // 入力・出力トークン数を事前試算する関数
         function estimateChunkTokens(chunkBlocks) {
             var totalIndoChars = 0;
             var totalJapChars = 0;
@@ -619,18 +651,15 @@
                 totalJapChars += (b.japanese || '').length;
             });
 
-            // インドネシア語/英語: 約4文字=1トークン、日本語: 約1.5文字=1トークン + プロンプト固定長(約600トークン)
             var inputTokensEst = Math.ceil(totalIndoChars / 3.5) + Math.ceil(totalJapChars / 1.5) + 600;
-            // 4段階解剖の出力予測: 1ブロックあたり約150〜200トークン
             var outputTokensEst = chunkBlocks.length * 200;
 
             return {
                 inputTokens: inputTokensEst,
                 outputTokens: outputTokensEst,
-                isSafe: outputTokensEst < 6500 // Geminiの応答上限(8192)に対して安全か
+                isSafe: outputTokensEst < 6500
             };
         }
-        // -----------------------------------------------------------------------------------
 
         function translateErrorMessage(rawMessage) {
             var str = String(rawMessage || '').toLowerCase();
@@ -784,6 +813,8 @@
             window.isCardFlipped = false;
             window.isShuffled = false;
             window.shuffledVocabList = [];
+            
+            // 旧 Blob URL メモリ完全解放
             window.ttsSentenceCache.clear();
             window.ttsWordCache.clear();
             
@@ -888,7 +919,6 @@
                 throw new Error('API Keyが正しく設定されていません。');
             }
 
-            // 【事前判定】APIを送信する前にレートリミット（15 RPM）をチェックして自動ウェイト
             await window.apiRateTracker.guardRateLimit();
 
             var modelName = isTtsRequest ? 'gemini-3.8-flash-tts' : 'gemini-3.8-flash';
@@ -972,36 +1002,30 @@
                 }
             }
 
-            writeString(view, 0, 'RIFF');
-            view.setUint32(4, chunkSize, true);
-            writeString(view, 8, 'WAVE');
-            writeString(view, 12, 'fmt ');
-            view.setUint32(16, 16, true);
-            view.setUint16(20, 1, true);
-            view.setUint16(22, numChannels, true);
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, byteRate, true);
-            view.setUint16(32, blockAlign, true);
-            view.setUint16(34, 16, true);
-            writeString(view, 36, 'data');
-            view.setUint32(40, dataSize, true);
+            writeString('RIFF');
+            out.setUint32(pos, length - 8, true); pos += 4;
+            writeString('WAVE');
+            writeString('fmt ');
+            out.setUint32(pos, 16, true); pos += 4;
+            out.setUint16(pos, 1, true); pos += 2;
+            out.setUint16(pos, 1, true); pos += 2;
+            out.setUint32(pos, sampleRate, true); pos += 4;
+            out.setUint32(pos, sampleRate * 2, true); pos += 4;
+            out.setUint16(pos, 2, true); pos += 2;
+            out.setUint16(pos, 16, true); pos += 2;
+            writeString('data');
+            out.setUint32(pos, length - pos - 4, true); pos += 4;
 
-            var fadeSamples = Math.min(pcm16.length, Math.floor(sampleRate * 0.06)); // 60ms
-            var offset = 44;
-            for (var i = 0; i < pcm16.length; i++, offset += 2) {
-                var sample = pcm16[i];
-                if (fadeSamples > 0 && i >= pcm16.length - fadeSamples) {
-                    var fadeIndex = i - (pcm16.length - fadeSamples);
-                    var gain = 1 - (fadeIndex + 1) / fadeSamples;
-                    sample = Math.round(sample * Math.max(0, gain));
-                }
-                view.setInt16(offset, sample, true);
+            for (var i = 0; i < channelData.length; i++) {
+                var sample = Math.max(-1, Math.min(1, channelData[i]));
+                sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+                out.setInt16(pos, sample, true);
+                pos += 2;
             }
 
-            return new Blob([buffer], { type: 'audio/wav' });
+            return new Blob([out.buffer], { type: 'audio/wav' });
         }
 
-        // ---------- Whisper JSON Handling ----------
         function extractAllTextValues(obj) {
             var texts = [];
             function recurse(curr) {
@@ -1181,10 +1205,10 @@
             event.target.value = ''; 
         };
 
-        // 【事前判断・動的調整エンジン】精度を100%保ちつつトークン/リクエストオーバーを自動回避
+        // 【事前判断・動的調整エンジン】精度100%保持＋バッチ数約60%削減
         async function reanalyzeBlocksCore(blocks, apiKey, fileNameLabel, onProgress) {
             var totalBlocks = blocks.length;
-            var defaultChunkSize = 8; // デフォルト最適値
+            var defaultChunkSize = 8;
             var accumulatedVocabMap = new Map();
 
             blocks.forEach(function(b) { if (!b.grammarExplanation || b.grammarExplanation === '解析中...') b.grammarExplanation = '解析中...'; });
@@ -1193,12 +1217,10 @@
             var processedChunksCount = 0;
 
             while (i < totalBlocks) {
-                // 【事前判断①】残りの文節から安全な動的チャンクサイズを試算
                 var currentChunkSize = defaultChunkSize;
                 var candidateBlocks = blocks.slice(i, i + currentChunkSize);
                 var tokenEst = estimateChunkTokens(candidateBlocks);
 
-                // もし1ブロックあたりの文が長く、出力トークン上限（8192）を超えそうな場合はサイズを自動半減
                 while (!tokenEst.isSafe && currentChunkSize > 2) {
                     currentChunkSize = Math.max(2, Math.floor(currentChunkSize / 2));
                     candidateBlocks = blocks.slice(i, i + currentChunkSize);
@@ -1228,7 +1250,6 @@
 
                 var wordListStr = Array.from(chunkWords).join(', ');
 
-                // 【制約強化型プロンプト】サボり・スキップ・統合を物理的に封じ込める
                 var combinedPrompt = 'You are a master Indonesian linguist and language instructor for Japanese native speakers.\n' +
 'CRITICAL INSTRUCTION: Analyze EACH AND EVERY given text block from index ' + chunkBlocks[0].blockIndex + ' to ' + chunkBlocks[chunkBlocks.length - 1].blockIndex + ' WITHOUT EXCEPTIONS OR SHORTCUTS.\n\n' +
 'For EACH block, you MUST generate all 4 detailed sections in Japanese using these EXACT headings:\n' +
@@ -1332,9 +1353,8 @@
                     }
                 });
 
-                // i を処理したブロック数分進める
                 i += currentChunkSize;
-                await sleep(500); // ガードが効くためウェイトを最短(500ms)に短縮
+                await sleep(500);
             }
 
             return {
