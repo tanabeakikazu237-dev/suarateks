@@ -584,6 +584,54 @@
 
         var sleep = function(ms) { return new Promise(function(resolve) { setTimeout(resolve, ms); }); };
 
+        // ---------- PRE-REQUEST SMART GUARD (事前判断＆トークン/レート制御エンジン) ----------
+        window.apiRateTracker = {
+            requestTimestamps: [],
+            // Gemini 無料枠: 15 RPM (安全のため 12 RPM に制限して判断)
+            maxRequestsPerMinute: 12,
+            
+            // APIを叩く前に判断し、必要なら自動待機する関数
+            async guardRateLimit() {
+                var now = Date.now();
+                // 60秒以内のリクエスト履歴だけに絞り込み
+                this.requestTimestamps = this.requestTimestamps.filter(function(ts) {
+                    return now - ts < 60000;
+                });
+
+                if (this.requestTimestamps.length >= this.maxRequestsPerMinute) {
+                    var oldestInWindow = this.requestTimestamps[0];
+                    var waitTime = 60000 - (now - oldestInWindow) + 500; // 余裕を持って+500ms
+                    if (waitTime > 0) {
+                        showToast('API制限回避のため ' + Math.ceil(waitTime / 1000) + ' 秒自動待機中...', 'info');
+                        await sleep(waitTime);
+                    }
+                }
+                this.requestTimestamps.push(Date.now());
+            }
+        };
+
+        // 入力・出力トークン数を事前試算する関数
+        function estimateChunkTokens(chunkBlocks) {
+            var totalIndoChars = 0;
+            var totalJapChars = 0;
+            chunkBlocks.forEach(function(b) {
+                totalIndoChars += (b.indonesian || '').length;
+                totalJapChars += (b.japanese || '').length;
+            });
+
+            // インドネシア語/英語: 約4文字=1トークン、日本語: 約1.5文字=1トークン + プロンプト固定長(約600トークン)
+            var inputTokensEst = Math.ceil(totalIndoChars / 3.5) + Math.ceil(totalJapChars / 1.5) + 600;
+            // 4段階解剖の出力予測: 1ブロックあたり約150〜200トークン
+            var outputTokensEst = chunkBlocks.length * 200;
+
+            return {
+                inputTokens: inputTokensEst,
+                outputTokens: outputTokensEst,
+                isSafe: outputTokensEst < 6500 // Geminiの応答上限(8192)に対して安全か
+            };
+        }
+        // -----------------------------------------------------------------------------------
+
         function translateErrorMessage(rawMessage) {
             var str = String(rawMessage || '').toLowerCase();
             if (str.includes('prepayment credits are depleted') || str.includes('billing#prepay')) {
@@ -840,6 +888,9 @@
                 throw new Error('API Keyが正しく設定されていません。');
             }
 
+            // 【事前判定】APIを送信する前にレートリミット（15 RPM）をチェックして自動ウェイト
+            await window.apiRateTracker.guardRateLimit();
+
             var modelName = isTtsRequest ? 'gemini-3.8-flash-tts' : 'gemini-3.8-flash';
             var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent?key=' + encodeURIComponent(cleanKey);
 
@@ -858,7 +909,7 @@
                     });
 
                     if (response.status === 429 || response.status === 503) {
-                        await sleep(attempt * 3000);
+                        await sleep(attempt * 4000);
                         continue;
                     }
                     break;
@@ -1129,25 +1180,38 @@
             setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
             event.target.value = ''; 
         };
-        // -------------------------------------------
 
-        // 【最適化設定】精度を100%保ちつつリクエスト回数と費用を60%削減する黄金比エンジン
+        // 【事前判断・動的調整エンジン】精度を100%保ちつつトークン/リクエストオーバーを自動回避
         async function reanalyzeBlocksCore(blocks, apiKey, fileNameLabel, onProgress) {
             var totalBlocks = blocks.length;
-            var chunkSize = 8; // 最適化: 3 ➔ 8 文節へ拡張 (API呼び出し回数を約1/3に縮減)
-            var totalChunks = Math.ceil(totalBlocks / chunkSize);
+            var defaultChunkSize = 8; // デフォルト最適値
             var accumulatedVocabMap = new Map();
 
             blocks.forEach(function(b) { if (!b.grammarExplanation || b.grammarExplanation === '解析中...') b.grammarExplanation = '解析中...'; });
 
-            for (var chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
-                var start = chunkIdx * chunkSize;
-                var end = Math.min(totalBlocks, start + chunkSize);
+            var i = 0;
+            var processedChunksCount = 0;
 
-                var currentPct = Math.floor(((chunkIdx + 1) / totalChunks) * 100);
-                if (onProgress) onProgress(chunkIdx + 1, totalChunks, currentPct, fileNameLabel);
+            while (i < totalBlocks) {
+                // 【事前判断①】残りの文節から安全な動的チャンクサイズを試算
+                var currentChunkSize = defaultChunkSize;
+                var candidateBlocks = blocks.slice(i, i + currentChunkSize);
+                var tokenEst = estimateChunkTokens(candidateBlocks);
 
-                var chunkBlocks = blocks.slice(start, end);
+                // もし1ブロックあたりの文が長く、出力トークン上限（8192）を超えそうな場合はサイズを自動半減
+                while (!tokenEst.isSafe && currentChunkSize > 2) {
+                    currentChunkSize = Math.max(2, Math.floor(currentChunkSize / 2));
+                    candidateBlocks = blocks.slice(i, i + currentChunkSize);
+                    tokenEst = estimateChunkTokens(candidateBlocks);
+                }
+
+                var end = i + candidateBlocks.length;
+                processedChunksCount++;
+
+                var currentPct = Math.floor((end / totalBlocks) * 100);
+                if (onProgress) onProgress(processedChunksCount, Math.ceil(totalBlocks / defaultChunkSize), currentPct, fileNameLabel);
+
+                var chunkBlocks = candidateBlocks;
                 var inputChunkText = chunkBlocks.map(function(b) {
                     return '[BLOCK_ID:' + b.blockIndex + '] ' + b.indonesian + '\n(JP: ' + b.japanese + ')';
                 }).join('\n\n');
@@ -1164,7 +1228,7 @@
 
                 var wordListStr = Array.from(chunkWords).join(', ');
 
-                // 【制約強化型プロンプト】チャンクサイズを8に伸ばしてもサボり・スキップ・統合を物理的に封じ込める
+                // 【制約強化型プロンプト】サボり・スキップ・統合を物理的に封じ込める
                 var combinedPrompt = 'You are a master Indonesian linguist and language instructor for Japanese native speakers.\n' +
 'CRITICAL INSTRUCTION: Analyze EACH AND EVERY given text block from index ' + chunkBlocks[0].blockIndex + ' to ' + chunkBlocks[chunkBlocks.length - 1].blockIndex + ' WITHOUT EXCEPTIONS OR SHORTCUTS.\n\n' +
 'For EACH block, you MUST generate all 4 detailed sections in Japanese using these EXACT headings:\n' +
@@ -1227,7 +1291,7 @@
 
                     if (chunkParsed.grammar && Array.isArray(chunkParsed.grammar)) {
                         chunkParsed.grammar.forEach(function(gItem, gIdx) {
-                            var bIdx = (gItem.blockIndex !== undefined && gItem.blockIndex !== null) ? Number(gItem.blockIndex) : (start + gIdx);
+                            var bIdx = (gItem.blockIndex !== undefined && gItem.blockIndex !== null) ? Number(gItem.blockIndex) : (i + gIdx);
                             var targetBlock = blocks.find(function(b) { return b.blockIndex === bIdx; }) || chunkBlocks[gIdx];
                             if (targetBlock && gItem.grammarExplanation) {
                                 targetBlock.grammarExplanation = String(gItem.grammarExplanation).trim();
@@ -1268,7 +1332,9 @@
                     }
                 });
 
-                await sleep(1500);
+                // i を処理したブロック数分進める
+                i += currentChunkSize;
+                await sleep(500); // ガードが効くためウェイトを最短(500ms)に短縮
             }
 
             return {
