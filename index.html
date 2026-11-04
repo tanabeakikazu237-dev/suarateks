@@ -47,7 +47,7 @@ colors: { indoRed: { 500: '#E70011', 600: '#C8000F', 700: '#A0000C' } }
 <h1 class="font-extrabold text-xs sm:text-sm flex items-center gap-1.5 shrink-0 truncate">
 <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block shrink-0"></span>
 <span class="truncate">SuaraTeks<span class="text-red-600">ID</span> Pro</span>
-<span class="text-[9px] text-slate-400 font-normal shrink-0">v7.2 (Gemini 3.8 Flash TTS Engine)</span>
+<span class="text-[9px] text-slate-400 font-normal shrink-0">v7.5 (Persistent Cache & Interactive TTS)</span>
 <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1 py-0.5 rounded font-bold shrink-0"><i class="fa-solid fa-wifi-slash"></i> オフライン</span>
 </h1>
 <div class="flex items-center gap-1.5 shrink-0 min-w-0">
@@ -94,9 +94,9 @@ colors: { indoRed: { 500: '#E70011', 600: '#C8000F', 700: '#A0000C' } }
 ​<div class="space-y-1 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
 <div class="flex items-center justify-between text-[10px] font-bold text-slate-600 dark:text-slate-300">
 <span><i class="fa-solid fa-microphone-lines text-red-600 mr-1"></i>音声エンジン</span>
-<span class="text-emerald-600 font-extrabold">Gemini 3.8 Flash TTS</span>
+<span class="text-emerald-600 font-extrabold">Gemini 2.5 Flash TTS</span>
 </div>
-<p class="text-[9px] text-slate-400 leading-tight">Gemini Native Audio (Puck / 高精度AI音声のみ使用)</p>
+<p class="text-[9px] text-slate-400 leading-tight">Gemini Native Audio (Iapetus / 語学学習クリアボイス・永続キャッシュ)</p>
 </div>
 </div>
 ​<!-- Audio Queue Selection -->
@@ -299,13 +299,14 @@ colors: { indoRed: { 500: '#E70011', 600: '#C8000F', 700: '#A0000C' } }
 const DB_NAME = 'SuaraTeksIDProDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'sessions';
+​const TTS_DB_NAME = 'SuaraTeksTTSCacheDB';
+const TTS_STORE_NAME = 'audioCache';
 ​const INDO_STOP_WORDS = new Set([
 'a','di','ke','dan','yang','ini','itu','ada','dari','pada','atau','untuk','agar','bisa','sudah',
 'saya','anda','mereka','kita','kami','dia','ia','ya','tidak','bukan','pula','lagi','juga','saja',
 'dengan','oleh','maka','kalau','sebab','karena','bahwa','saat','ketika','ada','adalah'
 ]);
-​// Blob URL メモリ自動開放用 LRU キャッシュクラス
-class BoundedAudioCache {
+​class BoundedAudioCache {
 constructor(maxSize = 50) {
 this.maxSize = maxSize;
 this.cache = new Map();
@@ -350,6 +351,52 @@ db.createObjectStore(STORE_NAME, { keyPath: 'id' });
 }
 };
 });
+}
+​function openTTSCacheDB() {
+return new Promise((resolve, reject) => {
+var request = indexedDB.open(TTS_DB_NAME, 1);
+request.onerror = () => reject(request.error);
+request.onsuccess = () => resolve(request.result);
+request.onupgradeneeded = (event) => {
+var db = event.target.result;
+if (!db.objectStoreNames.contains(TTS_STORE_NAME)) {
+db.createObjectStore(TTS_STORE_NAME);
+}
+};
+});
+}
+​async function getCachedTTSAudio(key) {
+try {
+var db = await openTTSCacheDB();
+return new Promise((resolve) => {
+var tx = db.transaction(TTS_STORE_NAME, 'readonly');
+var store = tx.objectStore(TTS_STORE_NAME);
+var req = store.get(key);
+req.onsuccess = () => {
+if (req.result) {
+var blob = new Blob([req.result.buffer], { type: req.result.type || 'audio/wav' });
+resolve(URL.createObjectURL(blob));
+} else {
+resolve(null);
+}
+};
+req.onerror = () => resolve(null);
+});
+} catch (e) { return null; }
+}
+​async function saveCachedTTSAudio(key, audioUrl) {
+try {
+var resp = await fetch(audioUrl);
+var arrayBuf = await resp.arrayBuffer();
+var db = await openTTSCacheDB();
+return new Promise((resolve) => {
+var tx = db.transaction(TTS_STORE_NAME, 'readwrite');
+var store = tx.objectStore(TTS_STORE_NAME);
+store.put({ buffer: arrayBuf, type: 'audio/wav' }, key);
+tx.oncomplete = () => resolve(true);
+tx.onerror = () => resolve(false);
+});
+} catch (e) {}
 }
 ​async function dbSaveSession(sessionObj) {
 try {
@@ -543,13 +590,11 @@ window.isShuffled = false;
 window.shuffledVocabList = [];
 window.selectedHistoryIds = [];
 window.speechRate = 0.85;
-​// メモリリーク防止 Bounded LRU キャッシュ
-window.ttsSentenceCache = new BoundedAudioCache(50);
+​window.ttsSentenceCache = new BoundedAudioCache(50);
 window.ttsWordCache = new BoundedAudioCache(200);
 ​window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
 ​var sleep = function(ms) { return new Promise(function(resolve) { setTimeout(resolve, ms); }); };
-​// PRE-REQUEST SMART GUARD (15 RPM 安全制御)
-window.apiRateTracker = {
+​window.apiRateTracker = {
 requestTimestamps: [],
 maxRequestsPerMinute: 12,
 ​async guardRateLimit() {
@@ -714,8 +759,7 @@ window.currentCardIndex = 0;
 window.isCardFlipped = false;
 window.isShuffled = false;
 window.shuffledVocabList = [];
-​// 旧 Blob URL メモリ完全解放
-window.ttsSentenceCache.clear();
+​window.ttsSentenceCache.clear();
 window.ttsWordCache.clear();
 ​var searchInput = document.getElementById('vocabSearchInput');
 if (searchInput) searchInput.value = '';
@@ -806,17 +850,11 @@ openModal('apiKeyModal');
 throw new Error('API Keyが正しく設定されていません。');
 }
 ​await window.apiRateTracker.guardRateLimit();
-​// TTS専用モデル(gemini-3.8-flash-tts)と通常マルチモーダルモデル(gemini-3.8-flash)を明確に区別
-var primaryModel = isTtsRequest ? 'gemini-3.8-flash-tts' : 'gemini-3.8-flash';
-var fallbackModels = isTtsRequest ? ['gemini-3.8-flash-lite-tts', 'gemini-2.5-flash-preview-tts'] : ['gemini-3.8-flash-lite'];
-var modelList = [primaryModel].concat(fallbackModels);
+​var modelName = isTtsRequest ? 'gemini-2.5-flash-preview-tts' : 'gemini-3.8-flash';
+var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent?key=' + encodeURIComponent(cleanKey);
 ​if (!payload.generationConfig && !isTtsRequest) {
 payload.generationConfig = { temperature: 0.1, maxOutputTokens: 8192 };
 }
-​var lastErr = null;
-​for (var m = 0; m < modelList.length; m++) {
-var modelName = modelList[m];
-var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent?key=' + encodeURIComponent(cleanKey);
 ​var response = null;
 var maxAttempts = 2;
 for (var attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -836,39 +874,30 @@ if (attempt === maxAttempts) break;
 await sleep(1000);
 }
 }
-​if (response && response.ok) {
-var data = await response.json();
-if (data.error) {
-lastErr = new Error(translateErrorMessage(data.error.message));
-continue;
-}
-return data;
-} else if (response) {
-var errDetail = await response.text();
+​if (!response || !response.ok) {
+var errDetail = response ? await response.text() : 'Network Error';
 try {
 var parsed = JSON.parse(errDetail);
 if (parsed.error && parsed.error.message) errDetail = parsed.error.message;
 } catch (e) {}
-​if (response.status === 401 || response.status === 403 || (errDetail && errDetail.toLowerCase().includes('key'))) {
+​if (response && (response.status === 401 || response.status === 403 || (errDetail && errDetail.toLowerCase().includes('key')))) {
 openModal('apiKeyModal', true);
 throw new Error('API Key認証エラー（401）です。有効なAPI Keyを設定してください。');
 }
-​if (response.status === 404 || errDetail.toLowerCase().includes('not found') || errDetail.toLowerCase().includes('not supported') || errDetail.toLowerCase().includes('no longer available')) {
-lastErr = new Error(translateErrorMessage(errDetail));
-continue;
-}
 throw new Error(translateErrorMessage(errDetail));
 }
+​var data = await response.json();
+if (data.error) {
+throw new Error(translateErrorMessage(data.error.message));
 }
-​throw lastErr || new Error('Gemini APIへの接続に失敗しました');
+return data;
 }
 ​function extractGeminiText(data) {
 var parts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) ? data.candidates[0].content.parts : null;
 if (!Array.isArray(parts)) throw new Error('応答にテキストデータが含まれていません');
 return parts.map(function(p) { return p.text || ''; }).join('').trim();
 }
-​// Geminiレスポンスパーツ内から inlineData (音声データ) を確実に探索・抽出
-function findAudioInlineData(resData) {
+​function findAudioInlineData(resData) {
 if (!resData || !resData.candidates || !resData.candidates[0]) return null;
 var parts = resData.candidates[0].content && resData.candidates[0].content.parts;
 if (!Array.isArray(parts)) return null;
@@ -888,8 +917,7 @@ bytes[i] = binaryString.charCodeAt(i);
 }
 return bytes.buffer;
 }
-​// PCM 16bitデータから正確なWAVバイナリBlobを作成
-function pcmToWav(pcm16, sampleRate) {
+​function pcmToWav(pcm16, sampleRate) {
 var numChannels = 1;
 var byteRate = sampleRate * numChannels * 2;
 var blockAlign = numChannels * 2;
@@ -907,12 +935,12 @@ view.setUint32(4, chunkSize, true);
 writeString(8, 'WAVE');
 writeString(12, 'fmt ');
 view.setUint32(16, 16, true);
-view.setUint16(20, 1, true); // PCM format
+view.setUint16(20, 1, true);
 view.setUint16(22, numChannels, true);
 view.setUint32(24, sampleRate, true);
 view.setUint32(28, byteRate, true);
 view.setUint16(32, blockAlign, true);
-view.setUint16(34, 16, true); // Bits per sample
+view.setUint16(34, 16, true);
 writeString(36, 'data');
 view.setUint32(40, dataSize, true);
 ​var offset = 44;
@@ -921,8 +949,7 @@ view.setInt16(offset, pcm16[i], true);
 }
 ​return new Blob([buffer], { type: 'audio/wav' });
 }
-​// Gemini TTS 音声データ（PCM/MP3/WAV/OGG等）の最適URL生成ヘルパー
-function createAudioBlobFromGeminiData(audioInline) {
+​function createAudioBlobFromGeminiData(audioInline) {
 if (!audioInline || !audioInline.data) return null;
 var rawMime = (audioInline.mimeType || 'audio/wav').toLowerCase();
 var arrayBuf = base64ToArrayBuffer(audioInline.data);
@@ -931,11 +958,9 @@ var mimeBase = rawMime.split(';')[0].trim();
 var blob = new Blob([arrayBuf], { type: mimeBase || 'audio/wav' });
 return URL.createObjectURL(blob);
 }
-​var isPcm = rawMime.includes('pcm') || rawMime.includes('l16') || rawMime.includes('raw');
-var rateMatch = rawMime.match(/rate=(\d+)/i);
+​var rateMatch = rawMime.match(/rate=(\d+)/i);
 var sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
-​// 安全なInt16Array生成（奇数バイト長によるRangeError防止）
-var numSamples = Math.floor(arrayBuf.byteLength / 2);
+​var numSamples = Math.floor(arrayBuf.byteLength / 2);
 var pcm16 = new Int16Array(arrayBuf, 0, numSamples);
 var wavBlob = pcmToWav(pcm16, sampleRate);
 return URL.createObjectURL(wavBlob);
@@ -1090,8 +1115,7 @@ await sleep(1500);
 setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
 event.target.value = '';
 };
-​// 【事前判断・動的調整エンジン】精度100%保持＋バッチ数約60%削減
-async function reanalyzeBlocksCore(blocks, apiKey, fileNameLabel, onProgress) {
+​async function reanalyzeBlocksCore(blocks, apiKey, fileNameLabel, onProgress) {
 var totalBlocks = blocks.length;
 var defaultChunkSize = 8;
 var accumulatedVocabMap = new Map();
@@ -1512,34 +1536,34 @@ updateBlockToggleUI(window.activeSpeechState.blockId, 'stopped');
 }
 window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
 }
-​// Gemini TTS 文章音声再生機能 (Pure Gemini AI Engine Only)
-async function speakSentenceGeminiTTS(textToSpeak, blockId) {
+​async function speakSentenceGeminiTTS(textToSpeak, blockId, startFromWordIdx = 0) {
 var apiKey = getApiKey();
 if (!apiKey) {
 openModal('apiKeyModal');
-showToast('Gemini API Keyを設定してください（Gemini AI音声生成に使用します）', 'error');
+showToast('Gemini API Keyを設定してください', 'error');
 if (blockId) updateBlockToggleUI(blockId, 'stopped');
 return;
 }
 ​if (blockId && window.activeSpeechState.blockId === blockId) {
 if (window.activeSpeechState.audioEl) {
-if (window.activeSpeechState.audioEl.paused) {
-window.activeSpeechState.audioEl.play();
-window.activeSpeechState.isPlaying = true;
-updateBlockToggleUI(blockId, 'playing');
-return;
-} else {
+if (!window.activeSpeechState.audioEl.paused) {
 window.activeSpeechState.audioEl.pause();
 window.activeSpeechState.isPlaying = false;
 updateBlockToggleUI(blockId, 'paused');
+return;
+} else if (startFromWordIdx === 0) {
+window.activeSpeechState.audioEl.play();
+window.activeSpeechState.isPlaying = true;
+updateBlockToggleUI(blockId, 'playing');
 return;
 }
 }
 }
 ​stopAllSpeech();
-​var audioUrl = null;
-var cacheKey = String(textToSpeak || '').trim();
-​if (window.ttsSentenceCache.has(cacheKey)) {
+​var cacheKey = 'sent-' + String(textToSpeak || '').trim().toLowerCase();
+var audioUrl = await getCachedTTSAudio(cacheKey);
+​if (!audioUrl) {
+if (window.ttsSentenceCache.has(cacheKey)) {
 audioUrl = window.ttsSentenceCache.get(cacheKey);
 } else {
 if (blockId) updateBlockToggleUI(blockId, 'loading');
@@ -1550,7 +1574,7 @@ generationConfig: {
 responseModalities: ["AUDIO"],
 speechConfig: {
 voiceConfig: {
-prebuiltVoiceConfig: { voiceName: "Puck" }
+prebuiltVoiceConfig: { voiceName: "Iapetus" }
 }
 }
 }
@@ -1558,11 +1582,12 @@ prebuiltVoiceConfig: { voiceName: "Puck" }
 ​var resData = await fetchGeminiApi(apiKey, ttsPayload, true);
 var audioInline = findAudioInlineData(resData);
 ​if (!audioInline || !audioInline.data) {
-throw new Error('Gemini TTS音声データの生成に失敗しました（応答に音声が含まれていません）');
+throw new Error('Gemini応答に音声データがありません');
 }
 ​audioUrl = createAudioBlobFromGeminiData(audioInline);
 if (!audioUrl) throw new Error('音声データの変換に失敗しました');
 ​window.ttsSentenceCache.set(cacheKey, audioUrl);
+await saveCachedTTSAudio(cacheKey, audioUrl);
 } catch (ttsErr) {
 console.warn('Gemini TTS sentence error:', ttsErr);
 if (blockId) updateBlockToggleUI(blockId, 'stopped');
@@ -1570,9 +1595,19 @@ showToast('Gemini TTS音声生成エラー: ' + translateErrorMessage(ttsErr.mes
 return;
 }
 }
+}
 ​if (!audioUrl) return;
 ​var audio = new Audio(audioUrl);
 audio.playbackRate = window.speechRate || 0.85;
+​var words = textToSpeak.split(/\s+/);
+if (startFromWordIdx > 0 && startFromWordIdx < words.length) {
+audio.addEventListener('loadedmetadata', function() {
+if (audio.duration && audio.duration !== Infinity) {
+var ratio = startFromWordIdx / words.length;
+audio.currentTime = audio.duration * ratio;
+}
+}, { once: true });
+}
 ​if (blockId) {
 window.activeSpeechState = { blockId: blockId, audioEl: audio, isPlaying: true };
 updateBlockToggleUI(blockId, 'playing');
@@ -1581,33 +1616,31 @@ updateBlockToggleUI(blockId, 'playing');
 if (blockId) updateBlockToggleUI(blockId, 'stopped');
 window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
 };
-​audio.onerror = function(e) {
-console.error('Audio playback error:', e);
+​audio.onerror = function() {
 if (blockId) updateBlockToggleUI(blockId, 'stopped');
-showToast('Gemini TTS音声の再生中にエラーが発生しました', 'error');
+showToast('音声再生中にエラーが発生しました', 'error');
 };
 ​try {
 await audio.play();
 } catch (playErr) {
-console.error('audio.play() error:', playErr);
 if (blockId) updateBlockToggleUI(blockId, 'stopped');
-showToast('音声再生がブラウザにより拒否されました。画面内をタップしてから再試行してください。', 'error');
+showToast('音声再生が拒否されました。画面をタップしてから再試行してください。', 'error');
 }
 }
-​// Gemini TTS 単語音声再生機能 (Pure Gemini AI Engine Only)
-async function speakWordGeminiTTS(wordText) {
+​async function speakWordGeminiTTS(wordText) {
 var cleanWord = String(wordText || '').trim();
 if (!cleanWord) return;
 ​var apiKey = getApiKey();
 if (!apiKey) {
 openModal('apiKeyModal');
-showToast('Gemini API Keyを設定してください（Gemini AI音声生成に使用します）', 'error');
+showToast('Gemini API Keyを設定してください', 'error');
 return;
 }
 ​stopAllSpeech();
-​var audioUrl = null;
-var cacheKey = cleanWord.toLowerCase();
-​if (window.ttsWordCache.has(cacheKey)) {
+​var cacheKey = 'word-' + cleanWord.toLowerCase();
+var audioUrl = await getCachedTTSAudio(cacheKey);
+​if (!audioUrl) {
+if (window.ttsWordCache.has(cacheKey)) {
 audioUrl = window.ttsWordCache.get(cacheKey);
 } else {
 try {
@@ -1617,7 +1650,7 @@ generationConfig: {
 responseModalities: ["AUDIO"],
 speechConfig: {
 voiceConfig: {
-prebuiltVoiceConfig: { voiceName: "Puck" }
+prebuiltVoiceConfig: { voiceName: "Iapetus" }
 }
 }
 }
@@ -1630,10 +1663,12 @@ throw new Error('単語TTS音声の生成に失敗しました');
 ​audioUrl = createAudioBlobFromGeminiData(audioInline);
 if (!audioUrl) throw new Error('単語音声データの変換に失敗しました');
 ​window.ttsWordCache.set(cacheKey, audioUrl);
+await saveCachedTTSAudio(cacheKey, audioUrl);
 } catch (wordErr) {
 console.warn('Gemini word TTS error:', wordErr);
-showToast('Gemini TTS単語音声エラー: ' + translateErrorMessage(wordErr.message), 'error');
+showToast('単語音声エラー: ' + translateErrorMessage(wordErr.message), 'error');
 return;
+}
 }
 }
 ​if (!audioUrl) return;
@@ -1645,19 +1680,34 @@ window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
 };
 audio.onerror = function() {
 window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
-showToast('単語音声の再生中にエラーが発生しました', 'error');
 };
 ​try {
 await audio.play();
-} catch (pErr) {
-window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
+} catch (pErr) {}
+}
+​window.wordTapTimers = {};
+function handleWordClick(wordText, blockId, wordIdx, fullSentence) {
+if (window.activeSpeechState.isPlaying && window.activeSpeechState.blockId === blockId) {
+stopAllSpeech();
+return;
+}
+​var timerKey = blockId + '-' + wordIdx;
+if (window.wordTapTimers[timerKey]) {
+clearTimeout(window.wordTapTimers[timerKey]);
+delete window.wordTapTimers[timerKey];
+speakSentenceGeminiTTS(fullSentence, blockId, wordIdx);
+} else {
+window.wordTapTimers[timerKey] = setTimeout(function() {
+delete window.wordTapTimers[timerKey];
+speakWordGeminiTTS(wordText);
+}, 250);
 }
 }
 ​function toggleSpeechBlock(blockId) {
 var cleanId = blockId.replace(/^[tg]-/, '');
 var block = window.transcriptBlocks.find(function(b) { return b.id === cleanId; });
 if (!block) return;
-speakSentenceGeminiTTS(block.indonesian, blockId);
+speakSentenceGeminiTTS(block.indonesian, blockId, 0);
 }
 ​function updateBlockToggleUI(blockId, state) {
 var btn = document.getElementById('btn-toggle-' + blockId);
@@ -1670,8 +1720,10 @@ else btn.innerHTML = '<i class="fa-solid fa-play"></i><span>ナレーション�
 ​function renderClickableIndonesianWords(text, blockId) {
 if (!text) return '';
 var words = text.split(/\s+/);
+var escSentence = escapeHtml(text).replace(/'/g, "\'");
 return words.map(function(w, idx) {
-return '<span class="word-clickable" onclick="speakWordGeminiTTS(\'' + escapeHtml(w) + '\')" title="単語音声をGemini TTSで再生">' + escapeHtml(w) + '</span>';
+var escWord = escapeHtml(w).replace(/'/g, "\'");
+return '<span class="word-clickable" onclick="handleWordClick(\'' + escWord + '\', \'' + blockId + '\', ' + idx + ', \'' + escSentence + '\')" title="1回タップ: 単語再生 / 2回タップ: ここから連続再生 / 再生中タップ: 一時停止">' + escapeHtml(w) + '</span>';
 }).join(' ');
 }
 ​function renderTranscriptContainer() {
