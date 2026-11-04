@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="id" class="h-full">
 <head>
@@ -56,7 +57,7 @@
         <h1 class="font-extrabold text-xs sm:text-sm flex items-center gap-1.5 shrink-0 truncate">
             <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block shrink-0"></span>
             <span class="truncate">SuaraTeks<span class="text-red-600">ID</span> Pro</span>
-            <span class="text-[9px] text-slate-400 font-normal shrink-0">v6.5 (Ultimate Gemini Engine)</span>
+            <span class="text-[9px] text-slate-400 font-normal shrink-0">v6.8 (Pure Gemini TTS Engine)</span>
             <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1 py-0.5 rounded font-bold shrink-0"><i class="fa-solid fa-wifi-slash"></i> オフライン</span>
         </h1>
         <div class="flex items-center gap-1.5 shrink-0 min-w-0">
@@ -110,9 +111,9 @@
                 <div class="space-y-1 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
                     <div class="flex items-center justify-between text-[10px] font-bold text-slate-600 dark:text-slate-300">
                         <span><i class="fa-solid fa-microphone-lines text-red-600 mr-1"></i>音声エンジン</span>
-                        <span class="text-emerald-600 font-extrabold">Gemini TTS (Puck固定)</span>
+                        <span class="text-emerald-600 font-extrabold">Gemini Pure TTS</span>
                     </div>
-                    <p class="text-[9px] text-slate-400 leading-tight">BoundedAudioCacheメモリ最適化モデル</p>
+                    <p class="text-[9px] text-slate-400 leading-tight">Gemini Native Audio (Puck / 高精度AI音声専任)</p>
                 </div>
             </div>
 
@@ -921,7 +922,7 @@
 
             await window.apiRateTracker.guardRateLimit();
 
-            var modelName = isTtsRequest ? 'gemini-3.8-flash-tts' : 'gemini-3.8-flash';
+            var modelName = 'gemini-2.0-flash';
             var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent?key=' + encodeURIComponent(cleanKey);
 
             if (!payload.generationConfig && !isTtsRequest) {
@@ -996,34 +997,50 @@
             var buffer = new ArrayBuffer(44 + dataSize);
             var view = new DataView(buffer);
 
-            function writeString(view, offset, string) {
+            function writeString(offset, string) {
                 for (var i = 0; i < string.length; i++) {
                     view.setUint8(offset + i, string.charCodeAt(i));
                 }
             }
 
-            writeString('RIFF');
-            out.setUint32(pos, length - 8, true); pos += 4;
-            writeString('WAVE');
-            writeString('fmt ');
-            out.setUint32(pos, 16, true); pos += 4;
-            out.setUint16(pos, 1, true); pos += 2;
-            out.setUint16(pos, 1, true); pos += 2;
-            out.setUint32(pos, sampleRate, true); pos += 4;
-            out.setUint32(pos, sampleRate * 2, true); pos += 4;
-            out.setUint16(pos, 2, true); pos += 2;
-            out.setUint16(pos, 16, true); pos += 2;
-            writeString('data');
-            out.setUint32(pos, length - pos - 4, true); pos += 4;
+            writeString(0, 'RIFF');
+            view.setUint32(4, chunkSize, true);
+            writeString(8, 'WAVE');
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true); // PCM format
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, 16, true); // Bits per sample
+            writeString(36, 'data');
+            view.setUint32(40, dataSize, true);
 
-            for (var i = 0; i < channelData.length; i++) {
-                var sample = Math.max(-1, Math.min(1, channelData[i]));
-                sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
-                out.setInt16(pos, sample, true);
-                pos += 2;
+            var offset = 44;
+            for (var i = 0; i < pcm16.length; i++, offset += 2) {
+                view.setInt16(offset, pcm16[i], true);
             }
 
-            return new Blob([out.buffer], { type: 'audio/wav' });
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+        // Gemini TTS 音声データ（PCM/MP3/WAV/OGG等）の最適URL生成ヘルパー
+        function createAudioBlobFromGeminiData(audioInline) {
+            var rawMime = audioInline.mimeType || 'audio/L16;rate=24000';
+            var mimeBase = rawMime.split(';')[0].toLowerCase().trim();
+            var pcmBuffer = base64ToArrayBuffer(audioInline.data);
+
+            if (['audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/wave', 'audio/x-wav', 'audio/ogg', 'audio/aac', 'audio/webm', 'audio/mp4', 'audio/m4a'].includes(mimeBase)) {
+                var blob = new Blob([pcmBuffer], { type: mimeBase });
+                return URL.createObjectURL(blob);
+            }
+
+            var rateMatch = rawMime.match(/rate=(\d+)/i);
+            var sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+            var pcm16 = new Int16Array(pcmBuffer);
+            var wavBlob = pcmToWav(pcm16, sampleRate);
+            return URL.createObjectURL(wavBlob);
         }
 
         function extractAllTextValues(obj) {
@@ -1688,20 +1705,19 @@
                 window.activeSpeechState.audioEl.pause();
                 window.activeSpeechState.audioEl = null;
             }
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-            }
             if (window.activeSpeechState.blockId) {
                 updateBlockToggleUI(window.activeSpeechState.blockId, 'stopped');
             }
             window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
         }
 
+        // Gemini TTS 文章音声再生機能 (Pure Gemini AI Engine Only)
         async function speakSentenceGeminiTTS(textToSpeak, blockId) {
             var apiKey = getApiKey();
             if (!apiKey) {
                 openModal('apiKeyModal');
-                showToast('Gemini API Keyを設定してください', 'error');
+                showToast('Gemini API Keyを設定してください（Gemini AI音声生成に使用します）', 'error');
+                if (blockId) updateBlockToggleUI(blockId, 'stopped');
                 return;
             }
 
@@ -1733,7 +1749,7 @@
 
                 try {
                     var ttsPayload = {
-                        contents: [{ parts: [{ text: textToSpeak }] }],
+                        contents: [{ parts: [{ text: "Silakan baca kalimat berikut dalam bahasa Indonesia dengan jelas: " + textToSpeak }] }],
                         generationConfig: {
                             responseModalities: ["AUDIO"],
                             speechConfig: {
@@ -1752,20 +1768,12 @@
                         throw new Error('Gemini TTS音声データの生成に失敗しました');
                     }
 
-                    var mimeType = audioInline.mimeType || 'audio/L16;rate=24000';
-                    var rateMatch = mimeType.match(/rate=(\d+)/);
-                    var sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
-
-                    var pcmBuffer = base64ToArrayBuffer(audioInline.data);
-                    var pcm16 = new Int16Array(pcmBuffer);
-                    var wavBlob = pcmToWav(pcm16, sampleRate);
-                    audioUrl = URL.createObjectURL(wavBlob);
-
+                    audioUrl = createAudioBlobFromGeminiData(audioInline);
                     window.ttsSentenceCache.set(cacheKey, audioUrl);
                 } catch (ttsErr) {
                     console.warn('Gemini TTS sentence error:', ttsErr);
                     if (blockId) updateBlockToggleUI(blockId, 'stopped');
-                    showToast('音声生成エラー: ' + translateErrorMessage(ttsErr.message), 'error');
+                    showToast('Gemini TTS音声生成エラー: ' + translateErrorMessage(ttsErr.message), 'error');
                     return;
                 }
             }
@@ -1787,12 +1795,18 @@
 
             audio.onerror = function() {
                 if (blockId) updateBlockToggleUI(blockId, 'stopped');
-                showToast('音声の再生中にエラーが発生しました', 'error');
+                showToast('Gemini TTS音声の再生中にエラーが発生しました', 'error');
             };
 
-            await audio.play();
+            try {
+                await audio.play();
+            } catch (playErr) {
+                if (blockId) updateBlockToggleUI(blockId, 'stopped');
+                showToast('音声再生が拒否されました。画面内をタップして再試行してください。', 'error');
+            }
         }
 
+        // Gemini TTS 単語音声再生機能 (Pure Gemini AI Engine Only)
         async function speakWordGeminiTTS(wordText) {
             var cleanWord = String(wordText || '').trim();
             if (!cleanWord) return;
@@ -1800,7 +1814,7 @@
             var apiKey = getApiKey();
             if (!apiKey) {
                 openModal('apiKeyModal');
-                showToast('Gemini API Keyを設定してください', 'error');
+                showToast('Gemini API Keyを設定してください（Gemini AI音声生成に使用します）', 'error');
                 return;
             }
 
@@ -1814,7 +1828,7 @@
             } else {
                 try {
                     var wordPayload = {
-                        contents: [{ parts: [{ text: cleanWord }] }],
+                        contents: [{ parts: [{ text: "Sebutkan kata berikut: " + cleanWord }] }],
                         generationConfig: {
                             responseModalities: ["AUDIO"],
                             speechConfig: {
@@ -1833,19 +1847,11 @@
                         throw new Error('単語TTS音声の生成に失敗しました');
                     }
 
-                    var mimeType = audioInline.mimeType || 'audio/L16;rate=24000';
-                    var rateMatch = mimeType.match(/rate=(\d+)/);
-                    var sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
-
-                    var pcmBuffer = base64ToArrayBuffer(audioInline.data);
-                    var pcm16 = new Int16Array(pcmBuffer);
-                    var wavBlob = pcmToWav(pcm16, sampleRate);
-                    audioUrl = URL.createObjectURL(wavBlob);
-
+                    audioUrl = createAudioBlobFromGeminiData(audioInline);
                     window.ttsWordCache.set(cacheKey, audioUrl);
                 } catch (wordErr) {
                     console.warn('Gemini word TTS error:', wordErr);
-                    showToast('単語音声生成エラー: ' + translateErrorMessage(wordErr.message), 'error');
+                    showToast('Gemini TTS単語音声エラー: ' + translateErrorMessage(wordErr.message), 'error');
                     return;
                 }
             }
@@ -1861,631 +1867,16 @@
             };
             audio.onerror = function() {
                 window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
+                showToast('単語音声の再生中にエラーが発生しました', 'error');
             };
 
-            await audio.play();
+            try {
+                await audio.play();
+            } catch (pErr) {
+                window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
+            }
         }
 
         function toggleSpeechBlock(blockId) {
             var cleanId = blockId.replace(/^[tg]-/, '');
-            var block = window.transcriptBlocks.find(function(b) { return b.id === cleanId; });
-            if (!block) return;
-            speakSentenceGeminiTTS(block.indonesian, blockId);
-        }
-
-        function updateBlockToggleUI(blockId, state) {
-            var btn = document.getElementById('btn-toggle-' + blockId);
-            if (!btn) return;
-            if (state === 'loading') btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i><span>生成中</span>';
-            else if (state === 'playing') btn.innerHTML = '<i class="fa-solid fa-pause text-red-500"></i><span>一時停止</span>';
-            else if (state === 'paused') btn.innerHTML = '<i class="fa-solid fa-play text-amber-500"></i><span>再開</span>';
-            else btn.innerHTML = '<i class="fa-solid fa-play"></i><span>ナレーション再生</span>';
-        }
-
-        function renderClickableIndonesianWords(text, blockId) {
-            if (!text) return '';
-            var words = text.split(/\s+/);
-            return words.map(function(w, idx) {
-                return '<span class="word-clickable" onclick="speakWordGeminiTTS(\'' + escapeHtml(w) + '\')" title="単語音声をGemini TTSで再生">' + escapeHtml(w) + '</span>';
-            }).join(' ');
-        }
-
-        function renderTranscriptContainer() {
-            var emptyState = document.getElementById('emptyState');
-            var container = document.getElementById('transcriptContainer');
-            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
-                if (emptyState) emptyState.classList.remove('hidden');
-                if (container) container.innerHTML = '';
-                return;
-            }
-            if (emptyState) emptyState.classList.add('hidden');
-            var html = '';
-            window.transcriptBlocks.forEach(function(block, idx) {
-                var clickableIndo = renderClickableIndonesianWords(block.indonesian, 't-' + block.id);
-                html += '<div class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">' +
-                    '<div class="flex items-center justify-between text-xs text-slate-500 pb-1 border-b border-slate-100 dark:border-slate-700">' +
-                        '<div class="flex items-center gap-1.5">' +
-                            '<span class="font-extrabold text-white bg-red-600 px-2 py-0.5 rounded-md text-[10px]">#' + (idx + 1) + '</span>' +
-                            '<span class="font-bold text-red-600 bg-red-50 dark:bg-red-950/60 px-2 py-0.5 rounded-full text-[10px]">' + escapeHtml(block.speaker) + '</span>' +
-                        '</div>' +
-                        '<button id="btn-toggle-t-' + block.id + '" onclick="toggleSpeechBlock(\'t-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1 hover:bg-slate-200">' +
-                            '<i class="fa-solid fa-play text-[10px]"></i><span>ナレーション再生</span>' +
-                        '</button>' +
-                    '</div>' +
-                    '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + clickableIndo + '</p>' +
-                    '<div class="bg-amber-50/70 dark:bg-slate-900/60 p-2.5 rounded-lg border border-amber-200/50">' +
-                        '<p class="dynamic-text-ja font-semibold text-amber-950 dark:text-amber-200">' + escapeHtml(block.japanese) + '</p>' +
-                    '</div>' +
-                '</div>';
-            });
-            if (container) container.innerHTML = html;
-        }
-
-        function renderGrammarContainer() {
-            var emptyState = document.getElementById('grammarEmptyState');
-            var container = document.getElementById('grammarContainer');
-            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
-                if (emptyState) emptyState.classList.remove('hidden');
-                if (container) container.innerHTML = '';
-                return;
-            }
-            if (emptyState) emptyState.classList.add('hidden');
-            var html = '';
-            window.transcriptBlocks.forEach(function(block, idx) {
-                var clickableIndo = renderClickableIndonesianWords(block.indonesian, 'g-' + block.id);
-                html += '<div class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2.5">' +
-                    '<div class="flex items-center justify-between text-xs pb-1 border-b border-slate-100 dark:border-slate-700">' +
-                        '<span class="font-extrabold text-blue-700 bg-blue-100 dark:bg-blue-950/80 px-2.5 py-0.5 rounded-full text-[11px]">文節 #' + (idx + 1) + '</span>' +
-                        '<button id="btn-toggle-g-' + block.id + '" onclick="toggleSpeechBlock(\'g-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-xs font-bold">' +
-                            '<i class="fa-solid fa-play text-[9px]"></i><span>再生</span>' +
-                        '</button>' +
-                    '</div>' +
-                    '<div class="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border-l-4 border-blue-500 space-y-1">' +
-                        '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + clickableIndo + '</p>' +
-                        '<p class="dynamic-text-ja text-slate-500 dark:text-slate-400 font-medium">' + escapeHtml(block.japanese) + '</p>' +
-                    '</div>' +
-                    '<div class="bg-blue-50/60 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200/60 text-xs leading-relaxed text-blue-950 dark:text-blue-200 space-y-1.5">' +
-                        '<h5 class="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1 text-[10px] uppercase tracking-wider"><i class="fa-solid fa-diagram-project"></i> 4段階精密構文解剖・応用解説</h5>' +
-                        '<div class="dynamic-text-ja whitespace-pre-line font-medium pt-0.5 leading-relaxed">' + escapeHtml(block.grammarExplanation) + '</div>' +
-                    '</div>' +
-                '</div>';
-            });
-            if (container) container.innerHTML = html;
-        }
-
-        function highlightMatch(str, query) {
-            var safeStr = escapeHtml(str || '');
-            var q = (query || '').trim();
-            if (!q) return safeStr;
-            try {
-                var escQuery = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                return safeStr.replace(new RegExp('(' + escQuery + ')', 'gi'), '<mark class="search-highlight">$1</mark>');
-            } catch (e) { return safeStr; }
-        }
-
-        function getFilteredVocabList() {
-            var filtered = window.isShuffled ? Array.from(window.shuffledVocabList) : (window.vocabList || []);
-            if (window.activeVocabPosFilter !== 'all') {
-                filtered = filtered.filter(function(v) { return v.pos === window.activeVocabPosFilter; });
-            }
-            var query = (window.activeVocabSearchQuery || '').trim().toLowerCase();
-            if (query !== '') {
-                filtered = filtered.filter(function(v) {
-                    return (v.indonesian || '').toLowerCase().includes(query) || (v.japanese || '').toLowerCase().includes(query) || (v.baseForm || '').toLowerCase().includes(query);
-                });
-            }
-            return filtered;
-        }
-
-        function renderVocabContainer() {
-            var emptyState = document.getElementById('vocabEmptyState');
-            var listContainer = document.getElementById('vocabListContainer');
-            var cardContainer = document.getElementById('vocabCardContainer');
-            var vocabBadge = document.getElementById('vocabCountBadge');
-
-            var filtered = getFilteredVocabList();
-            if (vocabBadge) vocabBadge.textContent = (window.vocabList || []).length;
-            updatePosFilterUI();
-            updateModeBtnUI();
-
-            if (!filtered || filtered.length === 0) {
-                if (emptyState) emptyState.classList.remove('hidden');
-                if (listContainer) listContainer.innerHTML = '';
-                if (cardContainer) cardContainer.classList.add('hidden');
-                return;
-            }
-
-            if (emptyState) emptyState.classList.add('hidden');
-            if (window.activeVocabMode === 'list') {
-                if (cardContainer) cardContainer.classList.add('hidden');
-                if (listContainer) listContainer.classList.remove('hidden');
-
-                var html = '', q = window.activeVocabSearchQuery;
-                filtered.forEach(function(v) {
-                    var hIndo = highlightMatch(v.indonesian, q);
-                    var hJap = highlightMatch(v.japanese, q);
-                    var keyTag = v.isKeyWord ? '<span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/50 flex items-center gap-0.5 shrink-0"><i class="fa-solid fa-star text-[8px]"></i>重要</span>' : '';
-
-                    html += '<div class="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between gap-2">' +
-                        '<div class="space-y-0.5 flex-1 min-w-0">' +
-                            '<div class="flex items-center gap-1.5 flex-wrap">' +
-                                '<span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0">' + getPosLabel(v.pos) + '</span>' +
-                                keyTag +
-                                '<h4 class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100 truncate">' + hIndo + '</h4>' +
-                                '<button onclick="speakWordGeminiTTS(\'' + escapeHtml(v.indonesian) + '\')" class="text-slate-400 hover:text-emerald-500 p-1 shrink-0" title="単語音声をGemini TTSで再生"><i class="fa-solid fa-volume-high text-xs"></i></button>' +
-                            '</div>' +
-                            '<p class="dynamic-text-ja text-emerald-700 dark:text-emerald-400 font-bold">' + hJap + '</p>' +
-                        '</div>' +
-                        '<button onclick="toggleVocabMastered(\'' + v.id + '\')" class="px-2 py-1 rounded ' + (v.mastered ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400') + ' text-[10px] font-bold shrink-0">' + (v.mastered ? '習得' : '未修') + '</button>' +
-                    '</div>';
-                });
-                if (listContainer) listContainer.innerHTML = html;
-            } else {
-                if (listContainer) listContainer.classList.add('hidden');
-                if (cardContainer) { cardContainer.classList.remove('hidden'); cardContainer.classList.add('flex'); }
-                updateFlashcardUI();
-            }
-        }
-
-        function getPosLabel(pos) {
-            switch(pos) {
-                case 'noun': return '名詞';
-                case 'verb': return '動詞';
-                case 'adjective': return '形容詞';
-                case 'adverb': return '副詞';
-                default: return 'その他';
-            }
-        }
-
-        function updateModeBtnUI() {
-            var btnCard = document.getElementById('btnModeCard'), btnList = document.getElementById('btnModeList');
-            if (btnCard && btnList) {
-                if (window.activeVocabMode === 'card') {
-                    btnCard.className = "px-2.5 py-1 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition";
-                    btnList.className = "px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
-                } else {
-                    btnList.className = "px-2.5 py-1 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition";
-                    btnCard.className = "px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
-                }
-            }
-        }
-
-        function updatePosFilterUI() {
-            document.querySelectorAll('.btn-pos-filter').forEach(function(btn) {
-                if (btn.dataset.pos === window.activeVocabPosFilter) {
-                    btn.className = "btn-pos-filter px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-red-600 text-white shadow-xs transition";
-                } else {
-                    btn.className = "btn-pos-filter px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
-                }
-            });
-        }
-
-        function setVocabMode(mode) { window.activeVocabMode = mode; renderVocabContainer(); }
-        function setVocabPosFilter(pos) { window.activeVocabPosFilter = pos; window.currentCardIndex = 0; renderVocabContainer(); }
-        function toggleShuffleCards() {
-            window.isShuffled = !window.isShuffled;
-            if (window.isShuffled) window.shuffledVocabList = Array.from(window.vocabList).sort(function() { return Math.random() - 0.5; });
-            window.currentCardIndex = 0;
-            renderVocabContainer();
-        }
-        function toggleVocabMastered(id) {
-            var item = window.vocabList.find(function(v) { return v.id === id; });
-            if (item) { item.mastered = !item.mastered; renderVocabContainer(); }
-        }
-
-        function updateFlashcardUI() {
-            var filtered = getFilteredVocabList();
-            if (!filtered || filtered.length === 0) return;
-            if (window.currentCardIndex >= filtered.length) window.currentCardIndex = 0;
-
-            var item = filtered[window.currentCardIndex];
-            var q = window.activeVocabSearchQuery;
-            var cardIndo = document.getElementById('cardIndoText');
-            var cardJap = document.getElementById('cardJapText');
-            var cardContext = document.getElementById('cardContextFull');
-            var cardPosFront = document.getElementById('cardBadgeFront');
-            var cardPosBack = document.getElementById('cardPosBack');
-            var progressLabel = document.getElementById('flashcardProgressLabel');
-
-            if (cardIndo) cardIndo.innerHTML = highlightMatch(item.indonesian, q);
-            if (cardJap) cardJap.innerHTML = highlightMatch(item.japanese, q);
-            if (cardContext) cardContext.innerHTML = item.context ? ('文脈: "' + highlightMatch(item.context, q) + '"') : '文脈なし';
-            if (cardPosFront) cardPosFront.innerHTML = getPosLabel(item.pos) + (item.isKeyWord ? ' <span class="ml-1 px-1.5 py-0.5 bg-amber-500 text-white rounded text-[9px] font-extrabold"><i class="fa-solid fa-star text-[8px]"></i> 重要語</span>' : '');
-            if (cardPosBack) cardPosBack.innerHTML = '品詞: ' + getPosLabel(item.pos) + (item.baseForm ? (' (原形: ' + item.baseForm + ')') : '');
-            if (progressLabel) progressLabel.textContent = (window.currentCardIndex + 1) + ' / ' + filtered.length;
-
-            window.isCardFlipped = false;
-            var flashcardInner = document.getElementById('flashcardInner');
-            if (flashcardInner) flashcardInner.classList.remove('rotate-y-180');
-        }
-
-        function flipFlashcard() {
-            window.isCardFlipped = !window.isCardFlipped;
-            var inner = document.getElementById('flashcardInner');
-            if (window.isCardFlipped) inner.classList.add('rotate-y-180');
-            else inner.classList.remove('rotate-y-180');
-        }
-
-        function nextFlashcard(mastered) {
-            var filtered = getFilteredVocabList();
-            if (filtered.length === 0) return;
-            if (mastered && filtered[window.currentCardIndex]) filtered[window.currentCardIndex].mastered = true;
-            window.currentCardIndex = (window.currentCardIndex + 1) % filtered.length;
-            updateFlashcardUI();
-        }
-
-        async function loadHistoryFromStorage() {
-            try {
-                var history = await dbGetAllSessions();
-                renderHistoryList(history);
-            } catch (e) { renderHistoryList([]); }
-        }
-
-        function toggleHistorySelect(id, event) {
-            if (event) event.stopPropagation();
-            var idx = window.selectedHistoryIds.indexOf(id);
-            if (idx > -1) window.selectedHistoryIds.splice(idx, 1);
-            else window.selectedHistoryIds.push(id);
-            updateHistoryActionButtonsState();
-        }
-
-        function updateHistoryActionButtonsState() {
-            var btnMerge = document.getElementById('btnMergeSelected');
-            var btnRe = document.getElementById('btnReanalyzeSelected');
-            var btnSave = document.getElementById('btnSaveSelected');
-            var count = window.selectedHistoryIds.length;
-
-            if (btnRe) {
-                if (count >= 1) {
-                    btnRe.disabled = false;
-                    btnRe.className = "px-1.5 py-0.5 bg-amber-500 hover:bg-amber-600 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
-                    btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 再解析 (' + count + ')';
-                } else {
-                    btnRe.disabled = true;
-                    btnRe.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
-                    btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 再解析';
-                }
-            }
-
-            if (btnMerge) {
-                if (count >= 2) {
-                    btnMerge.disabled = false;
-                    btnMerge.className = "px-1.5 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
-                    btnMerge.innerHTML = '<i class="fa-solid fa-code-merge"></i> 結合 (' + count + ')';
-                } else {
-                    btnMerge.disabled = true;
-                    btnMerge.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
-                    btnMerge.innerHTML = '<i class="fa-solid fa-code-merge"></i> 結合';
-                }
-            }
-
-            if (btnSave) {
-                if (count >= 1) {
-                    btnSave.disabled = false;
-                    btnSave.className = "px-1.5 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
-                    btnSave.innerHTML = '<i class="fa-solid fa-download"></i> 保存 (' + count + ')';
-                } else {
-                    btnSave.disabled = true;
-                    btnSave.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
-                    btnSave.innerHTML = '<i class="fa-solid fa-download"></i> 保存';
-                }
-            }
-        }
-
-        function renderHistoryList(history) {
-            var container = document.getElementById('historyList');
-            if (!container) return;
-            if (!history || history.length === 0) {
-                container.innerHTML = '<p class="text-xs text-slate-400 py-1.5 text-center">履歴なし (IndexedDB)</p>';
-                window.selectedHistoryIds = [];
-                updateHistoryActionButtonsState();
-                return;
-            }
-            var html = '';
-            history.forEach(function(item) {
-                var isChecked = window.selectedHistoryIds.includes(item.id);
-                var isCurrent = window.currentLoadedSessionId === item.id;
-                html += '<div onclick="loadHistoryItem(\'' + item.id + '\')" class="p-1.5 rounded-lg ' + (isCurrent ? 'bg-red-50 dark:bg-red-950/40 border-red-300' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700') + ' border hover:bg-red-50 cursor-pointer flex justify-between items-center text-xs transition mb-1">' +
-                    '<div class="flex items-center gap-1.5 min-w-0 flex-1">' +
-                        '<input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onclick="toggleHistorySelect(\'' + item.id + '\', event)" class="rounded text-red-600 cursor-pointer shrink-0 w-3.5 h-3.5">' +
-                        '<div class="min-w-0 flex-1">' +
-                            '<p class="font-bold text-slate-800 dark:text-slate-100 truncate leading-tight text-[11px]">' + escapeHtml(item.fileName) + '</p>' +
-                            '<p class="text-[8px] text-slate-400 font-mono">' + escapeHtml(item.date) + '</p>' +
-                        '</div>' +
-                    '</div>' +
-                    '<button onclick="deleteHistoryItem(\'' + item.id + '\', event)" class="text-slate-400 hover:text-rose-500 p-1 shrink-0 ml-1"><i class="fa-solid fa-trash-can text-[10px]"></i></button>' +
-                '</div>';
-            });
-            container.innerHTML = html;
-            updateHistoryActionButtonsState();
-        }
-
-        async function saveSelectedHistories() {
-            if (!window.selectedHistoryIds || window.selectedHistoryIds.length === 0) return;
-            var allSessions = await dbGetAllSessions();
-            var selectedItems = window.selectedHistoryIds.map(function(id) {
-                return allSessions.find(function(h) { return h.id === id; });
-            }).filter(Boolean);
-
-            if (selectedItems.length === 0) return;
-
-            selectedItems.forEach(function(item, index) {
-                var cleanName = formatOutputFileName(item.fileName || '解析データ');
-                var exportObj = {
-                    id: item.id,
-                    fileName: cleanName,
-                    date: item.date,
-                    blocks: item.blocks || [],
-                    vocab: item.vocab || []
-                };
-                setTimeout(function() {
-                    exportDataToFile(exportObj, cleanName + '.json');
-                }, index * 300);
-            });
-
-            showToast(selectedItems.length + ' 件の履歴を個別JSONとして保存しました！', 'info');
-        }
-
-        async function saveCurrentToHistory(fileName, showToastNotification) {
-            if (showToastNotification === undefined) showToastNotification = true;
-            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
-            try {
-                var formattedName = formatOutputFileName(fileName);
-                if (!window.currentLoadedSessionId) window.currentLoadedSessionId = 'session-' + Date.now();
-                var sessionObj = {
-                    id: window.currentLoadedSessionId,
-                    fileName: formattedName,
-                    date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                    timestamp: Date.now(),
-                    blocks: window.transcriptBlocks,
-                    vocab: window.vocabList
-                };
-                await dbSaveSession(sessionObj);
-                var history = await dbGetAllSessions();
-                renderHistoryList(history);
-                updateActiveSessionBadge();
-            } catch (e) {}
-        }
-
-        async function mergeSelectedHistories() {
-            if (window.selectedHistoryIds.length < 2) return;
-            var allSessions = await dbGetAllSessions();
-            var selectedItems = window.selectedHistoryIds.map(function(id) {
-                return allSessions.find(function(h) { return h.id === id; });
-            }).filter(Boolean);
-
-            var mergedBlocks = [], mergedVocabMap = new Map(), titleParts = [];
-            var globalBlockIdx = 0;
-
-            selectedItems.forEach(function(item) {
-                titleParts.push(item.fileName.replace(/\.[^/.]+$/, ""));
-                if (Array.isArray(item.blocks)) {
-                    item.blocks.forEach(function(b) {
-                        mergedBlocks.push(Object.assign({}, b, { id: 'block-merged-' + Date.now() + '-' + globalBlockIdx, blockIndex: globalBlockIdx }));
-                        globalBlockIdx++;
-                    });
-                }
-                if (Array.isArray(item.vocab)) {
-                    item.vocab.forEach(function(v) {
-                        var key = (v.indonesian || '').trim().toLowerCase();
-                        if (key && !mergedVocabMap.has(key)) mergedVocabMap.set(key, v);
-                    });
-                }
-            });
-
-            var mergedTitle = formatOutputFileName('結合_' + titleParts.join('_').substring(0, 20));
-            window.currentLoadedSessionId = 'session-merged-' + Date.now();
-            window.currentLoadedFileName = mergedTitle;
-            window.transcriptBlocks = mergedBlocks;
-            window.vocabList = Array.from(mergedVocabMap.values());
-            window.ttsSentenceCache.clear();
-            window.ttsWordCache.clear();
-            updateActiveSessionBadge();
-            renderTranscriptContainer();
-            renderGrammarContainer();
-            renderVocabContainer();
-
-            var mergedDataObj = {
-                id: window.currentLoadedSessionId,
-                fileName: mergedTitle,
-                date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                timestamp: Date.now(),
-                blocks: window.transcriptBlocks,
-                vocab: window.vocabList
-            };
-            await dbSaveSession(mergedDataObj);
-            var history = await dbGetAllSessions();
-            renderHistoryList(history);
-
-            exportDataToFile(mergedDataObj, mergedTitle + '.json');
-            window.selectedHistoryIds = [];
-            showToast('選択した履歴を結合しました！', 'info');
-        }
-
-        async function clearHistory() {
-            await dbClearAll();
-            window.selectedHistoryIds = [];
-            renderHistoryList([]);
-            showToast('IndexedDB履歴をすべて消去しました', 'info');
-        }
-
-        async function loadHistoryItem(id) {
-            var found = await dbGetSession(id);
-            if (found) {
-                window.currentLoadedSessionId = found.id;
-                window.currentLoadedFileName = found.fileName || '';
-                window.transcriptBlocks = found.blocks || [];
-                window.vocabList = found.vocab || [];
-                window.ttsSentenceCache.clear();
-                window.ttsWordCache.clear();
-                updateActiveSessionBadge();
-                renderTranscriptContainer();
-                renderGrammarContainer();
-                renderVocabContainer();
-                var history = await dbGetAllSessions();
-                renderHistoryList(history);
-                showToast('「' + found.fileName + '」を切り替え読み込みました', 'info');
-                if (window.innerWidth < 768) switchMobileTab('transcript');
-            }
-        }
-
-        async function deleteHistoryItem(id, event) {
-            if (event) event.stopPropagation();
-            await dbDeleteSession(id);
-            window.selectedHistoryIds = window.selectedHistoryIds.filter(function(sid) { return sid !== id; });
-            var history = await dbGetAllSessions();
-            renderHistoryList(history);
-            showToast('履歴から削除しました', 'info');
-        }
-
-        function exportDataToFile(dataObj, customFilename) {
-            var blob = new Blob([JSON.stringify(dataObj, null, 2)], { type: 'application/json' });
-            var url = URL.createObjectURL(blob);
-            var a = document.createElement('a');
-            a.href = url;
-            a.download = customFilename || 'suarateks_backup.json';
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        async function importHistoryBackup(event) {
-            var files = event.target.files ? Array.from(event.target.files) : [];
-            if (files.length === 0) return;
-
-            var successCount = 0, lastLoadedData = null;
-
-            for (var i = 0; i < files.length; i++) {
-                try {
-                    var content = await new Promise(function(resolve, reject) {
-                        var reader = new FileReader();
-                        reader.onload = function(e) { resolve(e.target.result); };
-                        reader.onerror = reject;
-                        reader.readAsText(files[i]);
-                    });
-                    var importedData = JSON.parse(content);
-                    var singleObj = Array.isArray(importedData) ? importedData[0] : importedData;
-                    if (!singleObj || !singleObj.blocks) continue;
-
-                    var formattedName = formatOutputFileName(singleObj.fileName || files[i].name);
-                    var item = {
-                        id: singleObj.id || ('session-imported-' + Date.now() + '-' + i),
-                        fileName: formattedName,
-                        date: singleObj.date || new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                        timestamp: Date.now(),
-                        blocks: singleObj.blocks,
-                        vocab: singleObj.vocab || []
-                    };
-                    await dbSaveSession(item);
-                    lastLoadedData = item;
-                    successCount++;
-                } catch (e) {}
-            }
-
-            var history = await dbGetAllSessions();
-            renderHistoryList(history);
-
-            if (lastLoadedData) {
-                window.currentLoadedSessionId = lastLoadedData.id;
-                window.currentLoadedFileName = lastLoadedData.fileName;
-                window.transcriptBlocks = lastLoadedData.blocks;
-                window.vocabList = lastLoadedData.vocab;
-                window.ttsSentenceCache.clear();
-                window.ttsWordCache.clear();
-                updateActiveSessionBadge();
-                renderTranscriptContainer();
-                renderGrammarContainer();
-                renderVocabContainer();
-            }
-            showToast(successCount + ' 件のJSONをインポートしました！', 'info');
-            event.target.value = '';
-        }
-
-        function showToast(message, type) {
-            if (type === undefined) type = 'info';
-            var container = document.getElementById('toastContainer');
-            if (!container) return;
-            var toast = document.createElement('div');
-            toast.className = (type === 'error' ? 'bg-rose-600' : 'bg-slate-800') + ' text-white px-3.5 py-2.5 rounded-xl shadow-xl text-xs font-bold flex items-center justify-between gap-2 transition-all duration-300 pointer-events-auto border border-white/10';
-            toast.innerHTML = '<span>' + escapeHtml(message) + '</span>';
-            container.appendChild(toast);
-            setTimeout(function() { if (toast.parentElement) toast.remove(); }, 4000);
-        }
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        }
-
-        function switchMobileTab(tab) {
-            window.activeMobileTab = tab;
-            var panelSetup = document.getElementById('panelSetup');
-            var panelTranscript = document.getElementById('panelTranscript');
-
-            var btnSetup = document.getElementById('btnMobSetup');
-            var btnTranscript = document.getElementById('btnMobTranscript');
-            var btnVocab = document.getElementById('btnMobVocab');
-
-            [btnSetup, btnTranscript, btnVocab].forEach(function(b) {
-                if (b) b.className = "flex-1 py-1.5 text-center text-slate-600 dark:text-slate-400 font-bold";
-            });
-
-            if (window.innerWidth >= 768) {
-                if (panelSetup) panelSetup.style.display = 'flex';
-                if (panelTranscript) panelTranscript.style.display = 'flex';
-                return;
-            }
-
-            if (tab === 'setup') {
-                if (panelSetup) panelSetup.style.display = 'flex';
-                if (panelTranscript) panelTranscript.style.display = 'none';
-                if (btnSetup) btnSetup.className = "flex-1 py-1.5 text-center bg-white dark:bg-slate-700 rounded shadow-sm text-slate-800 dark:text-slate-100 font-extrabold";
-            } else {
-                if (panelSetup) panelSetup.style.display = 'none';
-                if (panelTranscript) panelTranscript.style.display = 'flex';
-                if (tab === 'transcript' && btnTranscript) btnTranscript.className = "flex-1 py-1.5 text-center bg-white dark:bg-slate-700 rounded shadow-sm text-slate-800 dark:text-slate-100 font-extrabold";
-                if (tab === 'vocab' && btnVocab) btnVocab.className = "flex-1 py-1.5 text-center bg-white dark:bg-slate-700 rounded shadow-sm text-slate-800 dark:text-slate-100 font-extrabold";
-                setStudioSubView(tab);
-            }
-        }
-
-        function setStudioSubView(subView) {
-            window.activeStudioSubView = subView;
-            var viewTranscript = document.getElementById('transcriptView');
-            var viewGrammar = document.getElementById('grammarView');
-            var viewVocab = document.getElementById('vocabView');
-
-            var btnTranscript = document.getElementById('navTabTranscript');
-            var btnGrammar = document.getElementById('navTabGrammar');
-            var btnVocab = document.getElementById('navTabVocab');
-
-            if (viewTranscript) viewTranscript.classList.add('hidden');
-            if (viewGrammar) viewGrammar.classList.add('hidden');
-            if (viewVocab) { viewVocab.classList.add('hidden'); viewVocab.classList.remove('flex'); }
-
-            [btnTranscript, btnGrammar, btnVocab].forEach(function(btn) {
-                if (btn) btn.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0";
-            });
-
-            if (subView === 'transcript') {
-                if (viewTranscript) viewTranscript.classList.remove('hidden');
-                if (btnTranscript) btnTranscript.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
-            } else if (subView === 'grammar') {
-                if (viewGrammar) viewGrammar.classList.remove('hidden');
-                if (btnGrammar) btnGrammar.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
-                renderGrammarContainer();
-            } else if (subView === 'vocab') {
-                if (viewVocab) { viewVocab.classList.remove('hidden'); viewVocab.classList.add('flex'); }
-                if (btnVocab) btnVocab.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
-                renderVocabContainer();
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            setFontSize(20);
-            setSpeechRate(0.85);
-            loadHistoryFromStorage();
-            initDropzoneEvents();
-        });
-    </script>
-</body>
-</html>
+            var block = window.transcriptBlocks.find(function(b) { return b.id === cleanId;
