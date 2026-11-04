@@ -47,7 +47,7 @@ colors: { indoRed: { 500: '#E70011', 600: '#C8000F', 700: '#A0000C' } }
 <h1 class="font-extrabold text-xs sm:text-sm flex items-center gap-1.5 shrink-0 truncate">
 <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block shrink-0"></span>
 <span class="truncate">SuaraTeks<span class="text-red-600">ID</span> Pro</span>
-<span class="text-[9px] text-slate-400 font-normal shrink-0">v7.1 (Gemini 3.8 Flash Engine)</span>
+<span class="text-[9px] text-slate-400 font-normal shrink-0">v7.2 (Gemini 3.8 Flash TTS Engine)</span>
 <span id="offlineBadge" class="hidden text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 px-1 py-0.5 rounded font-bold shrink-0"><i class="fa-solid fa-wifi-slash"></i> オフライン</span>
 </h1>
 <div class="flex items-center gap-1.5 shrink-0 min-w-0">
@@ -806,12 +806,17 @@ openModal('apiKeyModal');
 throw new Error('API Keyが正しく設定されていません。');
 }
 ​await window.apiRateTracker.guardRateLimit();
-​// 最新のGemini 3.8 Flashモデルを指定
-var modelName = 'gemini-3.8-flash';
-if (!payload.generationConfig && !isTtsRequest) {
+​// TTS専用モデル(gemini-3.8-flash-tts)と通常マルチモーダルモデル(gemini-3.8-flash)を明確に区別
+var primaryModel = isTtsRequest ? 'gemini-3.8-flash-tts' : 'gemini-3.8-flash';
+var fallbackModels = isTtsRequest ? ['gemini-3.8-flash-lite-tts', 'gemini-2.5-flash-preview-tts'] : ['gemini-3.8-flash-lite'];
+var modelList = [primaryModel].concat(fallbackModels);
+​if (!payload.generationConfig && !isTtsRequest) {
 payload.generationConfig = { temperature: 0.1, maxOutputTokens: 8192 };
 }
-​var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent?key=' + encodeURIComponent(cleanKey);
+​var lastErr = null;
+​for (var m = 0; m < modelList.length; m++) {
+var modelName = modelList[m];
+var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent?key=' + encodeURIComponent(cleanKey);
 ​var response = null;
 var maxAttempts = 2;
 for (var attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -822,7 +827,7 @@ headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify(payload)
 });
 ​if (response.status === 429 || response.status === 503) {
-await sleep(attempt * 2000);
+await sleep(attempt * 1500);
 continue;
 }
 break;
@@ -834,7 +839,8 @@ await sleep(1000);
 ​if (response && response.ok) {
 var data = await response.json();
 if (data.error) {
-throw new Error(translateErrorMessage(data.error.message));
+lastErr = new Error(translateErrorMessage(data.error.message));
+continue;
 }
 return data;
 } else if (response) {
@@ -847,9 +853,14 @@ if (parsed.error && parsed.error.message) errDetail = parsed.error.message;
 openModal('apiKeyModal', true);
 throw new Error('API Key認証エラー（401）です。有効なAPI Keyを設定してください。');
 }
+​if (response.status === 404 || errDetail.toLowerCase().includes('not found') || errDetail.toLowerCase().includes('not supported') || errDetail.toLowerCase().includes('no longer available')) {
+lastErr = new Error(translateErrorMessage(errDetail));
+continue;
+}
 throw new Error(translateErrorMessage(errDetail));
 }
-​throw new Error('Gemini APIへの接続に失敗しました');
+}
+​throw lastErr || new Error('Gemini APIへの接続に失敗しました');
 }
 ​function extractGeminiText(data) {
 var parts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) ? data.candidates[0].content.parts : null;
@@ -913,19 +924,19 @@ view.setInt16(offset, pcm16[i], true);
 ​// Gemini TTS 音声データ（PCM/MP3/WAV/OGG等）の最適URL生成ヘルパー
 function createAudioBlobFromGeminiData(audioInline) {
 if (!audioInline || !audioInline.data) return null;
-var rawMime = (audioInline.mimeType || 'audio/L16;rate=24000').toLowerCase();
-var pcmBuffer = base64ToArrayBuffer(audioInline.data);
-​var isPcm = rawMime.includes('pcm') || rawMime.includes('l16') || rawMime.includes('raw');
-​if (!isPcm && (rawMime.includes('mp3') || rawMime.includes('mpeg') || rawMime.includes('wav') || rawMime.includes('ogg') || rawMime.includes('aac') || rawMime.includes('webm') || rawMime.includes('m4a'))) {
+var rawMime = (audioInline.mimeType || 'audio/wav').toLowerCase();
+var arrayBuf = base64ToArrayBuffer(audioInline.data);
+​if (rawMime.includes('wav') || rawMime.includes('mp3') || rawMime.includes('mpeg') || rawMime.includes('ogg') || rawMime.includes('aac') || rawMime.includes('webm') || rawMime.includes('m4a')) {
 var mimeBase = rawMime.split(';')[0].trim();
-var blob = new Blob([pcmBuffer], { type: mimeBase });
+var blob = new Blob([arrayBuf], { type: mimeBase || 'audio/wav' });
 return URL.createObjectURL(blob);
 }
-​var rateMatch = rawMime.match(/rate=(\d+)/i);
+​var isPcm = rawMime.includes('pcm') || rawMime.includes('l16') || rawMime.includes('raw');
+var rateMatch = rawMime.match(/rate=(\d+)/i);
 var sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
 ​// 安全なInt16Array生成（奇数バイト長によるRangeError防止）
-var numSamples = Math.floor(pcmBuffer.byteLength / 2);
-var pcm16 = new Int16Array(pcmBuffer, 0, numSamples);
+var numSamples = Math.floor(arrayBuf.byteLength / 2);
+var pcm16 = new Int16Array(arrayBuf, 0, numSamples);
 var wavBlob = pcmToWav(pcm16, sampleRate);
 return URL.createObjectURL(wavBlob);
 }
