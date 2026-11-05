@@ -142,46 +142,21 @@
                 </div>
             </div>
 
-            <!-- Audio Input Panel -->
+            <!-- JSON Input Panel (Audio File Transcribe Removed) -->
             <div id="playerCard" class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2 shrink-0">
                 <h3 class="font-extrabold text-xs text-slate-700 dark:text-slate-200 flex items-center justify-between">
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-red-600"></i> 音源/テキスト解析</span>
-                    <span class="text-[9px] text-emerald-600 font-bold"><i class="fa-solid fa-shield-halved"></i> 8チャンク安全解析</span>
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-file-code text-blue-500"></i> テキスト解析入力</span>
+                    <span class="text-[9px] text-emerald-600 font-bold"><i class="fa-solid fa-bolt"></i> トークン節約モード</span>
                 </h3>
                 
-                <label id="fileDropLabel" for="audioFileInput" class="relative group cursor-pointer block">
-                    <input type="file" id="audioFileInput" accept="audio/*" multiple onchange="window.handleFileChange(event)" class="hidden">
-                    
-                    <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-red-500 rounded-lg p-2 text-center bg-slate-50 dark:bg-slate-900 transition-all duration-200 group-hover:bg-red-50/30">
-                        <div id="dropzoneDefault" class="space-y-0.5">
-                            <div class="w-6 h-6 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
-                                <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
-                            </div>
-                            <p class="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">音声ファイルを選択（複数可）</p>
-                        </div>
-
-                        <div id="dropzoneSelected" class="hidden space-y-1 text-left">
-                            <div class="flex items-center justify-between text-emerald-600 mb-0.5">
-                                <span class="text-[9px] font-extrabold"><i class="fa-solid fa-list-check"></i> キューセット完了</span>
-                                <span class="text-[8px] text-slate-400">タップで再選択</span>
-                            </div>
-                            <div id="queueListContainer" class="max-h-24 overflow-y-auto pr-1"></div>
-                        </div>
+                <label class="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-extrabold shadow transition flex flex-col items-center justify-center gap-1 cursor-pointer">
+                    <div class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-import text-sm"></i>
+                        <span>Whisper JSONファイルを解析スタート</span>
                     </div>
+                    <span class="text-[9px] text-red-100 font-normal">意味のまとまりで8文節バッチ自動解剖</span>
+                    <input type="file" accept=".json" multiple onchange="window.handleWhisperJsonChange(event)" class="hidden">
                 </label>
-
-                <button id="startTranscribeBtn" onclick="window.processAudioWithGemini()" class="w-full py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-extrabold shadow transition flex items-center justify-center gap-1.5">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    <span id="transcribeBtnText">全ブロック深掘り解析スタート</span>
-                </button>
-
-                <div class="border-t border-slate-100 dark:border-slate-700 pt-2 mt-2">
-                    <label class="w-full py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-lg text-[10px] font-bold shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer">
-                        <i class="fa-solid fa-file-code text-blue-500 text-xs"></i> <span>Whisper JSONを意味のまとまりで再解析</span>
-                        <input type="file" accept=".json" multiple onchange="window.handleWhisperJsonChange(event)" class="hidden">
-                    </label>
-                    <p class="text-[8px] text-slate-400 text-center mt-1 leading-tight">8文節バッチ最適化 ➔ コスト60%削減 ➔ 自動保存</p>
-                </div>
             </div>
 
             <!-- Analysis Progress Bar -->
@@ -558,103 +533,6 @@
             }
         }
 
-        async function splitAudioFileIntoWavChunks(file, maxDurationSeconds = 180) {
-            try {
-                var arrayBuffer = await file.arrayBuffer();
-                var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                var audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-                await audioCtx.close();
-
-                var targetSampleRate = 16000;
-                var totalDuration = audioBuffer.duration;
-
-                if (totalDuration <= maxDurationSeconds) {
-                    var singleWav = await resampleAndExportWav(audioBuffer, 0, audioBuffer.length, targetSampleRate);
-                    return [{ chunkIndex: 0, blob: singleWav, duration: totalDuration }];
-                }
-
-                var origSampleRate = audioBuffer.sampleRate;
-                var samplesPerChunk = maxDurationSeconds * origSampleRate;
-                var totalChunks = Math.ceil(audioBuffer.length / samplesPerChunk);
-                var chunks = [];
-
-                for (var i = 0; i < totalChunks; i++) {
-                    var startSample = Math.floor(i * samplesPerChunk);
-                    var endSample = Math.min(audioBuffer.length, Math.floor(startSample + samplesPerChunk));
-                    var chunkWavBlob = await resampleAndExportWav(audioBuffer, startSample, endSample, targetSampleRate);
-                    
-                    chunks.push({
-                        chunkIndex: i,
-                        blob: chunkWavBlob,
-                        duration: (endSample - startSample) / origSampleRate
-                    });
-                }
-                return chunks;
-            } catch (e) {
-                return [{ chunkIndex: 0, blob: file, duration: 0 }];
-            }
-        }
-
-        async function resampleAndExportWav(audioBuffer, startSample, endSample, targetSampleRate) {
-            var frameCount = endSample - startSample;
-            var duration = frameCount / audioBuffer.sampleRate;
-            var targetLength = Math.ceil(duration * targetSampleRate);
-
-            var offlineCtx = new OfflineAudioContext(1, targetLength, targetSampleRate);
-            var src = offlineCtx.createBufferSource();
-
-            var tempBuffer = offlineCtx.createBuffer(audioBuffer.numberOfChannels, frameCount, audioBuffer.sampleRate);
-            for (var c = 0; c < audioBuffer.numberOfChannels; c++) {
-                tempBuffer.copyToChannel(audioBuffer.getChannelData(c).subarray(startSample, endSample), c);
-            }
-
-            src.buffer = tempBuffer;
-            src.connect(offlineCtx.destination);
-            src.start(0);
-
-            var renderedBuffer = await offlineCtx.startRendering();
-            return monoAudioBufferToWavBlob(renderedBuffer);
-        }
-
-        function monoAudioBufferToWavBlob(buffer) {
-            var length = buffer.length * 2 + 44;
-            var out = new DataView(new ArrayBuffer(length));
-            var sampleRate = buffer.sampleRate;
-            var channelData = buffer.getChannelData(0);
-            var pos = 0;
-
-            function writeString(str) {
-                for (var i = 0; i < str.length; i++) {
-                    out.setUint8(pos++, str.charCodeAt(i));
-                }
-            }
-
-            writeString('RIFF');
-            out.setUint32(pos, length - 8, true); pos += 4;
-            writeString('WAVE');
-            writeString('fmt ');
-            out.setUint32(pos, 16, true); pos += 4;
-            out.setUint16(pos, 1, true); pos += 2;
-            out.setUint16(pos, 1, true); pos += 2;
-            out.setUint32(pos, sampleRate, true); pos += 4;
-            out.setUint32(pos, sampleRate * 2, true); pos += 4;
-            out.setUint16(pos, 2, true); pos += 2;
-            out.setUint16(pos, 16, true); pos += 2;
-            writeString('data');
-            out.setUint32(pos, length - pos - 4, true); pos += 4;
-
-            for (var i = 0; i < channelData.length; i++) {
-                var sample = Math.max(-1, Math.min(1, channelData[i]));
-                sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
-                out.setInt16(pos, sample, true);
-                pos += 2;
-            }
-
-            return new Blob([out.buffer], { type: 'audio/wav' });
-        }
-
-        window.fileQueue = [];
-        window.isQueueProcessing = false;
         window.currentLoadedSessionId = null;
         window.currentLoadedFileName = '';
         window.transcriptBlocks = [];
@@ -1034,9 +912,27 @@
         }
 
         function extractGeminiText(data) {
-            var parts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) ? data.candidates[0].content.parts : null;
-            if (!Array.isArray(parts)) throw new Error('応答にテキストデータが含まれていません');
-            return parts.map(function(p) { return p.text || ''; }).join('').trim();
+            if (!data) throw new Error('APIからのレスポンスが空です');
+            if (data.promptFeedback && data.promptFeedback.blockReason) {
+                throw new Error('プロンプトがブロックされました (理由: ' + data.promptFeedback.blockReason + ')');
+            }
+            var candidates = data.candidates;
+            if (!Array.isArray(candidates) || candidates.length === 0) {
+                throw new Error('API応答に候補 (candidates) が含まれていません');
+            }
+            var cand = candidates[0];
+            var parts = (cand.content && cand.content.parts) ? cand.content.parts : null;
+            if (Array.isArray(parts) && parts.length > 0) {
+                var textResult = parts.map(function(p) { return p.text || ''; }).join('').trim();
+                if (textResult) return textResult;
+            }
+            var reason = cand.finishReason || 'UNKNOWN';
+            if (reason === 'SAFETY') {
+                throw new Error('安全フィルターによりコンテンツ生成が停止されました (SAFETY)');
+            } else if (reason === 'RECITATION') {
+                throw new Error('著作権保護フィルターによりコンテンツ生成が停止されました (RECITATION)');
+            }
+            throw new Error('応答にテキストデータが含まれていません (finishReason: ' + reason + ')');
         }
 
         function base64ToArrayBuffer(base64) {
@@ -1125,13 +1021,11 @@
                 return;
             }
 
-            var btn = document.getElementById('startTranscribeBtn');
             var progressContainer = document.getElementById('chunkProgressContainer');
             var progressLabel = document.getElementById('chunkProgressLabel');
             var progressPercent = document.getElementById('chunkProgressPercent');
             var progressBar = document.getElementById('chunkProgressBar');
 
-            if (btn) btn.disabled = true;
             if (progressContainer) progressContainer.classList.remove('hidden');
 
             for (var i = 0; i < files.length; i++) {
@@ -1269,7 +1163,6 @@
                 await sleep(1500);
             }
 
-            if (btn) btn.disabled = false;
             setTimeout(function() { if (progressContainer) progressContainer.classList.add('hidden'); }, 1000);
             event.target.value = ''; 
         };
@@ -1516,10 +1409,18 @@
                     reader.readAsDataURL(chunkObj.blob);
                 });
 
-                var transcribePrompt = 'Transcribe this Indonesian audio accurately with Japanese translation for each sentence block.';
+                var mimeType = chunkObj.mimeType || (chunkObj.blob && chunkObj.blob.type) || file.type || 'audio/wav';
+                if (!mimeType || mimeType === 'audio/*') mimeType = 'audio/wav';
+                if (mimeType.includes('mp3') || mimeType.includes('mpeg')) mimeType = 'audio/mp3';
+                else if (mimeType.includes('wav')) mimeType = 'audio/wav';
+                else if (mimeType.includes('m4a') || mimeType.includes('mp4') || mimeType.includes('aac')) mimeType = 'audio/m4a';
+                else if (mimeType.includes('ogg')) mimeType = 'audio/ogg';
+                else if (mimeType.includes('flac')) mimeType = 'audio/flac';
+
+                var transcribePrompt = 'Transcribe this Indonesian audio accurately into Indonesian and provide natural Japanese translation for each sentence block.';
 
                 var payload = {
-                    contents: [{ role: 'user', parts: [{ text: transcribePrompt }, { inlineData: { mimeType: 'audio/wav', data: chunkBase64 } }] }],
+                    contents: [{ role: 'user', parts: [{ text: transcribePrompt }, { inlineData: { mimeType: mimeType, data: chunkBase64 } }] }],
                     generationConfig: { 
                         responseMimeType: "application/json",
                         responseSchema: {
@@ -1869,4 +1770,793 @@
                 window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
             };
 
-            audio.onerror = fu
+            audio.onerror = function() {
+                if (blockId) updateBlockToggleUI(blockId, 'stopped');
+                window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
+                showToast('音声の再生中にエラーが発生しました', 'error');
+            };
+
+            await audio.play();
+        }
+
+        async function speakWordGeminiTTS(wordText) {
+            var rawWord = String(wordText || '').trim();
+            // 単語前後の記号やカンマ・ピリオドを除去
+            var cleanWord = rawWord.replace(/^[^\w-']+|[^\w-']+$|\?/g, '');
+            if (!cleanWord) cleanWord = rawWord;
+            if (!cleanWord) return;
+
+            var apiKey = getApiKey();
+            if (!apiKey) {
+                openModal('apiKeyModal');
+                showToast('Gemini API Keyを設定してください', 'error');
+                return;
+            }
+
+            // 再生中のナレーション等を安全に停止
+            stopAllSpeech();
+
+            var audioUrl = null;
+            var cacheKey = 'word_iapetus_' + cleanWord.toLowerCase();
+
+            // 1. Check In-Memory Cache
+            if (window.ttsWordCache.has(cacheKey)) {
+                audioUrl = window.ttsWordCache.get(cacheKey);
+            } else {
+                try {
+                    // 2. Check IndexedDB Persistent Cache (SuaraTeksTTSCacheDB)
+                    var cachedBlob = await getTTSCache(cacheKey);
+                    if (cachedBlob) {
+                        audioUrl = URL.createObjectURL(cachedBlob);
+                        window.ttsWordCache.set(cacheKey, audioUrl);
+                    } else {
+                        // 3. Request Gemini TTS API (gemini-2.5-flash-preview-tts with Iapetus)
+                        var wordPayload = {
+                            contents: [{ parts: [{ text: cleanWord }] }],
+                            generationConfig: {
+                                responseModalities: ["AUDIO"],
+                                speechConfig: {
+                                    voiceConfig: {
+                                        prebuiltVoiceConfig: { voiceName: "Iapetus" }
+                                    }
+                                }
+                            }
+                        };
+
+                        var resData = await fetchGeminiApi(apiKey, wordPayload, true);
+                        var part = resData.candidates && resData.candidates[0] && resData.candidates[0].content && resData.candidates[0].content.parts && resData.candidates[0].content.parts[0];
+                        var audioInline = part && part.inlineData;
+
+                        if (!audioInline || !audioInline.data) {
+                            throw new Error('単語TTS音声の生成に失敗しました');
+                        }
+
+                        var mimeType = audioInline.mimeType || 'audio/L16;rate=24000';
+                        var rateMatch = mimeType.match(/rate=(\d+)/);
+                        var sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+
+                        var pcmBuffer = base64ToArrayBuffer(audioInline.data);
+                        var pcm16 = new Int16Array(pcmBuffer);
+                        var wavBlob = pcmToWav(pcm16, sampleRate);
+
+                        // Save Blob to IndexedDB
+                        await saveTTSCache(cacheKey, wavBlob);
+
+                        audioUrl = URL.createObjectURL(wavBlob);
+                        window.ttsWordCache.set(cacheKey, audioUrl);
+                    }
+                } catch (wordErr) {
+                    console.warn('Gemini word TTS error:', wordErr);
+                    showToast('単語音声生成エラー: ' + translateErrorMessage(wordErr.message), 'error');
+                    return;
+                }
+            }
+
+            if (!audioUrl) return;
+
+            try {
+                var audio = new Audio(audioUrl);
+                audio.playbackRate = window.speechRate || 0.85;
+                window.activeSpeechState = { blockId: null, audioEl: audio, isPlaying: true };
+
+                audio.onended = function() {
+                    window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
+                };
+                audio.onerror = function() {
+                    window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
+                };
+
+                await audio.play();
+            } catch (playErr) {
+                window.activeSpeechState = { blockId: null, audioEl: null, isPlaying: false };
+                console.warn('Playback error:', playErr);
+            }
+        }
+
+        // ---------- Precision Word Interactions (1-Tap & Double-Tap) ----------
+        function handleWordInteraction(event, blockId, wordIndex) {
+            if (event) event.stopPropagation();
+
+            // RULE: 再生中にワンタップされた場合は即座にナレーションを一時停止
+            if (window.activeSpeechState.isPlaying) {
+                stopAllSpeech();
+                if (window.wordClickTimer) {
+                    clearTimeout(window.wordClickTimer);
+                    window.wordClickTimer = null;
+                }
+                window.lastWordClickTime = 0;
+                window.lastWordClickTarget = null;
+                return;
+            }
+
+            var cleanId = String(blockId).replace(/^[tg]-/, '');
+            var block = (window.transcriptBlocks || []).find(function(b) { return b.id === cleanId; });
+
+            var words = [];
+            if (block && block.indonesian) {
+                words = block.indonesian.split(/\s+/);
+            }
+
+            var wordText = words[wordIndex];
+            if (!wordText && event && event.currentTarget) {
+                wordText = event.currentTarget.innerText || event.currentTarget.textContent;
+            }
+            if (!wordText) return;
+
+            var now = Date.now();
+            var targetKey = blockId + '_' + wordIndex;
+
+            if (now - window.lastWordClickTime < 280 && window.lastWordClickTarget === targetKey) {
+                // DOUBLE TAP: 該当単語の位置から文末までをジャンプ再生
+                if (window.wordClickTimer) {
+                    clearTimeout(window.wordClickTimer);
+                    window.wordClickTimer = null;
+                }
+                window.lastWordClickTime = 0;
+                window.lastWordClickTarget = null;
+
+                var remainingText = words.length > 0 ? words.slice(wordIndex).join(' ') : wordText;
+                if (remainingText) {
+                    speakSentenceGeminiTTS(remainingText, blockId);
+                }
+            } else {
+                // SINGLE TAP: ナレーション未実行時でもエラー表示なしで即座に単語を再生
+                window.lastWordClickTime = now;
+                window.lastWordClickTarget = targetKey;
+
+                if (window.wordClickTimer) clearTimeout(window.wordClickTimer);
+
+                window.wordClickTimer = setTimeout(function() {
+                    window.wordClickTimer = null;
+                    window.lastWordClickTime = 0;
+                    window.lastWordClickTarget = null;
+
+                    speakWordGeminiTTS(wordText);
+                }, 280);
+            }
+        }
+
+        function toggleSpeechBlock(blockId) {
+            var cleanId = blockId.replace(/^[tg]-/, '');
+            var block = window.transcriptBlocks.find(function(b) { return b.id === cleanId; });
+            if (!block) return;
+            speakSentenceGeminiTTS(block.indonesian, blockId);
+        }
+
+        function updateBlockToggleUI(blockId, state) {
+            var btn = document.getElementById('btn-toggle-' + blockId);
+            if (!btn) return;
+            if (state === 'loading') btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i><span>生成中</span>';
+            else if (state === 'playing') btn.innerHTML = '<i class="fa-solid fa-pause text-red-500"></i><span>一時停止</span>';
+            else if (state === 'paused') btn.innerHTML = '<i class="fa-solid fa-play text-amber-500"></i><span>再開</span>';
+            else btn.innerHTML = '<i class="fa-solid fa-play"></i><span>ナレーション再生</span>';
+        }
+
+        function renderClickableIndonesianWords(text, blockId) {
+            if (!text) return '';
+            var words = text.split(/\s+/);
+            return words.map(function(w, idx) {
+                var safeWord = escapeHtml(w);
+                return '<span class="word-clickable" onclick="handleWordInteraction(event, \'' + blockId + '\', ' + idx + ')" title="1タップ: 単語再生/一時停止 | ダブルタップ: ここから文末までジャンプ再生">' + safeWord + '</span>';
+            }).join(' ');
+        }
+
+        function renderTranscriptContainer() {
+            var emptyState = document.getElementById('emptyState');
+            var container = document.getElementById('transcriptContainer');
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
+                if (emptyState) emptyState.classList.remove('hidden');
+                if (container) container.innerHTML = '';
+                return;
+            }
+            if (emptyState) emptyState.classList.add('hidden');
+            var html = '';
+            window.transcriptBlocks.forEach(function(block, idx) {
+                var clickableIndo = renderClickableIndonesianWords(block.indonesian, 't-' + block.id);
+                html += '<div class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">' +
+                    '<div class="flex items-center justify-between text-xs text-slate-500 pb-1 border-b border-slate-100 dark:border-slate-700">' +
+                        '<div class="flex items-center gap-1.5">' +
+                            '<span class="font-extrabold text-white bg-red-600 px-2 py-0.5 rounded-md text-[10px]">#' + (idx + 1) + '</span>' +
+                            '<span class="font-bold text-red-600 bg-red-50 dark:bg-red-950/60 px-2 py-0.5 rounded-full text-[10px]">' + escapeHtml(block.speaker) + '</span>' +
+                        '</div>' +
+                        '<button id="btn-toggle-t-' + block.id + '" onclick="toggleSpeechBlock(\'t-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1 hover:bg-slate-200">' +
+                            '<i class="fa-solid fa-play text-[10px]"></i><span>ナレーション再生</span>' +
+                        '</button>' +
+                    '</div>' +
+                    '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + clickableIndo + '</p>' +
+                    '<div class="bg-amber-50/70 dark:bg-slate-900/60 p-2.5 rounded-lg border border-amber-200/50">' +
+                        '<p class="dynamic-text-ja font-semibold text-amber-950 dark:text-amber-200">' + escapeHtml(block.japanese) + '</p>' +
+                    '</div>' +
+                '</div>';
+            });
+            if (container) container.innerHTML = html;
+        }
+
+        function renderGrammarContainer() {
+            var emptyState = document.getElementById('grammarEmptyState');
+            var container = document.getElementById('grammarContainer');
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) {
+                if (emptyState) emptyState.classList.remove('hidden');
+                if (container) container.innerHTML = '';
+                return;
+            }
+            if (emptyState) emptyState.classList.add('hidden');
+            var html = '';
+            window.transcriptBlocks.forEach(function(block, idx) {
+                var clickableIndo = renderClickableIndonesianWords(block.indonesian, 'g-' + block.id);
+                html += '<div class="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2.5">' +
+                    '<div class="flex items-center justify-between text-xs pb-1 border-b border-slate-100 dark:border-slate-700">' +
+                        '<span class="font-extrabold text-blue-700 bg-blue-100 dark:bg-blue-950/80 px-2.5 py-0.5 rounded-full text-[11px]">文節 #' + (idx + 1) + '</span>' +
+                        '<button id="btn-toggle-g-' + block.id + '" onclick="toggleSpeechBlock(\'g-' + block.id + '\')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-xs font-bold">' +
+                            '<i class="fa-solid fa-play text-[9px]"></i><span>再生</span>' +
+                        '</button>' +
+                    '</div>' +
+                    '<div class="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-lg border-l-4 border-blue-500 space-y-1">' +
+                        '<p class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100">' + clickableIndo + '</p>' +
+                        '<p class="dynamic-text-ja text-slate-500 dark:text-slate-400 font-medium">' + escapeHtml(block.japanese) + '</p>' +
+                    '</div>' +
+                    '<div class="bg-blue-50/60 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200/60 text-xs leading-relaxed text-blue-950 dark:text-blue-200 space-y-1.5">' +
+                        '<h5 class="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1 text-[10px] uppercase tracking-wider"><i class="fa-solid fa-diagram-project"></i> 4段階精密構文解剖・応用解説</h5>' +
+                        '<div class="dynamic-text-ja whitespace-pre-line font-medium pt-0.5 leading-relaxed">' + escapeHtml(block.grammarExplanation) + '</div>' +
+                    '</div>' +
+                '</div>';
+            });
+            if (container) container.innerHTML = html;
+        }
+
+        function highlightMatch(str, query) {
+            var safeStr = escapeHtml(str || '');
+            var q = (query || '').trim();
+            if (!q) return safeStr;
+            try {
+                var escQuery = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                return safeStr.replace(new RegExp('(' + escQuery + ')', 'gi'), '<mark class="search-highlight">$1</mark>');
+            } catch (e) { return safeStr; }
+        }
+
+        function getFilteredVocabList() {
+            var filtered = window.isShuffled ? Array.from(window.shuffledVocabList) : (window.vocabList || []);
+            if (window.activeVocabPosFilter !== 'all') {
+                filtered = filtered.filter(function(v) { return v.pos === window.activeVocabPosFilter; });
+            }
+            var query = (window.activeVocabSearchQuery || '').trim().toLowerCase();
+            if (query !== '') {
+                filtered = filtered.filter(function(v) {
+                    return (v.indonesian || '').toLowerCase().includes(query) || (v.japanese || '').toLowerCase().includes(query) || (v.baseForm || '').toLowerCase().includes(query);
+                });
+            }
+            return filtered;
+        }
+
+        function renderVocabContainer() {
+            var emptyState = document.getElementById('vocabEmptyState');
+            var listContainer = document.getElementById('vocabListContainer');
+            var cardContainer = document.getElementById('vocabCardContainer');
+            var vocabBadge = document.getElementById('vocabCountBadge');
+
+            var filtered = getFilteredVocabList();
+            if (vocabBadge) vocabBadge.textContent = (window.vocabList || []).length;
+            updatePosFilterUI();
+            updateModeBtnUI();
+
+            if (!filtered || filtered.length === 0) {
+                if (emptyState) emptyState.classList.remove('hidden');
+                if (listContainer) listContainer.innerHTML = '';
+                if (cardContainer) cardContainer.classList.add('hidden');
+                return;
+            }
+
+            if (emptyState) emptyState.classList.add('hidden');
+            if (window.activeVocabMode === 'list') {
+                if (cardContainer) cardContainer.classList.add('hidden');
+                if (listContainer) listContainer.classList.remove('hidden');
+
+                var html = '', q = window.activeVocabSearchQuery;
+                filtered.forEach(function(v) {
+                    var hIndo = highlightMatch(v.indonesian, q);
+                    var hJap = highlightMatch(v.japanese, q);
+                    var keyTag = v.isKeyWord ? '<span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/50 flex items-center gap-0.5 shrink-0"><i class="fa-solid fa-star text-[8px]"></i>重要</span>' : '';
+
+                    html += '<div class="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between gap-2">' +
+                        '<div class="space-y-0.5 flex-1 min-w-0">' +
+                            '<div class="flex items-center gap-1.5 flex-wrap">' +
+                                '<span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0">' + getPosLabel(v.pos) + '</span>' +
+                                keyTag +
+                                '<h4 class="dynamic-text-indo font-extrabold text-slate-800 dark:text-slate-100 truncate">' + hIndo + '</h4>' +
+                                '<button onclick="speakWordGeminiTTS(\'' + escapeHtml(v.indonesian) + '\')" class="text-slate-400 hover:text-emerald-500 p-1 shrink-0" title="単語音声をGemini TTSで再生"><i class="fa-solid fa-volume-high text-xs"></i></button>' +
+                            '</div>' +
+                            '<p class="dynamic-text-ja text-emerald-700 dark:text-emerald-400 font-bold">' + hJap + '</p>' +
+                        '</div>' +
+                        '<button onclick="toggleVocabMastered(\'' + v.id + '\')" class="px-2 py-1 rounded ' + (v.mastered ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400') + ' text-[10px] font-bold shrink-0">' + (v.mastered ? '習得' : '未修') + '</button>' +
+                    '</div>';
+                });
+                if (listContainer) listContainer.innerHTML = html;
+            } else {
+                if (listContainer) listContainer.classList.add('hidden');
+                if (cardContainer) { cardContainer.classList.remove('hidden'); cardContainer.classList.add('flex'); }
+                updateFlashcardUI();
+            }
+        }
+
+        function getPosLabel(pos) {
+            switch(pos) {
+                case 'noun': return '名詞';
+                case 'verb': return '動詞';
+                case 'adjective': return '形容詞';
+                case 'adverb': return '副詞';
+                default: return 'その他';
+            }
+        }
+
+        function updateModeBtnUI() {
+            var btnCard = document.getElementById('btnModeCard'), btnList = document.getElementById('btnModeList');
+            if (btnCard && btnList) {
+                if (window.activeVocabMode === 'card') {
+                    btnCard.className = "px-2.5 py-1 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition";
+                    btnList.className = "px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
+                } else {
+                    btnList.className = "px-2.5 py-1 text-xs font-extrabold rounded-lg bg-red-600 text-white shadow transition";
+                    btnCard.className = "px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
+                }
+            }
+        }
+
+        function updatePosFilterUI() {
+            document.querySelectorAll('.btn-pos-filter').forEach(function(btn) {
+                if (btn.dataset.pos === window.activeVocabPosFilter) {
+                    btn.className = "btn-pos-filter px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-red-600 text-white shadow-xs transition";
+                } else {
+                    btn.className = "btn-pos-filter px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition";
+                }
+            });
+        }
+
+        function setVocabMode(mode) { window.activeVocabMode = mode; renderVocabContainer(); }
+        function setVocabPosFilter(pos) { window.activeVocabPosFilter = pos; window.currentCardIndex = 0; renderVocabContainer(); }
+        function toggleShuffleCards() {
+            window.isShuffled = !window.isShuffled;
+            if (window.isShuffled) window.shuffledVocabList = Array.from(window.vocabList).sort(function() { return Math.random() - 0.5; });
+            window.currentCardIndex = 0;
+            renderVocabContainer();
+        }
+        function toggleVocabMastered(id) {
+            var item = window.vocabList.find(function(v) { return v.id === id; });
+            if (item) { item.mastered = !item.mastered; renderVocabContainer(); }
+        }
+
+        function updateFlashcardUI() {
+            var filtered = getFilteredVocabList();
+            if (!filtered || filtered.length === 0) return;
+            if (window.currentCardIndex >= filtered.length) window.currentCardIndex = 0;
+
+            var item = filtered[window.currentCardIndex];
+            var q = window.activeVocabSearchQuery;
+            var cardIndo = document.getElementById('cardIndoText');
+            var cardJap = document.getElementById('cardJapText');
+            var cardContext = document.getElementById('cardContextFull');
+            var cardPosFront = document.getElementById('cardBadgeFront');
+            var cardPosBack = document.getElementById('cardPosBack');
+            var progressLabel = document.getElementById('flashcardProgressLabel');
+
+            if (cardIndo) cardIndo.innerHTML = highlightMatch(item.indonesian, q);
+            if (cardJap) cardJap.innerHTML = highlightMatch(item.japanese, q);
+            if (cardContext) cardContext.innerHTML = item.context ? ('文脈: "' + highlightMatch(item.context, q) + '"') : '文脈なし';
+            if (cardPosFront) cardPosFront.innerHTML = getPosLabel(item.pos) + (item.isKeyWord ? ' <span class="ml-1 px-1.5 py-0.5 bg-amber-500 text-white rounded text-[9px] font-extrabold"><i class="fa-solid fa-star text-[8px]"></i> 重要語</span>' : '');
+            if (cardPosBack) cardPosBack.innerHTML = '品詞: ' + getPosLabel(item.pos) + (item.baseForm ? (' (原形: ' + item.baseForm + ')') : '');
+            if (progressLabel) progressLabel.textContent = (window.currentCardIndex + 1) + ' / ' + filtered.length;
+
+            window.isCardFlipped = false;
+            var flashcardInner = document.getElementById('flashcardInner');
+            if (flashcardInner) flashcardInner.classList.remove('rotate-y-180');
+        }
+
+        function flipFlashcard() {
+            window.isCardFlipped = !window.isCardFlipped;
+            var inner = document.getElementById('flashcardInner');
+            if (window.isCardFlipped) inner.classList.add('rotate-y-180');
+            else inner.classList.remove('rotate-y-180');
+        }
+
+        function nextFlashcard(mastered) {
+            var filtered = getFilteredVocabList();
+            if (filtered.length === 0) return;
+            if (mastered && filtered[window.currentCardIndex]) filtered[window.currentCardIndex].mastered = true;
+            window.currentCardIndex = (window.currentCardIndex + 1) % filtered.length;
+            updateFlashcardUI();
+        }
+
+        async function loadHistoryFromStorage() {
+            try {
+                var history = await dbGetAllSessions();
+                renderHistoryList(history);
+            } catch (e) { renderHistoryList([]); }
+        }
+
+        function toggleHistorySelect(id, event) {
+            if (event) event.stopPropagation();
+            var idx = window.selectedHistoryIds.indexOf(id);
+            if (idx > -1) window.selectedHistoryIds.splice(idx, 1);
+            else window.selectedHistoryIds.push(id);
+            updateHistoryActionButtonsState();
+        }
+
+        function updateHistoryActionButtonsState() {
+            var btnMerge = document.getElementById('btnMergeSelected');
+            var btnRe = document.getElementById('btnReanalyzeSelected');
+            var btnSave = document.getElementById('btnSaveSelected');
+            var count = window.selectedHistoryIds.length;
+
+            if (btnRe) {
+                if (count >= 1) {
+                    btnRe.disabled = false;
+                    btnRe.className = "px-1.5 py-0.5 bg-amber-500 hover:bg-amber-600 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
+                    btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 再解析 (' + count + ')';
+                } else {
+                    btnRe.disabled = true;
+                    btnRe.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
+                    btnRe.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 再解析';
+                }
+            }
+
+            if (btnMerge) {
+                if (count >= 2) {
+                    btnMerge.disabled = false;
+                    btnMerge.className = "px-1.5 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
+                    btnMerge.innerHTML = '<i class="fa-solid fa-code-merge"></i> 結合 (' + count + ')';
+                } else {
+                    btnMerge.disabled = true;
+                    btnMerge.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
+                    btnMerge.innerHTML = '<i class="fa-solid fa-code-merge"></i> 結合';
+                }
+            }
+
+            if (btnSave) {
+                if (count >= 1) {
+                    btnSave.disabled = false;
+                    btnSave.className = "px-1.5 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[9px] font-bold shadow transition flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap";
+                    btnSave.innerHTML = '<i class="fa-solid fa-download"></i> 保存 (' + count + ')';
+                } else {
+                    btnSave.disabled = true;
+                    btnSave.className = "px-1.5 py-0.5 bg-slate-200 text-slate-400 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-not-allowed opacity-60 shrink-0 whitespace-nowrap";
+                    btnSave.innerHTML = '<i class="fa-solid fa-download"></i> 保存';
+                }
+            }
+        }
+
+        function renderHistoryList(history) {
+            var container = document.getElementById('historyList');
+            if (!container) return;
+            if (!history || history.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400 py-1.5 text-center">履歴なし (IndexedDB)</p>';
+                window.selectedHistoryIds = [];
+                updateHistoryActionButtonsState();
+                return;
+            }
+            var html = '';
+            history.forEach(function(item) {
+                var isChecked = window.selectedHistoryIds.includes(item.id);
+                var isCurrent = window.currentLoadedSessionId === item.id;
+                html += '<div onclick="loadHistoryItem(\'' + item.id + '\')" class="p-1.5 rounded-lg ' + (isCurrent ? 'bg-red-50 dark:bg-red-950/40 border-red-300' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700') + ' border hover:bg-red-50 cursor-pointer flex justify-between items-center text-xs transition mb-1">' +
+                    '<div class="flex items-center gap-1.5 min-w-0 flex-1">' +
+                        '<input type="checkbox" ' + (isChecked ? 'checked' : '') + ' onclick="toggleHistorySelect(\'' + item.id + '\', event)" class="rounded text-red-600 cursor-pointer shrink-0 w-3.5 h-3.5">' +
+                        '<div class="min-w-0 flex-1">' +
+                            '<p class="font-bold text-slate-800 dark:text-slate-100 truncate leading-tight text-[11px]">' + escapeHtml(item.fileName) + '</p>' +
+                            '<p class="text-[8px] text-slate-400 font-mono">' + escapeHtml(item.date) + '</p>' +
+                        '</div>' +
+                    '</div>' +
+                    '<button onclick="deleteHistoryItem(\'' + item.id + '\', event)" class="text-slate-400 hover:text-rose-500 p-1 shrink-0 ml-1"><i class="fa-solid fa-trash-can text-[10px]"></i></button>' +
+                '</div>';
+            });
+            container.innerHTML = html;
+            updateHistoryActionButtonsState();
+        }
+
+        async function saveSelectedHistories() {
+            if (!window.selectedHistoryIds || window.selectedHistoryIds.length === 0) return;
+            var allSessions = await dbGetAllSessions();
+            var selectedItems = window.selectedHistoryIds.map(function(id) {
+                return allSessions.find(function(h) { return h.id === id; });
+            }).filter(Boolean);
+
+            if (selectedItems.length === 0) return;
+
+            selectedItems.forEach(function(item, index) {
+                var cleanName = formatOutputFileName(item.fileName || '解析データ');
+                var exportObj = {
+                    id: item.id,
+                    fileName: cleanName,
+                    date: item.date,
+                    blocks: item.blocks || [],
+                    vocab: item.vocab || []
+                };
+                setTimeout(function() {
+                    exportDataToFile(exportObj, cleanName + '.json');
+                }, index * 300);
+            });
+
+            showToast(selectedItems.length + ' 件の履歴を個別JSONとして保存しました！', 'info');
+        }
+
+        async function saveCurrentToHistory(fileName, showToastNotification) {
+            if (showToastNotification === undefined) showToastNotification = true;
+            if (!window.transcriptBlocks || window.transcriptBlocks.length === 0) return;
+            try {
+                var formattedName = formatOutputFileName(fileName);
+                if (!window.currentLoadedSessionId) window.currentLoadedSessionId = 'session-' + Date.now();
+                var sessionObj = {
+                    id: window.currentLoadedSessionId,
+                    fileName: formattedName,
+                    date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                    timestamp: Date.now(),
+                    blocks: window.transcriptBlocks,
+                    vocab: window.vocabList
+                };
+                await dbSaveSession(sessionObj);
+                var history = await dbGetAllSessions();
+                renderHistoryList(history);
+                updateActiveSessionBadge();
+            } catch (e) {}
+        }
+
+        async function mergeSelectedHistories() {
+            if (window.selectedHistoryIds.length < 2) return;
+            var allSessions = await dbGetAllSessions();
+            var selectedItems = window.selectedHistoryIds.map(function(id) {
+                return allSessions.find(function(h) { return h.id === id; });
+            }).filter(Boolean);
+
+            var mergedBlocks = [], mergedVocabMap = new Map(), titleParts = [];
+            var globalBlockIdx = 0;
+
+            selectedItems.forEach(function(item) {
+                titleParts.push(item.fileName.replace(/\.[^/.]+$/, ""));
+                if (Array.isArray(item.blocks)) {
+                    item.blocks.forEach(function(b) {
+                        mergedBlocks.push(Object.assign({}, b, { id: 'block-merged-' + Date.now() + '-' + globalBlockIdx, blockIndex: globalBlockIdx }));
+                        globalBlockIdx++;
+                    });
+                }
+                if (Array.isArray(item.vocab)) {
+                    item.vocab.forEach(function(v) {
+                        var key = (v.indonesian || '').trim().toLowerCase();
+                        if (key && !mergedVocabMap.has(key)) mergedVocabMap.set(key, v);
+                    });
+                }
+            });
+
+            var mergedTitle = formatOutputFileName('結合_' + titleParts.join('_').substring(0, 20));
+            window.currentLoadedSessionId = 'session-merged-' + Date.now();
+            window.currentLoadedFileName = mergedTitle;
+            window.transcriptBlocks = mergedBlocks;
+            window.vocabList = Array.from(mergedVocabMap.values());
+            window.ttsSentenceCache.clear();
+            window.ttsWordCache.clear();
+            updateActiveSessionBadge();
+            renderTranscriptContainer();
+            renderGrammarContainer();
+            renderVocabContainer();
+
+            var mergedDataObj = {
+                id: window.currentLoadedSessionId,
+                fileName: mergedTitle,
+                date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                timestamp: Date.now(),
+                blocks: window.transcriptBlocks,
+                vocab: window.vocabList
+            };
+            await dbSaveSession(mergedDataObj);
+            var history = await dbGetAllSessions();
+            renderHistoryList(history);
+
+            exportDataToFile(mergedDataObj, mergedTitle + '.json');
+            window.selectedHistoryIds = [];
+            showToast('選択した履歴を結合しました！', 'info');
+        }
+
+        async function clearHistory() {
+            await dbClearAll();
+            window.selectedHistoryIds = [];
+            renderHistoryList([]);
+            showToast('IndexedDB履歴をすべて消去しました', 'info');
+        }
+
+        async function loadHistoryItem(id) {
+            var found = await dbGetSession(id);
+            if (found) {
+                window.currentLoadedSessionId = found.id;
+                window.currentLoadedFileName = found.fileName || '';
+                window.transcriptBlocks = found.blocks || [];
+                window.vocabList = found.vocab || [];
+                window.ttsSentenceCache.clear();
+                window.ttsWordCache.clear();
+                updateActiveSessionBadge();
+                renderTranscriptContainer();
+                renderGrammarContainer();
+                renderVocabContainer();
+                var history = await dbGetAllSessions();
+                renderHistoryList(history);
+                showToast('「' + found.fileName + '」を切り替え読み込みました', 'info');
+                if (window.innerWidth < 768) switchMobileTab('transcript');
+            }
+        }
+
+        async function deleteHistoryItem(id, event) {
+            if (event) event.stopPropagation();
+            await dbDeleteSession(id);
+            window.selectedHistoryIds = window.selectedHistoryIds.filter(function(sid) { return sid !== id; });
+            var history = await dbGetAllSessions();
+            renderHistoryList(history);
+            showToast('履歴から削除しました', 'info');
+        }
+
+        function exportDataToFile(dataObj, customFilename) {
+            var blob = new Blob([JSON.stringify(dataObj, null, 2)], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = customFilename || 'suarateks_backup.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        async function importHistoryBackup(event) {
+            var files = event.target.files ? Array.from(event.target.files) : [];
+            if (files.length === 0) return;
+
+            var successCount = 0, lastLoadedData = null;
+
+            for (var i = 0; i < files.length; i++) {
+                try {
+                    var content = await new Promise(function(resolve, reject) {
+                        var reader = new FileReader();
+                        reader.onload = function(e) { resolve(e.target.result); };
+                        reader.onerror = reject;
+                        reader.readAsText(files[i]);
+                    });
+                    var importedData = JSON.parse(content);
+                    var singleObj = Array.isArray(importedData) ? importedData[0] : importedData;
+                    if (!singleObj || !singleObj.blocks) continue;
+
+                    var formattedName = formatOutputFileName(singleObj.fileName || files[i].name);
+                    var item = {
+                        id: singleObj.id || ('session-imported-' + Date.now() + '-' + i),
+                        fileName: formattedName,
+                        date: singleObj.date || new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                        timestamp: Date.now(),
+                        blocks: singleObj.blocks,
+                        vocab: singleObj.vocab || []
+                    };
+                    await dbSaveSession(item);
+                    lastLoadedData = item;
+                    successCount++;
+                } catch (e) {}
+            }
+
+            var history = await dbGetAllSessions();
+            renderHistoryList(history);
+
+            if (lastLoadedData) {
+                window.currentLoadedSessionId = lastLoadedData.id;
+                window.currentLoadedFileName = lastLoadedData.fileName;
+                window.transcriptBlocks = lastLoadedData.blocks;
+                window.vocabList = lastLoadedData.vocab;
+                window.ttsSentenceCache.clear();
+                window.ttsWordCache.clear();
+                updateActiveSessionBadge();
+                renderTranscriptContainer();
+                renderGrammarContainer();
+                renderVocabContainer();
+            }
+            showToast(successCount + ' 件のJSONをインポートしました！', 'info');
+            event.target.value = '';
+        }
+
+        function showToast(message, type) {
+            if (type === undefined) type = 'info';
+            var container = document.getElementById('toastContainer');
+            if (!container) return;
+            var toast = document.createElement('div');
+            toast.className = (type === 'error' ? 'bg-rose-600' : 'bg-slate-800') + ' text-white px-3.5 py-2.5 rounded-xl shadow-xl text-xs font-bold flex items-center justify-between gap-2 transition-all duration-300 pointer-events-auto border border-white/10';
+            toast.innerHTML = '<span>' + escapeHtml(message) + '</span>';
+            container.appendChild(toast);
+            setTimeout(function() { if (toast.parentElement) toast.remove(); }, 4000);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function switchMobileTab(tab) {
+            window.activeMobileTab = tab;
+            var panelSetup = document.getElementById('panelSetup');
+            var panelTranscript = document.getElementById('panelTranscript');
+
+            var btnSetup = document.getElementById('btnMobSetup');
+            var btnTranscript = document.getElementById('btnMobTranscript');
+            var btnVocab = document.getElementById('btnMobVocab');
+
+            [btnSetup, btnTranscript, btnVocab].forEach(function(b) {
+                if (b) b.className = "flex-1 py-1.5 text-center text-slate-600 dark:text-slate-400 font-bold";
+            });
+
+            if (window.innerWidth >= 768) {
+                if (panelSetup) panelSetup.style.display = 'flex';
+                if (panelTranscript) panelTranscript.style.display = 'flex';
+                return;
+            }
+
+            if (tab === 'setup') {
+                if (panelSetup) panelSetup.style.display = 'flex';
+                if (panelTranscript) panelTranscript.style.display = 'none';
+                if (btnSetup) btnSetup.className = "flex-1 py-1.5 text-center bg-white dark:bg-slate-700 rounded shadow-sm text-slate-800 dark:text-slate-100 font-extrabold";
+            } else {
+                if (panelSetup) panelSetup.style.display = 'none';
+                if (panelTranscript) panelTranscript.style.display = 'flex';
+                if (tab === 'transcript' && btnTranscript) btnTranscript.className = "flex-1 py-1.5 text-center bg-white dark:bg-slate-700 rounded shadow-sm text-slate-800 dark:text-slate-100 font-extrabold";
+                if (tab === 'vocab' && btnVocab) btnVocab.className = "flex-1 py-1.5 text-center bg-white dark:bg-slate-700 rounded shadow-sm text-slate-800 dark:text-slate-100 font-extrabold";
+                setStudioSubView(tab);
+            }
+        }
+
+        function setStudioSubView(subView) {
+            window.activeStudioSubView = subView;
+            var viewTranscript = document.getElementById('transcriptView');
+            var viewGrammar = document.getElementById('grammarView');
+            var viewVocab = document.getElementById('vocabView');
+
+            var btnTranscript = document.getElementById('navTabTranscript');
+            var btnGrammar = document.getElementById('navTabGrammar');
+            var btnVocab = document.getElementById('navTabVocab');
+
+            if (viewTranscript) viewTranscript.classList.add('hidden');
+            if (viewGrammar) viewGrammar.classList.add('hidden');
+            if (viewVocab) { viewVocab.classList.add('hidden'); viewVocab.classList.remove('flex'); }
+
+            [btnTranscript, btnGrammar, btnVocab].forEach(function(btn) {
+                if (btn) btn.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition flex items-center gap-1 shrink-0";
+            });
+
+            if (subView === 'transcript') {
+                if (viewTranscript) viewTranscript.classList.remove('hidden');
+                if (btnTranscript) btnTranscript.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
+            } else if (subView === 'grammar') {
+                if (viewGrammar) viewGrammar.classList.remove('hidden');
+                if (btnGrammar) btnGrammar.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
+                renderGrammarContainer();
+            } else if (subView === 'vocab') {
+                if (viewVocab) { viewVocab.classList.remove('hidden'); viewVocab.classList.add('flex'); }
+                if (btnVocab) btnVocab.className = "no-wrap-tab px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white shadow-md transition flex items-center gap-1 shrink-0";
+                renderVocabContainer();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setFontSize(20);
+            setSpeechRate(0.85);
+            loadHistoryFromStorage();
+            initDropzoneEvents();
+        });
+    </script>
+</body>
+</html>
